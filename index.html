@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#00288e">
+<meta name="description" content="مسار RTC — تطبيق مركز رسالة التدريبي لمتابعة الحضور والنقاط والشهادات الموثّقة.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src-elem 'self'; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>مسار RTC — مركز رسالة التدريبي | 100.0.0</title>
+
+<!-- Local, version-pinned assets: available offline in PWA and native shells -->
+<link rel="stylesheet" href="assets/vendor/fonts/fonts.css?v=100.0.0">
+<link rel="stylesheet" href="assets/vendor/phosphor/regular/style.css?v=100.0.0">
+<link rel="stylesheet" href="assets/vendor/phosphor/bold/style.css?v=100.0.0">
+<link rel="stylesheet" href="assets/vendor/phosphor/fill/style.css?v=100.0.0">
+<link rel="stylesheet" href="assets/vendor/phosphor/duotone/style.css?v=100.0.0">
+<script defer src="assets/vendor/jspdf.umd.min.js?v=100.0.0"></script>
+<script defer src="assets/vendor/qrcode.min.js?v=100.0.0"></script>
+
+<link rel="stylesheet" href="css/app.css?v=100.0.0">
+</head>
+<body>
+
+<div id="bgfx">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="bg-grid"></div>
+  <canvas id="fx-canvas"></canvas>
+</div>
+
+<div id="app" role="application" aria-label="مسار RTC">
+  <a class="skip-link" href="#screen-s-home">تخطّي إلى المحتوى</a>
+  <canvas id="confetti-canvas" style="position:fixed;inset:0;z-index:150;pointer-events:none;display:none;" aria-hidden="true"></canvas>
+  <div id="toast-ct" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- SPLASH SCREEN -->
+  <div id="screen-splash" class="screen active" style="background:linear-gradient(155deg,#001a6b 0%,#00288e 45%,#003c36 100%);">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:20px;text-align:center">
+      <div class="splash-logo" style="width:112px;height:112px;border-radius:34px;background:rgba(255,255,255,.14);backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;box-shadow:0 24px 60px rgba(0,0,0,.45);margin-bottom:20px;overflow:hidden">
+        <img src="rtc_app_logo.png" alt="RTC Logo" style="width:100%;height:100%;object-fit:cover">
+      </div>
+      <h1 style="color:#fff;font-size:32px;font-weight:700">مسار RTC</h1>
+      <p style="color:rgba(255,255,255,.75);font-size:14px;margin-top:6px">نتابع رحلتك خطوة بخطوة</p>
+      <p style="color:rgba(255,255,255,.45);font-size:12px;margin-top:4px">جمعية رسالة — مركز التدريب والتطوير</p>
+      <div class="splash-bar"><span></span></div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING SCREEN -->
+  <div id="screen-onboarding" class="screen">
+    <div class="scr-body-full">
+      <div class="onb-inner max-w-lg mx-auto w-full" style="display:flex;flex-direction:column;flex:1;min-height:0">
+
+        <div class="flex items-center justify-between pt-safe mb-1" style="flex-shrink:0">
+          <div class="flex items-center gap-1.5" id="onb-dots">
+            <div style="width:32px;height:8px;border-radius:99px;background:var(--primary)" id="dot-1"></div>
+            <div style="width:8px;height:8px;border-radius:99px;background:var(--line)" id="dot-2"></div>
+          </div>
+          <button onclick="resetAppData()" class="onb-help" aria-label="حل مشكلة تسجيل الدخول">
+            <i class="ph-bold ph-lifebuoy"></i><span>مشكلة في الدخول؟</span>
+          </button>
+        </div>
+
+        <!-- Step 1 — Welcome & secure Google Sign-In -->
+        <div id="onb-step-1" class="onb-step active onb-welcome">
+          <div class="onb-art" aria-hidden="true">
+            <img src="assets/illustrations/learning-community.webp" alt="" width="900" height="1536" fetchpriority="high">
+            <span class="onb-free-pill"><i class="ph-fill ph-gift"></i> تعلّم مجاني ١٠٠٪</span>
+          </div>
+          <div class="onb-copy">
+            <span class="eyebrow"><i class="ph-fill ph-sparkle"></i> رحلتك من التعلّم إلى الأثر</span>
+            <h2>ابدأ مسارك مع RTC</h2>
+            <p>كورسات مجانية يقودها متطوعون، حضور ونقاط وشهادات موثّقة—كل رحلتك في مكان واحد.</p>
+          </div>
+          <div class="trust-row" aria-label="معلومات عن مراكز رسالة للتدريب">
+            <div><strong>منذ ٢٠٠٠</strong><span>خبرة مجتمعية</span></div>
+            <div><strong>١٧ فرعًا</strong><span>بحسب الموقع الرسمي</span></div>
+            <div><strong>متطوعون</strong><span>تعليم يصنع أثرًا</span></div>
+          </div>
+          <div class="g-gate">
+            <div class="g-status info" id="g-status"><i class="ph-fill ph-shield-check"></i><span>جارٍ تجهيز تسجيل الدخول الآمن...</span></div>
+            <div id="g-btn-mount"></div>
+            <div id="oauth-origin-hint" class="w-full text-center"></div>
+            <div class="g-preview hidden" id="g-profile-preview">
+              <div class="avatar w-12 h-12 text-base" id="g-av">؟</div>
+              <div class="flex-1">
+                <div class="text-sm font-bold" style="color:var(--txt)" id="g-name">—</div>
+                <div class="text-[11px]" style="color:var(--mut)" id="g-email" dir="ltr">—</div>
+              </div>
+              <span class="status-chip st-a">موثق ✓</span>
+            </div>
+            <div class="onb-privacy"><i class="ph-fill ph-lock-key"></i><span>دخول مشفّر عبر Google. لا نخزّن كلمة مرورك.</span></div>
+            <button onclick="tryInitGoogle(true)" class="chip text-[11px]"><i class="ph-bold ph-arrows-clockwise"></i> إعادة محاولة الاتصال</button>
+          </div>
+          <div class="onb-links">
+            <a href="https://rtc-kohl.vercel.app/" target="_blank" rel="noopener noreferrer">موقع RTC الرسمي</a>
+            <span>•</span><a href="privacy.html">الخصوصية</a><span>•</span><a href="terms.html">الشروط</a>
+          </div>
+        </div>
+
+        <!-- Step 2 — بيانات الملف الشخصي -->
+        <div id="onb-step-2" class="onb-step start">
+          <div class="text-center">
+            <h2 class="text-xl font-bold text-on-surface">أكمل بياناتك للتواصل</h2>
+            <p class="text-xs text-on-surface-variant mt-0.5">أدخل رقم الهاتف والفرع لتأكيد حضورك وإصدار الشهادة</p>
+          </div>
+          <div class="reg-wrap mx-auto mt-4">
+            <div>
+              <label class="lbl">الاسم الثلاثي / الرباعي <b>*</b></label>
+              <input class="inp" id="onb-name" type="text" placeholder="اسمك الكامل كما يظهر بالشهادة" oninput="clearFieldError('onb-name','err-name')">
+              <span class="err-txt" id="err-name"><i class="ph-fill ph-warning-circle"></i> الاسم يجب أن يكون ثلاثياً على الأقل</span>
+            </div>
+            <div>
+              <label class="lbl">البريد الإلكتروني</label>
+              <input class="inp" id="onb-email-chip" type="email" dir="ltr" disabled style="text-align:left">
+            </div>
+            <div>
+              <label class="lbl">رقم الموبايل <b>*</b></label>
+              <input class="inp" id="onb-phone" type="tel" dir="ltr" maxlength="11" placeholder="01XXXXXXXXX" style="text-align:left" oninput="clearFieldError('onb-phone','err-phone')">
+              <span class="err-txt" id="err-phone"><i class="ph-fill ph-warning-circle"></i> رقم غير صحيح — يبدأ بـ 010/011/012/015</span>
+            </div>
+            <div>
+              <label class="lbl">الفرع الأقرب لك <b>*</b></label>
+              <div class="inp flex items-center justify-between cursor-pointer py-3" id="onb-branch-card" onclick="triggerBranchPickerOnb()">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-teal/10 text-teal flex items-center justify-center text-sm"><i class="ph-bold ph-map-pin"></i></div>
+                  <span class="font-bold text-xs" id="onb-branch-lbl">اضغط لاختيار الفرع</span>
+                </div>
+                <i class="ph-bold ph-caret-down text-muted text-xs"></i>
+              </div>
+              <input type="hidden" id="onb-address" value="">
+              <span class="err-txt" id="err-branch"><i class="ph-fill ph-warning-circle"></i> اختر الفرع الأقرب لك</span>
+            </div>
+          </div>
+          <button data-act="submitProfile" data-busy-label="جارٍ الحفظ" class="btn btn-primary btn-big w-full max-w-xs mx-auto mt-6 shadow-lg"><span id="btn-step2-label">حفظ وبدء الاستخدام</span><i class="ph-bold ph-check"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT HOME -->
+  <div id="screen-s-home" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl overflow-hidden border border-white/30 shadow-md">
+          <img src="rtc_app_logo.png" alt="RTC" class="w-full h-full object-cover">
+        </div>
+        <div><div class="sub">مسار RTC</div><div class="text-sm font-bold">الرئيسية</div></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="icon-btn" onclick="push('s-notifications')" aria-label="الإشعارات"><i class="ph-duotone ph-bell"></i><span class="dot" id="notif-dot"></span></button>
+        <button class="avatar w-10 h-10 border-2 border-primary text-xs" id="home-av" onclick="switchTab('s-profile')" aria-label="حسابي">؟</button>
+      </div>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex flex-col gap-4">
+        <div class="grad-hero p-5 rounded-3xl shadow-xl text-white rise">
+          <div class="flex justify-between items-start gap-3">
+            <div>
+              <div class="text-xs text-white/70">مرحباً بك يا</div>
+              <div class="text-xl font-bold mt-1" id="sh-name">— 👋</div>
+              <div class="text-xs text-white/60 mt-1" id="sh-branch">—</div>
+            </div>
+            <div class="bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-center">
+              <div class="text-[10px] text-white/70">المستوى</div>
+              <div class="text-base font-bold" id="sh-level">1 ⭐</div>
+            </div>
+          </div>
+          <div class="levelbar"><span id="sh-levelbar" style="width:0%"></span></div>
+          <div class="text-[10px] text-white/60 mt-1.5" id="sh-levelbar-txt"></div>
+          <div class="flex gap-2 mt-4">
+            <div class="flex-1 bg-white/15 p-2.5 rounded-xl text-center"><div class="text-base font-bold" id="sh-att">0%</div><div class="text-[10px] text-white/70">الحضور</div></div>
+            <div class="flex-1 bg-white/15 p-2.5 rounded-xl text-center"><div class="text-base font-bold" id="sh-pts">0</div><div class="text-[10px] text-white/70">نقطة</div></div>
+            <div class="flex-1 bg-white/15 p-2.5 rounded-xl text-center"><div class="text-base font-bold" id="sh-streak">🔥 0</div><div class="text-[10px] text-white/70">سلسلة</div></div>
+          </div>
+        </div>
+
+        <div class="quick-grid" aria-label="إجراءات سريعة">
+          <button class="quick-action" onclick="push('s-explore')"><span class="quick-icon primary"><i class="ph-duotone ph-compass"></i></span><span>استكشف</span></button>
+          <button class="quick-action" onclick="push('s-checkin')"><span class="quick-icon teal"><i class="ph-duotone ph-qr-code"></i></span><span>سجّل حضورك</span></button>
+          <button class="quick-action" onclick="push('s-notifications')"><span class="quick-icon gold"><i class="ph-duotone ph-bell-ringing"></i></span><span>التنبيهات</span></button>
+          <button class="quick-action" onclick="push('support')"><span class="quick-icon violet"><i class="ph-duotone ph-lifebuoy"></i></span><span>المساعدة</span></button>
+        </div>
+
+        <a id="sh-fb-banner" href="https://www.facebook.com/RTCPage/" target="_blank" rel="noopener noreferrer" class="social-banner card p-3 flex items-center justify-between text-xs font-bold">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl"><i class="ph-fill ph-facebook-logo"></i></div>
+            <div>
+              <div class="text-xs font-bold fb-title">صفحة فرعك الرسمية</div>
+              <div class="text-[10.5px] font-normal fb-desc">تابع أحدث الجداول ومواعيد المقابلات</div>
+            </div>
+          </div>
+          <i class="ph-bold ph-arrow-square-out text-base text-blue-600"></i>
+        </a>
+        <div class="home-grid">
+          <div class="flex flex-col gap-4">
+            <div>
+              <div class="sec-t">المحاضرة القادمة</div>
+              <div id="sh-next-lect"></div>
+            </div>
+            <div>
+              <div class="sec-t">دوراتي التدريبية <a onclick="switchTab('s-courses')">عرض الكل</a></div>
+              <div id="sh-courses" class="flex flex-col gap-3"></div>
+            </div>
+          </div>
+          <div>
+            <div class="sec-t">آخر الإنجازات <a onclick="switchTab('s-points')">عرض الشارات</a></div>
+            <div id="sh-badges" class="flex gap-3 overflow-x-auto pb-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT COURSES -->
+  <div id="screen-s-courses" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <div class="flex items-center gap-2 flex-1">
+        <button class="icon-btn" onclick="pop()" aria-label="رجوع"><i class="ph ph-arrow-right"></i></button>
+        <h1>دوراتي التدريبية</h1>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="push('s-explore')"><i class="ph ph-plus"></i> استكشف</button>
+    </div></div>
+    <div class="scr-body tab-pad"><div id="sc-list" class="flex flex-col gap-3 grid-desktop"></div></div>
+  </div>
+
+  <!-- COURSE DETAIL -->
+  <div id="screen-s-course-detail" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe">
+        <button class="icon-btn" onclick="pop()" aria-label="رجوع"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">تفاصيل الدورة التدريبية</h1>
+      </div>
+      <div id="cd-body" class="p-4 pt-0 flex flex-col gap-4"></div>
+    </div>
+  </div>
+
+  <!-- POINTS & BADGES -->
+  <div id="screen-s-points" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <div class="flex items-center gap-2 flex-1">
+        <button class="icon-btn" onclick="pop()" aria-label="رجوع"><i class="ph ph-arrow-right"></i></button>
+        <h1>نقاطي وشاراتي</h1>
+      </div>
+      <div class="flex gap-1.5">
+        <button class="btn btn-sm btn-soft" onclick="push('s-ledger')"><i class="ph-duotone ph-list-numbers"></i> الكشف</button>
+        <button class="btn btn-sm btn-soft" onclick="push('s-leaderboard')"><i class="ph-duotone ph-trophy"></i> الصدارة</button>
+      </div>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex flex-col gap-4">
+        <div class="grad-hero p-5 rounded-3xl text-white shadow-xl rise">
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="text-xs text-white/70">رصيدك الحالي</div>
+              <div class="text-4xl font-bold mt-1" id="sp-pts">0</div>
+              <div class="text-xs text-white/60">نقطة تحفيزية مكتسبة</div>
+            </div>
+            <div class="text-4xl">⭐</div>
+          </div>
+        </div>
+        <div>
+          <div class="sec-t"><span>الشارات المكتسبة <span id="sp-badges-count"></span></span></div>
+          <div id="sp-badges" class="grid grid-cols-2 gap-3 grid-desktop-3"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CERTIFICATES -->
+  <div id="screen-s-certs" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <div class="flex items-center gap-2 flex-1">
+        <button class="icon-btn" onclick="pop()" aria-label="رجوع"><i class="ph ph-arrow-right"></i></button>
+        <h1>شهاداتي الموثّقة</h1>
+      </div>
+      <button class="btn btn-sm btn-soft" onclick="openVerifyCertModal()"><i class="ph-bold ph-shield-check"></i> تحقق من شهادة</button>
+    </div></div>
+    <div class="scr-body tab-pad"><div id="scerts-list" class="flex flex-col gap-3 grid-desktop"></div></div>
+  </div>
+
+  <!-- STUDENT PROFILE -->
+  <div id="screen-s-profile" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <h1 style="flex:1">الملف الشخصي</h1>
+      <button class="btn btn-sm btn-soft" onclick="push('s-edit-profile')"><i class="ph-bold ph-pencil"></i> تعديل</button>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex flex-col items-center p-6 text-center">
+        <div class="avatar w-24 h-24 text-2xl shadow-xl" id="pf-av">؟</div>
+        <div class="text-xl font-bold mt-3" id="pf-name">—</div>
+        <div class="text-xs text-muted mt-1" id="pf-branch">—</div>
+        <div class="text-[11px] text-muted mt-0.5" id="pf-email" dir="ltr">—</div>
+      </div>
+      <div class="p-4 pt-0 flex flex-col gap-4">
+        <div class="card overflow-hidden">
+          <div class="row-item" style="cursor:default"><i class="ph-duotone ph-google-logo"></i><div class="flex-1"><div class="text-[10px] text-muted">حالة الربط والتوثيق</div><div class="text-sm font-bold" id="pf-google">موثق عبر Google ✓</div></div></div>
+          <div class="row-item" style="cursor:default"><i class="ph-duotone ph-cloud"></i><div class="flex-1"><div class="text-[10px] text-muted">قاعدة البيانات</div><div class="text-sm font-bold" id="pf-cloud">—</div></div></div>
+          <div class="row-item" style="cursor:default"><i class="ph-duotone ph-phone"></i><div><div class="text-[10px] text-muted">رقم الهاتف</div><div class="text-sm font-bold" id="pf-phone" dir="ltr">—</div></div></div>
+          <div class="row-item" style="cursor:default"><i class="ph-duotone ph-map-pin"></i><div><div class="text-[10px] text-muted">الفرع</div><div class="text-sm font-bold" id="pf-branch2">—</div></div></div>
+        </div>
+        <div class="sec-t">الإعدادات والأدوات</div>
+        <div class="card overflow-hidden">
+            <div class="row-item" onclick="push('s-checkin')"><i class="ph-duotone ph-qr-code"></i><span class="text-sm font-semibold">تسجيل حضوري برمز المحاضرة</span></div>
+          <div class="row-item" onclick="push('s-excuse')"><i class="ph-duotone ph-first-aid"></i><span class="text-sm font-semibold">طلب عذر غياب</span></div>
+          <div class="row-item" onclick="push('s-ledger')"><i class="ph-duotone ph-list-numbers"></i><span class="text-sm font-semibold">كشف حساب النقاط</span></div>
+          <div class="row-item" onclick="shareApp()"><i class="ph-duotone ph-share-network"></i><span class="text-sm font-semibold">مشاركة التطبيق (شارة سوشيال)</span></div>
+          <div class="row-item" onclick="enableRTCNotifications()"><i class="ph-duotone ph-bell-ringing"></i><span class="text-sm font-semibold">تفعيل الإشعارات وتذكير المحاضرات</span></div>
+          <div class="row-item" onclick="toggleDark()"><i class="ph-duotone ph-moon"></i><span class="text-sm font-semibold">تبديل الوضع الليلي / النهارى</span></div>
+          <div class="row-item" style="cursor:default"><i class="ph-duotone ph-translate"></i><span class="text-sm font-semibold">لغة الواجهة: العربية</span></div>
+          <div class="row-item hidden" data-pwa-install onclick="installRTCApp()"><i class="ph-duotone ph-device-mobile-down"></i><span class="text-sm font-semibold">تثبيت التطبيق على الجهاز</span></div>
+          <a class="row-item" href="privacy.html"><i class="ph-duotone ph-shield-check"></i><span class="text-sm font-semibold">الخصوصية والتحكم في البيانات</span></a>
+          <div class="row-item" onclick="resetAppData()"><i class="ph-duotone ph-trash" style="color:var(--red)"></i><span class="text-sm font-semibold" style="color:var(--red)">مسح الذاكرة المؤقتة</span></div>
+          <div class="row-item" onclick="push('support')"><i class="ph-duotone ph-lifebuoy"></i><span class="text-sm font-semibold">المساعدة والدعم الفني</span></div>
+        </div>
+        <button class="btn btn-danger btn-mid w-full" onclick="askLogout()"><i class="ph-bold ph-sign-out"></i> تسجيل الخروج</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPLORE COURSES -->
+  <div id="screen-s-explore" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe">
+        <button class="icon-btn" onclick="pop()"><i class="ph-bold ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">استكشاف الكورسات المجانية</h1>
+      </div>
+      <div class="p-4 pt-0">
+        <div class="flex flex-col gap-2 mb-3">
+          <label class="sr-only" for="explore-search">ابحث في الكورسات</label>
+          <input class="inp" id="explore-search" type="search" inputmode="search" autocomplete="off" placeholder="ابحث عن اسم كورس أو تصنيف..." oninput="filterExploreCourses(this.value)">
+          <div class="card p-3 flex items-center justify-between cursor-pointer active:scale-95 transition-transform border border-line hover:border-primary" onclick="triggerExploreBranchPickerUI()">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-base"><i class="ph-bold ph-map-pin"></i></div>
+              <div>
+                <div class="text-[11px] text-muted">تصفية الكورسات حسب الفرع</div>
+                <div class="text-xs font-bold text-main" id="explore-branch-val-txt">🌐 جميع الفروع المتاحة</div>
+              </div>
+            </div>
+            <i class="ph-bold ph-caret-down text-muted"></i>
+          </div>
+          <input type="hidden" id="explore-branch-select" value="الكل">
+        </div>
+        <div id="explore-list" class="flex flex-col gap-3 grid-desktop"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div id="screen-s-notifications" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe">
+        <button class="icon-btn" onclick="pop()"><i class="ph-bold ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">الإشعارات والتنبيهات</h1>
+      </div>
+      <div class="p-4 pt-0"><div id="notif-list" class="flex flex-col gap-3"></div></div>
+    </div>
+  </div>
+
+  <!-- VOLUNTEER HOME -->
+  <div id="screen-v-home" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <h1>لوحة المتطوع / المحاضر</h1>
+      <button class="avatar w-10 h-10 text-xs" id="vh-av" onclick="switchTab('v-profile')">؟</button>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex flex-col gap-4">
+        <div class="grad-hero p-5 rounded-3xl text-white shadow-xl">
+          <div class="text-xs text-white/70">أهلاً بك يا متطوع رسالة</div>
+          <div class="text-xl font-bold mt-1" id="vh-name">—</div>
+          <div class="text-xs text-white/60 mt-1" id="vh-branch">—</div>
+        </div>
+        <div class="flex justify-between items-center">
+          <div class="sec-t" style="margin-bottom:0">مجموعاتي والدورات الإشرافية</div>
+          <button class="btn btn-teal btn-sm" onclick="openAddBatchModal()"><i class="ph-bold ph-plus"></i> إضافة مجموعة جديدة</button>
+        </div>
+        <div id="vh-batches" class="flex flex-col gap-3 grid-desktop"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN HOME -->
+  <div id="screen-a-home" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <h1>لوحة الإدارة والإشراف العام</h1>
+      <button class="btn btn-sm btn-danger" onclick="askLogout()"><i class="ph-bold ph-sign-out"></i> خروج</button>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex flex-col gap-4">
+        <div class="grad-hero p-5 rounded-3xl text-white shadow-xl">
+          <div class="text-xs text-white/70">أهلاً بك يا أدمن النظام</div>
+          <div class="text-xl font-bold mt-1" id="ah-name">مشرف رسالة المركز الرئيسي</div>
+        </div>
+        <div class="grid grid-cols-2 gap-3" id="ah-stats"></div>
+        <div>
+          <div class="sec-t">إدارة النظام الكلية</div>
+          <div class="card overflow-hidden">
+            <div class="row-item" onclick="push('a-users')"><i class="ph-duotone ph-users"></i><span class="text-sm font-semibold">إدارة الطلاب والمتطوعين</span></div>
+            <div class="row-item" onclick="push('a-courses')"><i class="ph-duotone ph-book-open"></i><span class="text-sm font-semibold">إدارة الكورسات والمجموعات</span></div>
+            <div class="row-item" onclick="push('s-analytics')"><i class="ph-duotone ph-chart-line-up"></i><span class="text-sm font-semibold text-teal font-bold">لوحة البيانات الحقيقية والتحليلات</span></div>
+            <div class="row-item" onclick="push('a-certs')"><i class="ph-duotone ph-certificate"></i><span class="text-sm font-semibold">إدارة وتوثيق الشهادات</span></div>
+            <div class="row-item" onclick="push('a-broadcast')"><i class="ph-duotone ph-megaphone"></i><span class="text-sm font-semibold">بث تنبيه للفرع أو للجميع</span></div>
+            <div class="row-item" onclick="push('a-branches')"><i class="ph-duotone ph-buildings"></i><span class="text-sm font-semibold">دليل الفروع</span></div>
+            <div class="row-item" onclick="push('a-committees')"><i class="ph-duotone ph-hand-heart"></i><span class="text-sm font-semibold">لجان ومسارات التطوع</span></div>
+            <div class="row-item" onclick="push('a-settings')"><i class="ph-duotone ph-gear"></i><span class="text-sm font-semibold">إعدادات النظام العامة</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REAL DATA ANALYTICS DASHBOARD -->
+  <div id="screen-s-analytics" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <div class="flex items-center gap-2 flex-1">
+        <button class="icon-btn" onclick="pop()" aria-label="رجوع"><i class="ph ph-arrow-right"></i></button>
+        <h1>لوحة تحليلات البيانات الحقيقية</h1>
+      </div>
+      <button class="btn btn-sm btn-soft" onclick="renderAnalytics()"><i class="ph-bold ph-arrows-clockwise"></i> تحديث</button>
+    </div></div>
+    <div class="scr-body tab-pad" id="analytics-body"></div>
+  </div>
+
+  <!-- EDIT PROFILE -->
+  <div id="screen-s-edit-profile" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe border-b border-line">
+        <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">تعديل الملف الشخصي</h1>
+      </div>
+      <div class="p-4 flex flex-col gap-4">
+        <div class="av-row">
+          <div class="av-big avatar" id="ep-av" onclick="document.getElementById('ep-avatar-file').click()">؟
+            <span class="av-cam"><i class="ph ph-camera"></i></span>
+          </div>
+          <input type="file" id="ep-avatar-file" accept="image/*" class="hidden" onchange="editAvatar(event)">
+          <button class="chip text-xs mt-1" onclick="document.getElementById('ep-avatar-file').click()"><i class="ph ph-upload-simple"></i> تغيير الصورة الشخصية</button>
+        </div>
+        <div>
+          <label class="lbl">الاسم الثلاثي / الرباعي</label>
+          <input class="inp" id="ep-name" type="text" placeholder="اسمك الكامل">
+        </div>
+        <div>
+          <label class="lbl">رقم الموبايل</label>
+          <input class="inp" id="ep-phone" type="tel" dir="ltr" placeholder="01XXXXXXXXX" style="text-align:left">
+        </div>
+        <div>
+          <label class="lbl">الفرع الأقرب لك</label>
+          <div class="card p-3.5 flex items-center justify-between cursor-pointer active:scale-95 transition-transform border border-line hover:border-primary" onclick="triggerEditProfileBranchPickerUI()">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-lg"><i class="ph-bold ph-buildings"></i></div>
+              <div>
+                <div class="text-xs text-muted">الفرع الأقرب لك</div>
+                <div class="text-sm font-bold text-main" id="ep-branch-val-txt">فرع فيصل — الطوابق (الجيزة)</div>
+              </div>
+            </div>
+            <i class="ph-bold ph-caret-down text-muted"></i>
+          </div>
+          <input type="hidden" id="ep-branch" value="">
+        </div>
+        <button class="btn btn-primary btn-big w-full mt-3" data-act="saveEditProfile" data-busy-label="جاري الحفظ"><i class="ph ph-floppy-disk"></i> حفظ التعديلات</button>
+        <div class="h-20"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="screen-s-leaderboard" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe border-b border-line">
+        <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">لوحة صدارة المتفوقين 🏆</h1>
+      </div>
+      <div class="p-4">
+        <div class="grad-hero p-5 rounded-3xl text-white shadow-xl mb-4 text-center">
+          <i class="ph-fill ph-trophy text-4xl text-amber-400 mb-2"></i>
+          <div class="text-lg font-bold">أفضل الطلاب تفاعلاً وحضوراً</div>
+          <div class="text-xs text-white/70 mt-1">يتم تحديث الترتيب أسبوعياً بناءً على النقاط والحضور</div>
+        </div>
+        <div id="lb-list" class="flex flex-col gap-2"></div>
+        <div class="h-20"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPORT -->
+  <div id="screen-support" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe border-b border-line">
+        <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">المساعدة والدعم الفني</h1>
+      </div>
+      <div class="p-4 flex flex-col gap-4">
+        <div class="support-hero card p-4">
+          <div class="support-logo"><i class="ph-duotone ph-headset"></i></div>
+          <div class="flex-1">
+            <div class="text-sm font-bold">كيف نقدر نساعدك؟</div>
+            <div class="text-xs text-muted mt-0.5">للمواعيد الدقيقة تواصل مع فرعك أو الخط الساخن قبل الزيارة.</div>
+          </div>
+          <a href="tel:19450" class="btn btn-teal btn-sm" aria-label="اتصل بالخط الساخن 19450"><i class="ph-bold ph-phone-call"></i> 19450</a>
+        </div>
+        <div class="support-actions">
+          <a href="https://www.facebook.com/RTCPage/" target="_blank" rel="noopener noreferrer" class="support-action"><i class="ph-fill ph-facebook-logo"></i><span>الصفحة المركزية</span></a>
+          <a href="https://rtc-kohl.vercel.app/" target="_blank" rel="noopener noreferrer" class="support-action"><i class="ph-duotone ph-globe"></i><span>موقع RTC الرسمي</span></a>
+          <a href="https://www.instagram.com/resala_training_center/" target="_blank" rel="noopener noreferrer" class="support-action"><i class="ph-fill ph-instagram-logo"></i><span>Instagram</span></a>
+          <button class="support-action" data-pwa-install onclick="installRTCApp()"><i class="ph-duotone ph-device-mobile-down"></i><span>تثبيت التطبيق</span></button>
+        </div>
+        <div class="sec-t"><span>دليل الفروع</span><span class="source-badge">بيانات محدثة من الإدارة</span></div>
+        <div id="support-branches" class="flex flex-col gap-2"></div>
+        <p class="data-note"><i class="ph-fill ph-info"></i> الموقع الرسمي يذكر ١٧ فرعًا. المعروض هنا هو الفروع المنشورة والمفعّلة في قاعدة التطبيق، وتُراجع بيانات كل فرع دوريًا.</p>
+        <div class="sec-t"><span>مسارات التطوع</span><span class="source-badge">تُراجع حسب الفرع</span></div>
+        <div id="volunteer-tracks" class="volunteer-track-grid"></div>
+        <p class="data-note"><i class="ph-fill ph-hand-heart"></i> فتح التطوع واللجان المتاحة يختلف من فرع لآخر. تواصل مع فرعك للتقديم والتأكيد.</p>
+        <div class="sec-t">الأسئلة الشائعة</div>
+        <div id="faq-list" class="flex flex-col gap-2"></div>
+        <div class="h-20"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOLUNTEER BATCHES -->
+  <div id="screen-v-batches" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1 class="text-base font-bold">المجموعات والإشراف</h1>
+      <button class="btn btn-sm btn-teal" onclick="openAddBatchModal()"><i class="ph-bold ph-plus"></i> مجموعة جديدة</button>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div id="vb-list" class="flex flex-col gap-3"></div>
+    </div>
+  </div>
+
+  <!-- VOLUNTEER PROFILE -->
+  <div id="screen-v-profile" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>الملف الشخصي للمتطوع</h1>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex flex-col items-center p-6 text-center">
+        <div class="avatar w-24 h-24 text-2xl shadow-xl" id="vp-av">؟</div>
+        <div class="text-xl font-bold mt-3" id="vp-name">—</div>
+        <div class="text-xs text-muted mt-1" id="vp-branch">—</div>
+      </div>
+      <div class="p-4 flex flex-col gap-4">
+        <div class="card overflow-hidden">
+          <div class="row-item"><i class="ph-duotone ph-phone"></i><div><div class="text-[10px] text-muted">رقم الهاتف</div><div class="text-sm font-bold" id="vp-phone" dir="ltr">—</div></div></div>
+        </div>
+        <div class="sec-t">الإعدادات</div>
+        <div class="card overflow-hidden">
+          <div class="row-item" onclick="push('v-excuses')"><i class="ph-duotone ph-first-aid"></i><span class="text-sm font-semibold">مراجعة طلبات الأعذار</span></div>
+          <div class="row-item" onclick="toggleDark()"><i class="ph-duotone ph-moon"></i><span class="text-sm font-semibold">تبديل الوضع الليلي / النهارى</span></div>
+          <div class="row-item" style="cursor:default"><i class="ph-duotone ph-translate"></i><span class="text-sm font-semibold">لغة الواجهة: العربية</span></div>
+          <div class="row-item" onclick="resetAppData()"><i class="ph-duotone ph-trash text-red-500"></i><span class="text-sm font-semibold text-red-500">مسح الذاكرة المؤقتة</span></div>
+        </div>
+        <button class="btn btn-danger btn-mid w-full" onclick="askLogout()"><i class="ph ph-sign-out"></i> تسجيل الخروج</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN USERS -->
+  <div id="screen-a-users" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>إدارة الطلاب والمتطوعين</h1>
+      <span class="chip" id="au-count">0</span>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="flex gap-2 mb-3">
+        <input class="inp flex-1" placeholder="بحث بالاسم أو البريد..." oninput="filterAdminUsers(this.value)">
+        <select class="inp" id="au-role" style="width:42%" onchange="filterAdminUsers(document.querySelector('#screen-a-users .inp').value)">
+          <option value="">كل الأدوار</option>
+          <option value="student">طلاب</option>
+          <option value="volunteer">متطوعون</option>
+          <option value="admin">مشرفون</option>
+        </select>
+      </div>
+      <div id="au-list" class="flex flex-col gap-3"></div>
+    </div>
+  </div>
+
+  <!-- VOLUNTEER COURSES & MANAGEMENT -->
+  <div id="screen-v-courses" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1 class="text-base font-bold">إدارة وحجز إشراف الكورسات</h1>
+      <div class="flex items-center gap-1.5">
+        <button class="btn btn-sm btn-primary" onclick="openAddCourseModal()"><i class="ph ph-plus"></i> كورس</button>
+        <button class="btn btn-sm btn-teal" onclick="openAddBatchModal()"><i class="ph ph-plus"></i> مجموعة</button>
+      </div>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div class="mb-3">
+        <label class="lbl">تصفية حسب الفرع</label>
+        <div class="card p-3 flex items-center justify-between cursor-pointer active:scale-95 transition-transform border border-line hover:border-primary" onclick="triggerVolunteerBranchPickerUI()">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal flex items-center justify-center text-base"><i class="ph-bold ph-funnel"></i></div>
+            <div>
+              <div class="text-[11px] text-muted">تصفية حسب الفرع</div>
+              <div class="text-xs font-bold text-main" id="vc-branch-val-txt">🌐 جميع الفروع المتاحة</div>
+            </div>
+          </div>
+          <i class="ph-bold ph-caret-down text-muted"></i>
+        </div>
+        <input type="hidden" id="vc-branch-select" value="الكل">
+      </div>
+      <div id="vc-list" class="flex flex-col gap-3 grid-desktop"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN COURSES -->
+  <div id="screen-a-courses" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1 class="text-base font-bold">إدارة الكورسات والمجموعات</h1>
+      <div class="flex items-center gap-1.5">
+        <button class="btn btn-sm btn-primary" onclick="openAddCourseModal()"><i class="ph ph-plus"></i> كورس</button>
+        <button class="btn btn-sm btn-teal" onclick="openAddBatchModal()"><i class="ph ph-plus"></i> مجموعة</button>
+      </div>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div id="ac-list" class="flex flex-col gap-3 grid-desktop"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN CERTS -->
+  <div id="screen-a-certs" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>توثيق والتحقق من الشهادات</h1>
+    </div></div>
+    <div class="scr-body tab-pad">
+      <div id="acerts-list" class="flex flex-col gap-3"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN SETTINGS -->
+  <div id="screen-a-settings" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>إعدادات النظام العامة</h1>
+    </div></div>
+    <div class="scr-body tab-pad flex flex-col gap-4">
+      <div class="card overflow-hidden">
+        <div class="row-item" onclick="toggleDark()"><i class="ph-duotone ph-moon"></i><span class="text-sm font-semibold">تبديل الوضع الليلي / النهارى</span></div>
+        <div class="row-item" style="cursor:default"><i class="ph-duotone ph-translate"></i><span class="text-sm font-semibold">لغة الواجهة: العربية</span></div>
+        <div class="row-item" onclick="push('a-branches')"><i class="ph-duotone ph-buildings"></i><span class="text-sm font-semibold">دليل الفروع</span></div>
+        <div class="row-item" onclick="push('a-broadcast')"><i class="ph-duotone ph-megaphone"></i><span class="text-sm font-semibold">بث تنبيه</span></div>
+        <a class="row-item" href="privacy.html"><i class="ph-duotone ph-shield-check"></i><span class="text-sm font-semibold">سياسة الخصوصية</span></a>
+        <a class="row-item" href="terms.html"><i class="ph-duotone ph-scroll"></i><span class="text-sm font-semibold">شروط الاستخدام</span></a>
+        <div class="row-item" onclick="resetAppData()"><i class="ph-duotone ph-trash text-red-500"></i><span class="text-sm font-semibold text-red-500">مسح الذاكرة المحفوظة بالكامل</span></div>
+      </div>
+      <button class="btn btn-danger btn-mid w-full" onclick="askLogout()"><i class="ph ph-sign-out"></i> تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <!-- STUDENT CHECK-IN -->
+  <div id="screen-s-checkin" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe border-b border-line">
+        <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">تسجيل حضوري</h1>
+      </div>
+      <div class="p-4" id="checkin-box"></div>
+    </div>
+  </div>
+
+  <!-- EXCUSE -->
+  <div id="screen-s-excuse" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe border-b border-line">
+        <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">طلب عذر غياب</h1>
+      </div>
+      <div class="p-4" id="excuse-box"></div>
+    </div>
+  </div>
+
+  <!-- POINTS LEDGER -->
+  <div id="screen-s-ledger" class="screen">
+    <div class="scr-body-full">
+      <div class="flex items-center gap-3 p-4 pt-safe border-b border-line">
+        <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+        <h1 class="text-base font-bold">كشف حساب النقاط</h1>
+      </div>
+      <div class="p-4" id="ledger-list"></div>
+    </div>
+  </div>
+
+  <!-- STAFF EXCUSES -->
+  <div id="screen-v-excuses" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>طلبات الأعذار</h1>
+    </div></div>
+    <div class="scr-body tab-pad" id="vex-list"></div>
+  </div>
+
+  <!-- ADMIN BRANCHES -->
+  <div id="screen-a-branches" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>دليل فروع مركز رسالة</h1>
+    </div></div>
+    <div class="scr-body tab-pad" id="ab-list"></div>
+  </div>
+
+  <!-- ADMIN VOLUNTEER COMMITTEES -->
+  <div id="screen-a-committees" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()" aria-label="رجوع"><i class="ph ph-arrow-right"></i></button>
+      <div class="flex-1"><h1>لجان ومسارات التطوع</h1><div class="sub">تحكم في حالة التقديم والمعلومات المنشورة</div></div>
+      <button class="btn btn-sm btn-soft" onclick="renderCommitteesAdmin()"><i class="ph-bold ph-arrows-clockwise"></i> تحديث</button>
+    </div></div>
+    <div class="scr-body tab-pad" id="committees-admin-list"></div>
+  </div>
+
+  <!-- ADMIN BROADCAST -->
+  <div id="screen-a-broadcast" class="screen">
+    <div class="glass-header"><div class="hdr">
+      <button class="icon-btn" onclick="pop()"><i class="ph ph-arrow-right"></i></button>
+      <h1>بث تنبيه</h1>
+    </div></div>
+    <div class="scr-body tab-pad" id="bc-box"></div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BARS — floating island (v100) -->
+  <div id="nav-student" class="bottom-nav hidden">
+    <div class="in">
+      <button class="nav-btn active" data-screen="s-home" data-icon="ph-house" data-act="switchTab" data-arg1="s-home"><i class="ph-fill ph-house"></i><span>الرئيسية</span></button>
+      <button class="nav-btn" data-screen="s-courses" data-icon="ph-book-bookmark" data-act="switchTab" data-arg1="s-courses"><i class="ph ph-book-bookmark"></i><span>كورساتي</span></button>
+      <button class="nav-btn" data-screen="s-points" data-icon="ph-star" data-act="switchTab" data-arg1="s-points"><i class="ph ph-star"></i><span>النقاط</span></button>
+      <button class="nav-btn" data-screen="s-certs" data-icon="ph-certificate" data-act="switchTab" data-arg1="s-certs"><i class="ph ph-certificate"></i><span>شهاداتي</span></button>
+      <button class="nav-btn" data-screen="s-profile" data-icon="ph-user" data-act="switchTab" data-arg1="s-profile"><i class="ph ph-user"></i><span>حسابي</span></button>
+    </div>
+  </div>
+
+  <div id="nav-volunteer" class="bottom-nav hidden">
+    <div class="in">
+      <button class="nav-btn active" data-screen="v-home" data-icon="ph-house" data-act="switchTab" data-arg1="v-home"><i class="ph-fill ph-house"></i><span>الرئيسية</span></button>
+      <button class="nav-btn" data-screen="v-batches" data-icon="ph-users-three" data-act="switchTab" data-arg1="v-batches"><i class="ph ph-users-three"></i><span>المجموعات</span></button>
+      <button class="nav-btn" data-screen="v-courses" data-icon="ph-book-open" data-act="switchTab" data-arg1="v-courses"><i class="ph ph-book-open"></i><span>الكورسات</span></button>
+      <button class="nav-btn" data-screen="s-analytics" data-icon="ph-chart-line-up" data-act="switchTab" data-arg1="s-analytics"><i class="ph ph-chart-line-up"></i><span>التحليلات</span></button>
+      <button class="nav-btn" data-screen="v-profile" data-icon="ph-user" data-act="switchTab" data-arg1="v-profile"><i class="ph ph-user"></i><span>حسابي</span></button>
+    </div>
+  </div>
+
+  <div id="nav-admin" class="bottom-nav hidden">
+    <div class="in">
+      <button class="nav-btn active" data-screen="a-home" data-icon="ph-house" data-act="switchTab" data-arg1="a-home"><i class="ph-fill ph-house"></i><span>الرئيسية</span></button>
+      <button class="nav-btn" data-screen="a-users" data-icon="ph-users" data-act="switchTab" data-arg1="a-users"><i class="ph ph-users"></i><span>المستخدمين</span></button>
+      <button class="nav-btn" data-screen="a-courses" data-icon="ph-book-open" data-act="switchTab" data-arg1="a-courses"><i class="ph ph-book-open"></i><span>الكورسات</span></button>
+      <button class="nav-btn" data-screen="s-analytics" data-icon="ph-chart-line-up" data-act="switchTab" data-arg1="s-analytics"><i class="ph ph-chart-line-up"></i><span>التحليلات</span></button>
+    </div>
+  </div>
+
+  </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="assets/vendor/supabase.js?v=100.0.0"></script>
+<script src="assets/vendor/secure-storage.min.js?v=100.0.0"></script>
+<script src="assets/vendor/barcode-scanner.min.js?v=100.0.0"></script>
+<script src="js/config.js?v=100.0.0"></script>
+<script src="js/supabaseClient.js?v=100.0.0"></script>
+<script src="js/native.js?v=100.0.0"></script>
+<script src="js/motion.js?v=100.0.0"></script>
+<script src="js/security.js?v=100.0.0"></script>
+<script src="js/i18n.js?v=100.0.0"></script>
+<script src="js/content.js?v=100.0.0"></script>
+<script src="js/ui.js?v=100.0.0"></script>
+<script src="js/api.js?v=100.0.0"></script>
+<script src="js/pwa.js?v=100.0.0"></script>
+<script src="app.js?v=100.0.0"></script>
+<script src="js/ambient.js?v=100.0.0"></script>
+</body>
+</html>

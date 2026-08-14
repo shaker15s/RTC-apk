@@ -16,16 +16,16 @@
     return res.data;
   }
 
-  /* ═══════════════ Retry Queue (Offline First) ═══════════════ */
+  /* ═══════════════ Auth-bound Retry Queue (Offline First) ═══════════════ */
   var RETRY_QUEUE_KEY = 'rtc_api_retry_queue_v100';
-  var MAX_QUEUE_RETRIES = 5;
   var _isFlushing = false;
+  /* Only replay RPCs whose database implementation is idempotent. Insert-only
+     actions (excuses, broadcasts and private notes) must never be duplicated. */
   var MUTATING_RPCS = [
     'join_batch', 'start_session', 'student_check_in', 'record_session_attendance',
     'close_session', 'issue_certificates', 'change_user_role', 'set_user_status',
-    'assign_instructor', 'submit_excuse', 'review_excuse', 'submit_session_report',
-    'submit_course_rating', 'broadcast_notice', 'add_private_note', 'claim_social_badge',
-    'disable_my_push_devices', 'register_push_device', 'ensure_my_profile', 'update_branch_directory'
+    'assign_instructor', 'review_excuse', 'submit_session_report',
+    'submit_course_rating', 'claim_social_badge', 'update_branch_directory'
   ];
 
   function isMutatingRpc(name) {
@@ -60,7 +60,7 @@
     try {
       var raw = w.localStorage.getItem(RETRY_QUEUE_KEY);
       var list = JSON.parse(raw || '[]');
-      return Array.isArray(list) ? list : [];
+      return Array.isArray(list) ? list.filter(function (item) { return item && typeof item === 'object'; }) : [];
     } catch (e) {
       return [];
     }
@@ -68,7 +68,8 @@
 
   function saveRetryQueue(queue) {
     try {
-      w.localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify((queue || []).slice(0, 100)));
+      /* Keep the newest bounded set if storage survives a long outage. */
+      w.localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify((queue || []).slice(-100)));
     } catch (e) {}
   }
 
@@ -78,15 +79,29 @@
     } catch (e) {}
   }
 
-  function enqueueRequest(type, action, name, args, err) {
+  async function activeUserId(client) {
+    try {
+      client = client || await sbReady();
+      if (!client || !client.auth) return null;
+      var res = await client.auth.getSession();
+      var session = res && res.data && res.data.session;
+      return session && session.user && session.user.id ? String(session.user.id) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function enqueueRequest(type, action, name, args, err, ownerId) {
+    if (!ownerId || !isMutatingRpc(name)) return null;
     var queue = getRetryQueue();
     var isDup = queue.some(function (item) {
-      return item.action === action && item.name === name && JSON.stringify(item.args) === JSON.stringify(args);
+      return item.ownerId === ownerId && item.action === action && item.name === name && JSON.stringify(item.args) === JSON.stringify(args);
     });
     if (isDup) return null;
 
     var item = {
       id: 'rq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      ownerId: ownerId,
       type: type || 'rpc',
       action: action || 'rpc',
       name: name || null,
@@ -107,60 +122,48 @@
   }
 
   async function executeQueueItem(item) {
+    if (!item || item.action !== 'rpc' || item.type !== 'rpc' || !isMutatingRpc(item.name)) {
+      throw new Error('Unsafe queued action');
+    }
     var client = await sbReady();
     if (!client) throw new Error('تعذر الاتصال بقاعدة البيانات');
-
-    if (item.type === 'rpc' || item.action === 'rpc') {
-      var res = await client.rpc(item.name, item.args || {});
-      return unwrap(res);
-    }
-
-    if (item.action === 'updateMyProfile') {
-      var session = await getSession();
-      if (!session) throw new Error('auth required');
-      var pRes = await client.from('profiles').update(item.args).eq('id', session.user.id);
-      if (pRes.error) throw pRes.error;
-      return pRes.data;
-    }
-
-    if (item.action === 'markNotifRead') {
-      var nRes = await client.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', item.args && item.args.id);
-      if (nRes.error) throw nRes.error;
-      return nRes.data;
-    }
-
-    if (item.action === 'table_insert') {
-      var insRes = await client.from(item.name).insert(item.args).select();
-      if (insRes.error) throw insRes.error;
-      return insRes.data;
-    }
-
-    if (item.action === 'table_update') {
-      var updRes = await client.from(item.name).update(item.args.payload).eq(item.args.key || 'id', item.args.val);
-      if (updRes.error) throw updRes.error;
-      return updRes.data;
-    }
-
-    throw new Error('Unknown queued action: ' + item.action);
+    var res = await client.rpc(item.name, item.args || {});
+    return unwrap(res);
   }
 
   async function flushRetryQueue() {
-    if (_isFlushing) return { processed: 0, remaining: getRetryQueue().length };
+    if (_isFlushing) return { processed: 0, remaining: getRetryQueue().length, discarded: 0 };
     var queue = getRetryQueue();
-    if (!queue.length) return { processed: 0, remaining: 0 };
+    if (!queue.length) return { processed: 0, remaining: 0, discarded: 0 };
 
     try {
-      if (w.navigator && w.navigator.onLine === false) return { processed: 0, remaining: queue.length };
-      if (w.RTCNative && typeof w.RTCNative.isOnline === 'function' && !w.RTCNative.isOnline()) return { processed: 0, remaining: queue.length };
+      if (w.navigator && w.navigator.onLine === false) return { processed: 0, remaining: queue.length, discarded: 0 };
+      if (w.RTCNative && typeof w.RTCNative.isOnline === 'function' && !w.RTCNative.isOnline()) {
+        return { processed: 0, remaining: queue.length, discarded: 0 };
+      }
     } catch (e) {}
+
+    var ownerId = await activeUserId();
+    if (!ownerId) return { processed: 0, remaining: queue.length, discarded: 0 };
 
     _isFlushing = true;
     var processed = 0;
+    var discarded = 0;
     var remaining = [];
 
     try {
       for (var i = 0; i < queue.length; i++) {
         var item = queue[i];
+        /* Legacy ownerless entries are intentionally not replayed under whoever
+           happens to sign in next. Unknown actions are discarded as well. */
+        if (!item.ownerId || item.action !== 'rpc' || item.type !== 'rpc' || !isMutatingRpc(item.name)) {
+          discarded++;
+          continue;
+        }
+        if (item.ownerId !== ownerId) {
+          remaining.push(item);
+          continue;
+        }
         try {
           item.attempts = (item.attempts || 0) + 1;
           item.lastAttemptAt = Date.now();
@@ -168,17 +171,23 @@
           processed++;
         } catch (err) {
           if (isNetworkError(err)) {
+            item.lastError = String(err.message || err);
             remaining.push(item);
+            /* The transport is unavailable; preserve the rest without issuing
+               more requests, while still dropping malformed legacy entries. */
             for (var j = i + 1; j < queue.length; j++) {
-              remaining.push(queue[j]);
+              var pending = queue[j];
+              if (pending && pending.ownerId && pending.action === 'rpc' && pending.type === 'rpc' && isMutatingRpc(pending.name)) {
+                remaining.push(pending);
+              } else {
+                discarded++;
+              }
             }
             break;
-          } else {
-            if (item.attempts < MAX_QUEUE_RETRIES) {
-              item.lastError = String(err.message || err);
-              remaining.push(item);
-            }
           }
+          /* Authorization/validation failures are permanent for this payload;
+             retrying them on every app focus would be both noisy and unsafe. */
+          discarded++;
         }
       }
     } finally {
@@ -192,11 +201,11 @@
         if (w.RTCUI && typeof w.RTCUI.toast === 'function') {
           w.RTCUI.toast('تم مزامنة ' + processed + ' من العمليات المحفوظة دون اتصال', 'ok', 'ph-arrows-clockwise');
         }
-        w.dispatchEvent(new CustomEvent('rtc:queue-flushed', { detail: { processed: processed, remaining: remaining.length } }));
+        w.dispatchEvent(new CustomEvent('rtc:queue-flushed', { detail: { processed: processed, remaining: remaining.length, discarded: discarded } }));
       } catch (e) {}
     }
 
-    return { processed: processed, remaining: remaining.length };
+    return { processed: processed, remaining: remaining.length, discarded: discarded };
   }
 
   if (typeof w.addEventListener === 'function') {
@@ -218,20 +227,20 @@
   }, 2000);
 
   async function rpc(name, args) {
+    var queueable = isMutatingRpc(name);
     var client = await sbReady();
+    var ownerId = queueable ? await activeUserId(client) : null;
     if (!client) {
       var err = new Error('تعذر الاتصال بقاعدة البيانات');
-      if (isMutatingRpc(name)) {
-        enqueueRequest('rpc', 'rpc', name, args, err);
-      }
+      if (queueable && ownerId) enqueueRequest('rpc', 'rpc', name, args, err, ownerId);
       throw err;
     }
     try {
       var res = await client.rpc(name, args || {});
       return unwrap(res);
     } catch (err) {
-      if (isNetworkError(err) && isMutatingRpc(name)) {
-        enqueueRequest('rpc', 'rpc', name, args, err);
+      if (isNetworkError(err) && queueable && ownerId) {
+        enqueueRequest('rpc', 'rpc', name, args, err, ownerId);
       }
       throw err;
     }
@@ -323,7 +332,12 @@
   }
 
   async function signOut() {
-    if (sb()) await sb().auth.signOut();
+    try {
+      if (sb()) await sb().auth.signOut();
+    } finally {
+      /* Never leave one account's pending payloads for the next local user. */
+      clearRetryQueue();
+    }
   }
 
   async function fetchMyProfile() {

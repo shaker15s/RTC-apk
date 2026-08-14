@@ -240,21 +240,48 @@ const humanError = vm.runInContext('window.RTCUI.humanError', ctx);
   const queuedItems = RTCApi.getRetryQueue();
   check('تم حفظ الطلب تلقائياً في طابور إعادة المحاولة', queuedItems.length === 1);
   check('البيانات المحفوظة مطابقة للعملية', queuedItems[0] && queuedItems[0].name === 'student_check_in' && queuedItems[0].args.p_code === 'ATT-1234');
+  check('الطلب المعلّق مرتبط بصاحب الجلسة', queuedItems[0] && queuedItems[0].ownerId === 'u-1');
 
-  /* عودة الاتصال ومحاكاة نجاح السيرفر عند التفريغ */
+  /* لا يجوز تشغيل طابور مستخدم سابق تحت حساب محلي آخر. */
   vm.runInContext(`
     globalThis.__flushedCalls = [];
+    window.supabaseClient.auth.getSession = async function () {
+      return { data: { session: { user: { id: 'u-2' } } } };
+    };
     window.supabaseClient.rpc = async function (name, args) {
       globalThis.__flushedCalls.push({ name: name, args: args });
       return { data: { success: true }, error: null };
     };
   `, ctx);
+  const wrongUserFlush = await RTCApi.flushRetryQueue();
+  check('لا تُنفّذ عمليات مستخدم تحت حساب آخر', wrongUserFlush.processed === 0 && wrongUserFlush.remaining === 1);
+  check('لم يصل أي طلب للسيرفر بالحساب الآخر', vm.runInContext('globalThis.__flushedCalls.length', ctx) === 0);
 
+  /* عودة صاحب الطلب والاتصال ثم نجاح التفريغ. */
+  vm.runInContext(`
+    window.supabaseClient.auth.getSession = async function () {
+      return { data: { session: { user: { id: 'u-1' } } } };
+    };
+  `, ctx);
   const flushRes = await RTCApi.flushRetryQueue();
   const flushedCalls = vm.runInContext('globalThis.__flushedCalls', ctx);
   check('تم تفريغ ومعالجة الطلبات المعلقة بنجاح', flushRes.processed === 1 && flushRes.remaining === 0);
   check('تم استدعاء السيرفر بالمعاملات الصحيحة', flushedCalls.length === 1 && flushedCalls[0].name === 'student_check_in' && flushedCalls[0].args.p_code === 'ATT-1234');
   check('الطابور أصبح فارغاً بعد المعالجة', RTCApi.getRetryQueue().length === 0);
+
+  /* عمليات الإدخال غير المتكررة لا تُحفظ كي لا تتكرر عند استجابة مبهمة. */
+  vm.runInContext(`
+    window.supabaseClient.rpc = async function () { throw new TypeError('Failed to fetch'); };
+  `, ctx);
+  try { await RTCApi.broadcast('all', null, 'announcement', 'عنوان', 'رسالة اختبار'); } catch (e) {}
+  check('البث غير القابل للتكرار لا يدخل طابور الإعادة', RTCApi.getRetryQueue().length === 0);
+
+  /* تسجيل الخروج يمسح أي payload معلّق على الجهاز المشترك. */
+  try { await RTCApi.checkIn('ATT-5678'); } catch (e) {}
+  check('تم تجهيز طلب معلّق قبل الخروج', RTCApi.getRetryQueue().length === 1);
+  vm.runInContext('window.supabaseClient.auth.signOut = async function () { return { error: null }; };', ctx);
+  await RTCApi.signOut();
+  check('تسجيل الخروج يمسح طابور صاحب الحساب', RTCApi.getRetryQueue().length === 0);
 
   console.log(failures === 0 ? '\nكل الاختبارات نجحت ✅\n' : '\nفشل ' + failures + ' اختبار ❌\n');
   process.exit(failures === 0 ? 0 : 1);

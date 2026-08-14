@@ -6,6 +6,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 let failures = 0;
 function read(file) { return fs.readFileSync(path.join(ROOT, file), 'utf8'); }
+function exists(file) { return fs.existsSync(path.join(ROOT, file)); }
 function check(name, value, detail) {
   if (value) console.log('  ✔ ' + name);
   else { failures += 1; console.error('  ✘ ' + name + (detail ? ' — ' + detail : '')); }
@@ -27,6 +28,14 @@ check('index uses no runtime script/style CDN', noRuntimeCdn(index));
 check('legal/verify pages use no runtime CDN', ['verify.html', 'privacy.html', 'terms.html'].every((f) => noRuntimeCdn(read(f))));
 check('index has no executable inline script block', !/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i.test(index));
 check('CSP separates script elements from inline handlers', index.includes("script-src-elem 'self'") && index.includes("script-src-attr 'unsafe-inline'"));
+const manifest = JSON.parse(read('manifest.json'));
+check('PWA identity is portable across repository paths', manifest.id === './');
+check('all PWA manifest icons exist locally', manifest.icons.every((icon) => exists(icon.src)));
+const shellBlock = sw.match(/const APP_SHELL = \[([\s\S]*?)\];/);
+const shellFiles = shellBlock ? [...shellBlock[1].matchAll(/['"]\.\/([^'"]+)['"]/g)].map((match) => match[1].split('?')[0]) : [];
+check('service-worker app shell only references present files', shellFiles.length > 0 && shellFiles.every(exists));
+const iconButtons = index.match(/<button\b[^>]*class="[^"]*\bicon-btn\b[^"]*"[^>]*>/g) || [];
+check('icon-only controls have accessible labels', iconButtons.length > 0 && iconButtons.every((button) => /\baria-label=/.test(button)));
 
 console.log('\n[V100] OAuth + URL safety:');
 const supa = read('js/supabaseClient.js');
@@ -97,12 +106,23 @@ check('free iOS signing mode omits restricted APNs entitlement', !iosEntitlement
 const appDelegate = read('ios/App/App/AppDelegate.swift');
 check('iOS forwards APNs success and failure to Capacitor', appDelegate.includes('capacitorDidRegisterForRemoteNotifications') && appDelegate.includes('capacitorDidFailToRegisterForRemoteNotifications'));
 check('iOS camera permission explains QR-only purpose', plist.includes('<key>NSCameraUsageDescription</key>') && plist.includes('مسح رمز QR'));
+const iosIconDir = 'ios/App/App/Assets.xcassets/AppIcon.appiconset/';
+const iosSplashDir = 'ios/App/App/Assets.xcassets/Splash.imageset/';
+const iosIcons = JSON.parse(read(iosIconDir + 'Contents.json')).images.filter((image) => image.filename);
+const iosSplashes = JSON.parse(read(iosSplashDir + 'Contents.json')).images.filter((image) => image.filename);
+check('iOS asset catalogs contain every referenced icon and splash', iosIcons.every((image) => exists(iosIconDir + image.filename)) && iosSplashes.every((image) => exists(iosSplashDir + image.filename)));
+const androidRoundIcons = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'].map((density) => `android/app/src/main/res/mipmap-${density}/ic_launcher_round.png`);
+check('Android legacy round icons and base splash are present', androidRoundIcons.every(exists) && exists('android/app/src/main/res/drawable/splash.png'));
 
 console.log('\n[V100] Offline privacy:');
 check('service worker excludes Supabase from cache', sw.includes("url.hostname.endsWith('.supabase.co')"));
 check('service worker has controlled update handoff', sw.includes("type === 'SKIP_WAITING'"));
 check('public cache namespace is explicit', api.includes("PUBLIC_CACHE_PREFIX = 'rtc_public_v100_'"));
 check('sensitive profile is not written to public cache', !/writePublicCache\(['"]profile/.test(api));
+check('offline mutations are bound to their authenticated owner', api.includes('ownerId: ownerId') && api.includes('item.ownerId !== ownerId'));
+const retryAllowlist = (api.match(/var MUTATING_RPCS = \[[\s\S]*?\];/) || [''])[0];
+check('insert-only RPCs are excluded from automatic replay', !retryAllowlist.includes("'submit_excuse'") && !retryAllowlist.includes("'broadcast_notice'") && !retryAllowlist.includes("'add_private_note'"));
+check('sign-out clears account-bound retry payloads', /async function signOut\(\)[\s\S]*?clearRetryQueue\(\)/.test(api));
 
 console.log(failures ? `\nفشل ${failures} فحص v100 ❌\n` : '\nكل فحوصات v100 نجحت ✅\n');
 process.exit(failures ? 1 : 0);

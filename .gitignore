@@ -63,6 +63,9 @@ npm-debug.log*
 *.tsbuildinfo
 
 # Native credentials and signing material — never commit
+google-services.json
+service-account*.json
+firebase-admin*.json
 android/app/google-services.json
 android/*.jks
 android/*.keystore

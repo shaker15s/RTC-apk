@@ -102,7 +102,13 @@ function buildIcons() {
 function buildVendor() {
   const vendor = path.join(DIST, 'assets', 'vendor');
   mkdir(vendor);
-  copyFile(mustExist(fromNode('@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'Supabase UMD'), path.join(vendor, 'supabase.js'));
+  const supabaseUmd = mustExist(fromNode('@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'Supabase UMD');
+  const supabaseSource = fs.readFileSync(supabaseUmd, 'utf8');
+  /* Some UMD releases emit the auth base64 whitespace alphabet with a literal
+     tab/newline. Escape that equivalent string so generated Git assets pass
+     whitespace checks without changing its runtime value. */
+  const normalizedSupabase = supabaseSource.replace(/=` \t\n\\r=`\.split\(``\)/g, '=` \\t\\n\\r=`.split(``)');
+  fs.writeFileSync(path.join(vendor, 'supabase.js'), normalizedSupabase);
   copyFile(mustExist(fromNode('jspdf', 'dist', 'jspdf.umd.min.js'), 'jsPDF UMD'), path.join(vendor, 'jspdf.umd.min.js'));
   esbuild.buildSync({
     entryPoints: [mustExist(fromNode('@aparajita', 'capacitor-secure-storage', 'dist', 'esm', 'index.js'), 'Secure Storage browser entry')],
@@ -149,11 +155,26 @@ function validate() {
     'assets/vendor/jspdf.umd.min.js', 'assets/vendor/secure-storage.min.js', 'assets/vendor/barcode-scanner.min.js', 'js/native.js', 'js/security.js', 'app.js'
   ];
   for (const file of required) if (!fs.existsSync(path.join(DIST, file))) problems.push(`missing ${file}`);
+
+  /* A missing app-shell file makes service-worker installation fail atomically. */
+  const sw = fs.readFileSync(path.join(DIST, 'sw.js'), 'utf8');
+  const shellBlock = sw.match(/const APP_SHELL = \[([\s\S]*?)\];/);
+  if (!shellBlock) {
+    problems.push('service worker APP_SHELL is missing');
+  } else {
+    const shellPaths = [...shellBlock[1].matchAll(/['"]\.\/([^'"]+)['"]/g)]
+      .map((match) => match[1].split('?')[0])
+      .filter(Boolean);
+    for (const file of new Set(shellPaths)) {
+      if (!fs.existsSync(path.join(DIST, file))) problems.push(`service-worker app shell is missing ${file}`);
+    }
+  }
+
   if (/cdn\.tailwindcss\.com|cdnjs\.cloudflare\.com|unpkg\.com\/@supabase|cdn\.jsdelivr\.net\/@supabase/.test(html)) {
     problems.push('production HTML still contains a runtime library CDN');
   }
   if (!html.includes(`?v=${VERSION}`)) problems.push(`cache tag ?v=${VERSION} is absent`);
-  if (problems.length) throw new Error('Build validation failed:\n - ' + problems.join('\n - '));
+  if (problems.length) throw new Error('Build validation failed:\n - ' + [...new Set(problems)].join('\n - '));
 }
 
 function main() {
@@ -161,10 +182,8 @@ function main() {
   rm(DIST);
   mkdir(DIST);
   let count = 0;
-  const optionalMissing = [];
   for (const file of FILES) {
-    const src = path.join(ROOT, file);
-    if (!fs.existsSync(src)) { optionalMissing.push(file); continue; }
+    const src = mustExist(path.join(ROOT, file), `required web asset ${file}`);
     copyFile(src, path.join(DIST, file));
     count += 1;
   }
@@ -177,7 +196,6 @@ function main() {
     targets: ['web', 'pwa', 'android', 'ios'], localAssets: true
   }, null, 2));
   validate();
-  if (optionalMissing.length) console.log('  • Optional files not present: ' + optionalMissing.join(', '));
   console.log(`\n✓ Production bundle ready (${count}+ files) → dist/`);
   console.log('✓ Runtime libraries and fonts are local/offline-capable\n');
 }

@@ -153,6 +153,49 @@ REVOKE ALL ON FUNCTION public.get_my_next_session() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_my_next_session() TO authenticated;
 
 -- ------------------------------------------------------------
+-- 4) get_my_attendance — سجل الحضور التفصيلي للطالب (F-10)
+--    ⚠️ عدّل أسماء الأعمدة حسب جدولي sessions و attendance الفعليين
+--    (المفترض: attendance(session_id, student_id, status, points))
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_my_attendance()
+RETURNS TABLE (
+  session_id uuid,
+  session_title text,
+  course_title text,
+  batch_name text,
+  session_date timestamptz,
+  status text,
+  points integer
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    a.session_id,
+    s.title AS session_title,
+    c.title AS course_title,
+    b.name AS batch_name,
+    s.session_date,
+    a.status,
+    COALESCE(a.points, 0) AS points
+  FROM attendance a
+  JOIN sessions s ON s.id = a.session_id
+  JOIN batches b ON b.id = s.batch_id
+  JOIN courses c ON c.id = b.course_id
+  WHERE a.student_id = auth.uid()
+  ORDER BY s.session_date DESC
+  LIMIT 200;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_my_attendance() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_my_attendance() TO authenticated;
+
+-- ------------------------------------------------------------
 -- ملاحظات إضافية للفريق:
 -- 1) تأكد أن RLS يسمح فقط للمشرف بتنفيذ admin_award_points (الدالة تفحص داخلياً).
 -- 2) أضف كود قاعدة 'manual_award' في points_rules إن لم يوجد.

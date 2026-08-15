@@ -69,6 +69,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={colors.mut}
+          accessibilityLabel={label || placeholder}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           maxLength={maxLength}

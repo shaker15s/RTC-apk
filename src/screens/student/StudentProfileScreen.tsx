@@ -150,7 +150,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مريح للعين وموفر للبطارية</Text>
               </View>
             </View>
-            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} />
+            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label="الوضع الليلي" />
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />

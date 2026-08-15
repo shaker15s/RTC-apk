@@ -1,7 +1,7 @@
 /**
  * Public Certificate Verification Screen (matches verify.html and s-certs verify modal).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
@@ -13,17 +13,20 @@ import { RTCHaptics } from '../../core/native/haptics';
 import { ShieldCheck, CheckCircle2, XCircle, Search, Award, Calendar, User, ArrowRight } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
-export const VerifyCertScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: string }> = ({
+  onBack,
+  initialSerial,
+}) => {
   const insets = useSafeAreaInsets();
   const { colors, showToast } = useAppStore();
 
-  const [serial, setSerial] = useState('');
+  const [serial, setSerial] = useState(initialSerial || '');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VerifyCertificateResult | null>(null);
   const [searched, setSearched] = useState(false);
 
-  const handleVerify = async () => {
-    const cleanSerial = serial.trim().toUpperCase();
+  const runVerify = async (rawSerial: string) => {
+    const cleanSerial = rawSerial.trim().toUpperCase();
     if (!cleanSerial) {
       showToast('يرجى إدخال الرقم التسلسلي للشهادة', 'warn');
       return;
@@ -47,6 +50,20 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) 
     } finally {
       setLoading(false);
     }
+  };
+
+  // Deep-link support (fixes A-1): org.resala.rtc.masar://verify?serial=X
+  // arrives via route params and auto-verifies on mount.
+  useEffect(() => {
+    if (initialSerial) {
+      setSerial(initialSerial);
+      runVerify(initialSerial);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSerial]);
+
+  const handleVerify = async () => {
+    await runVerify(serial);
   };
 
   return (

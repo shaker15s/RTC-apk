@@ -21,7 +21,7 @@ import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
-import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay } from 'lucide-react-native';
+import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay, CalendarCheck } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export interface StudentCoursesScreenProps {
@@ -71,7 +71,23 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="دوراتي التدريبية" subtitle="متابعة المقررات والحضور" />
+      <GlassHeader
+        title="دوراتي التدريبية"
+        subtitle="متابعة المقررات والحضور"
+        rightAction={
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              RTCHaptics.light();
+              onNavigate('s-attendance');
+            }}
+            style={[styles.attendanceBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
+          >
+            <CalendarCheck color={colors.primary} size={15} />
+            <Text style={[styles.attendanceBtnText, { color: colors.primary }]}>سجل الحضور</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.filterWrap}>
         <SelectChips items={filterChips} selectedId={filter} onSelect={(id) => setFilter(id as any)} />
@@ -216,6 +232,19 @@ const styles = StyleSheet.create({
   filterWrap: {
     paddingHorizontal: 16,
     paddingVertical: 4,
+  },
+  attendanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+  },
+  attendanceBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   scrollContent: {
     paddingHorizontal: 16,

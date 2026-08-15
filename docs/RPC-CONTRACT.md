@@ -41,6 +41,7 @@
 | 27 | `admin_award_points` | `p_user_id`, `p_points`, `p_reason` | admin | منح نقاط يدوية حقيقية (كان الزر وهمياً — P0-1) |
 | 28 | `get_active_session` | `p_batch_id` | instructor/admin | استرجاع الجلسة النشطة للمدرب (P0-5) |
 | 29 | `get_my_next_session` | — | authenticated | أقرب محاضرة قادمة حقيقية للطالب (F-2) |
+| 30 | `get_my_attendance` | — | authenticated | سجل الحضور التفصيلي للطالب (F-10) — v100.2.0 |
 
 > 🔴 SQL المقترح للدالتين 27 و 28 موجود في `docs/sql/2026-08-15-quality-fixes.sql`.
 > العميل يتعامل مع غيابهما بشكل آمن (fallback محلي) حتى يتم نشرهما على الداتابيز.

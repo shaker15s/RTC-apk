@@ -1,14 +1,32 @@
 /**
- * Master App Navigator for Masar RTC Mobile
- * Orchestrates role-based tabs, screen stacks, route guards, hardware back handler, and toasts.
+ * Master App Navigator for Masar RTC Mobile — v100.2.0
+ * ---------------------------------------------------------------
+ * Rebuilt on React Navigation (native-stack) replacing the hand-rolled
+ * state navigator. This fixes (A-1):
+ *   - native screen transitions + iOS swipe-back gesture
+ *   - screens stay mounted (no data loss on navigation)
+ *   - real deep linking (org.resala.rtc.masar://verify?serial=...)
+ *   - notification tap routing via navigationRef
+ *
+ * Every existing screen keeps its exact prop interface (onNavigate /
+ * onBack) through thin adapters, so no screen code needed rewriting.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, BackHandler } from 'react-native';
+import {
+  NavigationContainer,
+  useNavigation,
+  useRoute,
+  useNavigationState,
+  StackActions,
+} from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAppStore } from '../state/appStore';
 import { useAuthStore } from '../state/authStore';
 import { useSessionStore } from '../state/sessionStore';
 import { canAccess } from '../core/security/sanitizers';
 import { RTCHaptics } from '../core/native/haptics';
+import { navigationRef } from './navigationRef';
 
 // Layout & Feedback Components
 import { OfflineBanner } from '../components/layout/OfflineBanner';
@@ -19,6 +37,7 @@ import { ToastContainer } from '../components/feedback/ToastContainer';
 import { SplashScreen } from '../screens/public/SplashScreen';
 import { OnboardingScreen } from '../screens/public/OnboardingScreen';
 import { VerifyCertScreen } from '../screens/public/VerifyCertScreen';
+import { ChangelogScreen } from '../screens/public/ChangelogScreen';
 
 // Student Screens
 import { StudentHomeScreen } from '../screens/student/StudentHomeScreen';
@@ -35,6 +54,8 @@ import { StudentCheckInScreen } from '../screens/student/StudentCheckInScreen';
 import { StudentExcuseScreen } from '../screens/student/StudentExcuseScreen';
 import { LeaderboardScreen } from '../screens/student/LeaderboardScreen';
 import { SupportScreen } from '../screens/student/SupportScreen';
+import { CourseRatingScreen } from '../screens/student/CourseRatingScreen';
+import { StudentAttendanceScreen } from '../screens/student/StudentAttendanceScreen';
 
 // Volunteer Screens
 import { VolunteerHomeScreen } from '../screens/volunteer/VolunteerHomeScreen';
@@ -44,6 +65,7 @@ import { VolunteerCoursesScreen } from '../screens/volunteer/VolunteerCoursesScr
 import { VolunteerExcusesScreen } from '../screens/volunteer/VolunteerExcusesScreen';
 import { VolunteerProfileScreen } from '../screens/volunteer/VolunteerProfileScreen';
 import { AnalyticsScreen } from '../screens/volunteer/AnalyticsScreen';
+import { SessionReportFormScreen } from '../screens/volunteer/SessionReportFormScreen';
 
 // Admin Screens
 import { AdminHomeScreen } from '../screens/admin/AdminHomeScreen';
@@ -54,313 +76,273 @@ import { AdminSettingsScreen } from '../screens/admin/AdminSettingsScreen';
 import { AdminBranchesScreen } from '../screens/admin/AdminBranchesScreen';
 import { AdminCommitteesScreen } from '../screens/admin/AdminCommitteesScreen';
 import { AdminBroadcastScreen } from '../screens/admin/AdminBroadcastScreen';
-
-// New Screens
-import { CourseRatingScreen } from '../screens/student/CourseRatingScreen';
-import { SessionReportFormScreen } from '../screens/volunteer/SessionReportFormScreen';
 import { AdminAnalyticsScreen } from '../screens/admin/AdminAnalyticsScreen';
-import { ChangelogScreen } from '../screens/public/ChangelogScreen';
 
-export const AppNavigator: React.FC = () => {
-  const { colors, showToast } = useAppStore();
-  const { session, profile, isLoading, isInitialized, initAuth } = useAuthStore();
+const Stack = createNativeStackNavigator();
 
-  const [currentScreen, setCurrentScreen] = useState<string>('splash');
-  const [screenParams, setScreenParams] = useState<any>({});
-  const [navigationStack, setNavigationStack] = useState<Array<{ screen: string; params: any }>>([]);
-  const [lastBackPressAt, setLastBackPressAt] = useState(0);
+// ---------------------------------------------------------------
+// Screen adapter: injects onNavigate / onBack into every screen so
+// the existing components work unchanged on top of React Navigation.
+// ---------------------------------------------------------------
+function makeScreen(Screen: React.ComponentType<any>, extraProps?: (props: any) => Record<string, any>) {
+  return function ScreenWithNav(props: any) {
+    const navigation = useNavigation<any>();
+    const route = useRoute<any>();
+    const profile = useAuthStore((s) => s.profile);
+    const showToast = useAppStore((s) => s.showToast);
 
-  // Notification/deep-link target screen (set by App.tsx listener — F-12)
-  const { pendingRoute, setPendingRoute } = useSessionStore();
-
-  // Initialize auth session on mount
-  useEffect(() => {
-    initAuth();
-  }, []);
-
-  // Handle default screen routing on auth state change
-  useEffect(() => {
-    // While initializing, stay on splash
-    if (!isInitialized) {
-      return;
-    }
-
-    // Not loading AND no session → go to onboarding (unless on public verify screen)
-    if (!session) {
-      if (currentScreen !== 'verify') {
-        setCurrentScreen('onboarding');
+    const navigate = (screenId: string, params?: any) => {
+      RTCHaptics.selection();
+      const role = profile?.role || 'student';
+      if (!canAccess(screenId, role)) {
+        RTCHaptics.error();
+        showToast('ليس لديك صلاحية الوصول لهذه الشاشة', 'warn');
+        return;
       }
-      return;
-    }
-
-    // Session exists — check if profile is complete
-    // If profile has no phone or branch_id, stay on onboarding step 2
-    if (session && (!profile?.phone || !profile?.branch_id)) {
-      if (currentScreen === 'splash' || currentScreen !== 'onboarding') {
-        setCurrentScreen('onboarding');
-      }
-      return;
-    }
-
-    // Session exists AND profile is complete → route to role-based home
-    const role = profile?.role || 'student';
-    if (currentScreen === 'splash' || currentScreen === 'onboarding') {
-      if (role === 'admin') {
-        setCurrentScreen('a-home');
-      } else if (role === 'volunteer') {
-        setCurrentScreen('v-home');
-      } else {
-        setCurrentScreen('s-home');
-      }
-    }
-  }, [session, profile, isInitialized, isLoading]);
-
-  // Consume a pending notification/deep-link route once the user is
-  // signed in with a complete profile (F-12).
-  useEffect(() => {
-    if (!pendingRoute || !session || !profile || !isInitialized) return;
-    setPendingRoute(null);
-    if (!profile?.phone || !profile?.branch_id) return; // onboarding first
-    if (canAccess(pendingRoute, profile.role || 'student')) {
-      navigate(pendingRoute);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingRoute, session, profile, isInitialized]);
-
-  // Android Hardware Back Button Handler
-  // Double-press-to-exit at the root (U-5), normal back otherwise.
-  useEffect(() => {
-    const onBackPress = () => {
-      if (navigationStack.length > 0) {
-        handleBack();
-        return true;
-      }
-      const now = Date.now();
-      if (now - lastBackPressAt < 2000) {
-        return false; // second press within 2s → exit app
-      }
-      setLastBackPressAt(now);
-      showToast('اضغط مرة أخرى للخروج من التطبيق', 'info');
-      return true;
+      navigation.push(screenId, params || {});
     };
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigationStack, lastBackPressAt]);
+    const onBack = () => {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
+    };
 
-  const navigate = (screenId: string, params: any = {}) => {
-    RTCHaptics.selection();
-    const role = profile?.role || (session ? 'student' : 'public');
+    return <Screen onNavigate={navigate} onBack={onBack} {...(route.params || {})} {...(extraProps ? extraProps({ navigate }) : {})} />;
+  };
+}
 
-    // Route Guard Security check
-    if (session && !canAccess(screenId, role)) {
+// Special adapters
+function OnboardingWithNav() {
+  const navigation = useNavigation<any>();
+  return (
+    <OnboardingScreen
+      onOpenVerify={() => navigation.push('verify')}
+      onLoginSuccess={() => {}}
+    />
+  );
+}
+
+// Registered route table (single source of truth)
+type RouteDef = { name: string; component: React.ComponentType<any> };
+
+const PUBLIC_SCREENS: RouteDef[] = [
+  { name: 'onboarding', component: OnboardingWithNav },
+  { name: 'verify', component: makeScreen(VerifyCertScreen) },
+  { name: 'changelog', component: makeScreen(ChangelogScreen) },
+];
+
+const AUTHED_SCREENS: RouteDef[] = [
+  // Shared / public-reachable
+  { name: 'onboarding', component: OnboardingWithNav },
+  { name: 'verify', component: makeScreen(VerifyCertScreen) },
+  { name: 'changelog', component: makeScreen(ChangelogScreen) },
+
+  // Student
+  { name: 's-home', component: makeScreen(StudentHomeScreen) },
+  { name: 's-courses', component: makeScreen(StudentCoursesScreen) },
+  { name: 's-course-detail', component: makeScreen(CourseDetailScreen) },
+  { name: 's-course-rating', component: makeScreen(CourseRatingScreen) },
+  { name: 's-points', component: makeScreen(StudentPointsScreen) },
+  { name: 's-ledger', component: makeScreen(PointsLedgerScreen) },
+  { name: 's-certs', component: makeScreen(StudentCertsScreen) },
+  { name: 's-profile', component: makeScreen(StudentProfileScreen) },
+  { name: 's-edit-profile', component: makeScreen(EditProfileScreen) },
+  { name: 's-explore', component: makeScreen(ExploreCoursesScreen) },
+  { name: 's-notifications', component: makeScreen(NotificationsScreen) },
+  { name: 's-checkin', component: makeScreen(StudentCheckInScreen) },
+  { name: 's-excuse', component: makeScreen(StudentExcuseScreen) },
+  { name: 's-leaderboard', component: makeScreen(LeaderboardScreen) },
+  { name: 's-attendance', component: makeScreen(StudentAttendanceScreen) },
+  { name: 'support', component: makeScreen(SupportScreen) },
+
+  // Volunteer
+  { name: 'v-home', component: makeScreen(VolunteerHomeScreen) },
+  { name: 'v-batches', component: makeScreen(VolunteerBatchesScreen) },
+  { name: 'v-attendance', component: makeScreen(VolunteerAttendanceScreen) },
+  { name: 'v-courses', component: makeScreen(VolunteerCoursesScreen) },
+  { name: 'v-excuses', component: makeScreen(VolunteerExcusesScreen) },
+  { name: 'v-report', component: makeScreen(SessionReportFormScreen) },
+  { name: 'v-profile', component: makeScreen(VolunteerProfileScreen) },
+  { name: 's-analytics', component: makeScreen(AnalyticsScreen) },
+
+  // Admin
+  { name: 'a-home', component: makeScreen(AdminHomeScreen) },
+  { name: 'a-users', component: makeScreen(AdminUsersScreen) },
+  { name: 'a-courses', component: makeScreen(AdminCoursesScreen) },
+  { name: 'a-certs', component: makeScreen(AdminCertsScreen) },
+  { name: 'a-settings', component: makeScreen(AdminSettingsScreen) },
+  { name: 'a-branches', component: makeScreen(AdminBranchesScreen) },
+  { name: 'a-committees', component: makeScreen(AdminCommitteesScreen) },
+  { name: 'a-broadcast', component: makeScreen(AdminBroadcastScreen) },
+  { name: 'a-analytics', component: makeScreen(AdminAnalyticsScreen) },
+];
+
+// Screens that show the floating bottom tab bar
+const TAB_SCREENS = [
+  's-home',
+  's-courses',
+  's-points',
+  's-certs',
+  's-profile',
+  'v-home',
+  'v-batches',
+  'v-courses',
+  'v-profile',
+  'a-home',
+  'a-users',
+  'a-courses',
+  'a-certs',
+  'a-settings',
+  'a-analytics',
+  's-analytics',
+];
+
+// Deep-link mapping (org.resala.rtc.masar://)
+const linking = {
+  prefixes: ['org.resala.rtc.masar://', 'masar-rtc://'],
+  // OAuth return URLs are handled by the auth store (App.tsx listener) —
+  // keep them away from the navigator to avoid "screen not found" warnings.
+  filter: (url: string) => !(url.includes('code=') || url.includes('access_token')),
+  config: {
+    screens: {
+      onboarding: '',
+      verify: 'verify',
+      changelog: 'changelog',
+      's-home': 'home',
+      's-courses': 'courses',
+      's-points': 'points',
+      's-certs': 'certs',
+      's-profile': 'profile',
+    },
+  },
+};
+
+function RootFlow() {
+  const { session, profile, isInitialized } = useAuthStore();
+  const { pendingRoute, setPendingRoute } = useSessionStore();
+
+  // Consume notification/deep-link targets once signed in (F-12)
+  useEffect(() => {
+    if (!pendingRoute || !session || !profile || !isInitialized) return;
+    // Incomplete profile? Finish onboarding first and keep the target.
+    if (!profile?.phone || !profile?.branch_id) return;
+    setPendingRoute(null);
+    if (canAccess(pendingRoute, profile.role || 'student')) {
+      navigationRef.navigate(pendingRoute as never);
+    }
+  }, [pendingRoute, session, profile, isInitialized]);
+
+  // Auto-route to the role home once the profile is completed
+  // (mirrors the old navigator's behaviour: onboarding → home).
+  useEffect(() => {
+    if (!session || !profile || !isInitialized) return;
+    if (!profile?.phone || !profile?.branch_id) return;
+    const role = profile.role || 'student';
+    const home = role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home';
+    if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === 'onboarding') {
+      navigationRef.navigate(home as never);
+    }
+  }, [session, profile, isInitialized]);
+
+  // Splash while auth initializes
+  if (!isInitialized) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="splash" component={SplashScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  // Signed out: public stack
+  if (!session) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {PUBLIC_SCREENS.map((r) => (
+          <Stack.Screen key={r.name} name={r.name} component={r.component} />
+        ))}
+      </Stack.Navigator>
+    );
+  }
+
+  // Signed in: role-based stack. New users with incomplete profiles
+  // start at onboarding (step 2) until phone + branch are set.
+  const role = profile?.role || 'student';
+  const incomplete = !profile?.phone || !profile?.branch_id;
+  const home = role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home';
+
+  return (
+    <Stack.Navigator
+      screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
+      initialRouteName={incomplete ? 'onboarding' : home}
+    >
+      {AUTHED_SCREENS.map((r) => (
+        <Stack.Screen key={r.name} name={r.name} component={r.component} />
+      ))}
+    </Stack.Navigator>
+  );
+}
+
+function RootShell() {
+  const { colors } = useAppStore();
+  const { session, profile } = useAuthStore();
+  const showToast = useAppStore((s) => s.showToast);
+  const routeName = useNavigationState((state) => state?.routes[state.index]?.name as string);
+
+  // Double-press-to-exit at the stack root (U-5). Native-stack handles
+  // its own back behaviour when there is history.
+  useEffect(() => {
+    let lastPressAt = 0;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (navigationRef.isReady() && navigationRef.canGoBack()) {
+        return false; // let the stack pop
+      }
+      const now = Date.now();
+      if (now - lastPressAt < 2000) {
+        return false; // second press → exit app
+      }
+      lastPressAt = now;
+      showToast('اضغط مرة أخرى للخروج من التطبيق', 'info');
+      return true;
+    });
+    return () => sub.remove();
+  }, [showToast]);
+
+  const showTabBar = !!session && TAB_SCREENS.includes(routeName);
+
+  const handleTabPress = (screenId: string) => {
+    const role = profile?.role || 'student';
+    if (!canAccess(screenId, role)) {
       RTCHaptics.error();
       showToast('ليس لديك صلاحية الوصول لهذه الشاشة', 'warn');
       return;
     }
-
-    setNavigationStack((prev) => [...prev, { screen: currentScreen, params: screenParams }]);
-    setCurrentScreen(screenId);
-    setScreenParams(params);
-  };
-
-  const handleBack = () => {
-    RTCHaptics.light();
-    if (navigationStack.length > 0) {
-      const prev = navigationStack[navigationStack.length - 1];
-      setNavigationStack((s) => s.slice(0, s.length - 1));
-      setCurrentScreen(prev.screen);
-      setScreenParams(prev.params || {});
-    } else {
-      const role = profile?.role || 'student';
-      setCurrentScreen(role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home');
-    }
-  };
-
-  // Determine if Bottom Tab Bar should be visible
-  const isTopTab = [
-    's-home',
-    's-courses',
-    's-points',
-    's-certs',
-    's-profile',
-    'v-home',
-    'v-batches',
-    'v-courses',
-    'v-profile',
-    'a-home',
-    'a-users',
-    'a-courses',
-    'a-certs',
-    'a-settings',
-    'a-analytics',
-    's-analytics', // shared tab for volunteer & admin (fixes F-4)
-  ].includes(currentScreen);
-
-  // Render Screen Content
-  const renderScreen = () => {
-    if (currentScreen === 'splash') {
-      return (
-        <SplashScreen
-          onFinish={() => {
-            const role = profile?.role || 'student';
-            if (session) {
-              setCurrentScreen(role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home');
-            } else {
-              setCurrentScreen('onboarding');
-            }
-          }}
-        />
-      );
-    }
-
-    if (!session) {
-      if (currentScreen === 'verify') {
-        return <VerifyCertScreen onBack={() => setCurrentScreen('onboarding')} />;
-      }
-      return (
-        <OnboardingScreen
-          onLoginSuccess={() => {}}
-          onOpenVerify={() => setCurrentScreen('verify')}
-        />
-      );
-    }
-
-    switch (currentScreen) {
-      // Student Screens
-      case 's-home':
-        return <StudentHomeScreen onNavigate={navigate} />;
-      case 's-courses':
-        return <StudentCoursesScreen onNavigate={navigate} />;
-      case 's-course-detail':
-        return (
-          <CourseDetailScreen
-            courseId={screenParams.courseId}
-            onBack={handleBack}
-            onNavigate={navigate}
-          />
-        );
-      case 's-course-rating':
-        return (
-          <CourseRatingScreen
-            courseId={screenParams.courseId}
-            courseTitle={screenParams.courseTitle}
-            onBack={handleBack}
-          />
-        );
-      case 's-points':
-        return <StudentPointsScreen onNavigate={navigate} />;
-      case 's-ledger':
-        return <PointsLedgerScreen onBack={handleBack} />;
-      case 's-certs':
-        return <StudentCertsScreen onNavigate={navigate} />;
-      case 's-profile':
-        return <StudentProfileScreen onNavigate={navigate} />;
-      case 's-edit-profile':
-        return <EditProfileScreen onBack={handleBack} />;
-      case 's-explore':
-        return <ExploreCoursesScreen onNavigate={navigate} onBack={handleBack} />;
-      case 's-notifications':
-        return <NotificationsScreen onBack={handleBack} onNavigate={navigate} />;
-      case 's-checkin':
-        return <StudentCheckInScreen onBack={handleBack} onNavigate={navigate} />;
-      case 's-excuse':
-        return <StudentExcuseScreen onBack={handleBack} onNavigate={navigate} />;
-      case 's-leaderboard':
-        return <LeaderboardScreen onBack={handleBack} />;
-      case 'support':
-        return <SupportScreen onBack={handleBack} onNavigate={navigate} />;
-      case 'changelog':
-        return <ChangelogScreen onBack={handleBack} />;
-
-      // Volunteer Screens
-      case 'v-home':
-        return <VolunteerHomeScreen onNavigate={navigate} />;
-      case 'v-batches':
-        return (
-          <VolunteerBatchesScreen
-            onNavigate={navigate}
-            selectedBatchId={screenParams?.selectedBatchId}
-          />
-        );
-      case 'v-attendance':
-        return (
-          <VolunteerAttendanceScreen
-            sessionId={screenParams.sessionId}
-            batchId={screenParams.batchId}
-            students={screenParams.students || []}
-            onBack={handleBack}
-          />
-        );
-      case 'v-courses':
-        return <VolunteerCoursesScreen onNavigate={navigate} />;
-      case 'v-excuses':
-        return <VolunteerExcusesScreen onBack={handleBack} />;
-      case 'v-report':
-        return (
-          <SessionReportFormScreen
-            sessionId={screenParams.sessionId}
-            sessionTitle={screenParams.sessionTitle}
-            onBack={handleBack}
-          />
-        );
-      case 'v-profile':
-        return <VolunteerProfileScreen onNavigate={navigate} />;
-      case 's-analytics':
-        return <AnalyticsScreen onBack={handleBack} />;
-
-      // Admin Screens
-      case 'a-home':
-        return <AdminHomeScreen onNavigate={navigate} />;
-      case 'a-users':
-        return <AdminUsersScreen onBack={handleBack} />;
-      case 'a-courses':
-        return <AdminCoursesScreen onBack={handleBack} />;
-      case 'a-certs':
-        return <AdminCertsScreen onBack={handleBack} />;
-      case 'a-settings':
-        return <AdminSettingsScreen onNavigate={navigate} />;
-      case 'a-branches':
-        return <AdminBranchesScreen onBack={handleBack} />;
-      case 'a-committees':
-        return <AdminCommitteesScreen onBack={handleBack} />;
-      case 'a-broadcast':
-        return <AdminBroadcastScreen onBack={handleBack} />;
-      case 'a-analytics':
-        return <AdminAnalyticsScreen onBack={handleBack} />;
-
-      // Fallback
-      case 'verify':
-        return <VerifyCertScreen onBack={handleBack} />;
-
-      default:
-        return <StudentHomeScreen onNavigate={navigate} />;
-    }
+    if (!navigationRef.isReady()) return;
+    if (screenId === routeName) return;
+    // Tab switch = reset stack to the tab (mimics old tab behaviour)
+    navigationRef.dispatch(StackActions.popToTop());
+    navigationRef.navigate(screenId as never);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <OfflineBanner />
-      <View style={styles.screenWrap}>{renderScreen()}</View>
-      {session && isTopTab ? (
-        <BottomNavigationBar
-          currentScreen={currentScreen}
-          onTabPress={(screenId) => {
-            // Route-guard tab presses too (fixes SEC-5)
-            if (session && !canAccess(screenId, profile?.role || 'student')) {
-              RTCHaptics.error();
-              showToast('ليس لديك صلاحية الوصول لهذه الشاشة', 'warn');
-              return;
-            }
-            setNavigationStack([]);
-            setCurrentScreen(screenId);
-            setScreenParams({});
-          }}
-        />
+      <View style={styles.screenWrap}>
+        <RootFlow />
+      </View>
+      {showTabBar ? (
+        <BottomNavigationBar currentScreen={routeName} onTabPress={handleTabPress} />
       ) : null}
       <ToastContainer />
     </View>
+  );
+}
+
+export const AppNavigator: React.FC = () => {
+  return (
+    <NavigationContainer ref={navigationRef} linking={linking}>
+      <RootShell />
+    </NavigationContainer>
   );
 };
 

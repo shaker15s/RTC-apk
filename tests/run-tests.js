@@ -104,6 +104,8 @@ const ALL_RPCS = [
   'admin_award_points',
   'get_active_session',
   'get_my_next_session',
+  // v100.2.0
+  'get_my_attendance',
 ];
 
 const rpcFilePath = path.join(__dirname, '../src/data/rpc/index.ts');
@@ -140,6 +142,7 @@ const ALL_34_SCREENS = [
   'NotificationsScreen.tsx',
   'StudentCheckInScreen.tsx',
   'StudentExcuseScreen.tsx',
+  'StudentAttendanceScreen.tsx',
   'LeaderboardScreen.tsx',
   'SupportScreen.tsx',
   // Volunteer (8)
@@ -193,7 +196,15 @@ const COMPONENTS_TO_CHECK = [
   'feedback/SuccessAnimation.tsx',
   'layout/BottomNavigationBar.tsx',
   'layout/GlassHeader.tsx',
+  'cert/CertificateCard.tsx',
 ];
+
+// Navigation layer files (React Navigation migration — v100.2.0)
+const NAVIGATION_FILES = ['navigationRef.ts', 'AppNavigator.tsx'];
+const navigationBaseDir = path.join(__dirname, '../src/navigation');
+NAVIGATION_FILES.forEach((file) => {
+  assert(fs.existsSync(path.join(navigationBaseDir, file)), `Navigation file created: ${file}`);
+});
 
 const componentsBaseDir = path.join(__dirname, '../src/components');
 COMPONENTS_TO_CHECK.forEach((cmpPath) => {

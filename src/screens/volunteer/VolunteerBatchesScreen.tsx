@@ -217,7 +217,7 @@ export const VolunteerBatchesScreen: React.FC<{
                   onNavigate('v-attendance', {
                     sessionId: activeSession.id,
                     batchId: activeBatchId,
-                    students,
+                    // roster is loaded by the attendance screen itself
                   })
                 }
                 variant="primary"

@@ -2,7 +2,7 @@
  * Volunteer Attendance Marking Screen (v-attendance)
  * Bulk attendance recording with Present, Late, Absent, Excused statuses.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,27 +31,59 @@ export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
 export interface VolunteerAttendanceScreenProps {
   sessionId: string;
   batchId: string;
-  students: BatchRosterStudent[];
+  /** Roster may be passed by the caller; if omitted the screen loads it
+   *  itself from batch_roster (keeps navigation params serializable). */
+  students?: BatchRosterStudent[];
   onBack: () => void;
 }
 
 export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps> = ({
   sessionId,
   batchId,
-  students,
+  students: initialStudents,
   onBack,
 }) => {
   const { colors, showToast } = useAppStore();
 
+  const [students, setStudents] = useState<BatchRosterStudent[]>(initialStudents || []);
+  const [loadingRoster, setLoadingRoster] = useState(!initialStudents?.length);
+
   const [attendanceState, setAttendanceState] = useState<Record<string, AttendanceStatus>>(() => {
     const init: Record<string, AttendanceStatus> = {};
-    students.forEach((s) => {
+    (initialStudents || []).forEach((s) => {
       init[s.student_id] = 'present';
     });
     return init;
   });
 
   const [saving, setSaving] = useState(false);
+
+  // Self-load the roster when it wasn't passed through navigation
+  // (fixes non-serializable params with React Navigation).
+  useEffect(() => {
+    if (initialStudents?.length) return;
+    let cancelled = false;
+    RPC.batchRoster(batchId)
+      .then((roster) => {
+        if (cancelled) return;
+        setStudents(roster);
+        const init: Record<string, AttendanceStatus> = {};
+        roster.forEach((s) => {
+          init[s.student_id] = 'present';
+        });
+        setAttendanceState(init);
+      })
+      .catch((e: any) => {
+        if (!cancelled) showToast('تعذر تحميل كشف الطلاب', 'err');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRoster(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchId]);
 
   const setStudentStatus = (studentId: string, status: AttendanceStatus) => {
     RTCHaptics.selection();
@@ -110,7 +142,15 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {students.map((student) => {
+        {loadingRoster ? (
+          <View style={styles.loadingWrap}>
+            <Text style={[styles.loadingText, { color: colors.mut }]}>جارٍ تحميل كشف الطلاب...</Text>
+          </View>
+        ) : students.length === 0 ? (
+          <View style={styles.loadingWrap}>
+            <Text style={[styles.loadingText, { color: colors.mut }]}>لا يوجد طلاب مسجلون في هذه المجموعة.</Text>
+          </View>
+        ) : students.map((student) => {
           const currentStatus = attendanceState[student.student_id] || 'present';
 
           return (
@@ -212,7 +252,6 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
           );
         })}
       </ScrollView>
-
       {/* Fixed Save Button at bottom */}
       <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.line }]}>
         <CustomButton
@@ -262,6 +301,15 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 100,
     gap: 10,
+  },
+  loadingWrap: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   studentRowCard: {
     padding: 14,

@@ -10,9 +10,10 @@ export interface SwitchToggleProps {
   value: boolean;
   onValueChange: (val: boolean) => void;
   disabled?: boolean;
+  label?: string;
 }
 
-export const SwitchToggle: React.FC<SwitchToggleProps> = ({ value, onValueChange, disabled = false }) => {
+export const SwitchToggle: React.FC<SwitchToggleProps> = ({ value, onValueChange, disabled = false, label }) => {
   const { colors } = useAppStore();
   const animatedValue = React.useRef(new Animated.Value(value ? 1 : 0)).current;
 
@@ -48,6 +49,7 @@ export const SwitchToggle: React.FC<SwitchToggleProps> = ({ value, onValueChange
         },
       ]}
       accessibilityRole="switch"
+      accessibilityLabel={label || 'مفتاح تبديل'}
       accessibilityState={{ checked: value }}
     >
       <Animated.View

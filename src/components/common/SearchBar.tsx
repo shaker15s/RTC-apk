@@ -75,6 +75,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onChangeText={setInternalVal}
         placeholder={placeholder}
         placeholderTextColor={colors.mut}
+        accessibilityLabel={placeholder}
         style={[styles.input, { color: colors.txt }]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

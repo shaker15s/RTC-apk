@@ -103,7 +103,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مظهر داكن مريح للعين</Text>
               </View>
             </View>
-            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} />
+            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label="الوضع الليلي" />
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />

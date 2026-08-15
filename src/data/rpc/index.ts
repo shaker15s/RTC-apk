@@ -354,4 +354,21 @@ export const RPC = {
     const res = await supabase.rpc('get_my_next_session');
     return unwrap(res, null);
   },
+
+  // 30. get_my_attendance (student — added in v100.2.0, fixes F-10)
+  // Returns the student's detailed per-session attendance history.
+  // Requires the SQL function in docs/sql/2026-08-15-quality-fixes.sql
+  // — the attendance screen degrades gracefully if not deployed.
+  async getMyAttendance(): Promise<Array<{
+    session_id: string;
+    session_title?: string;
+    course_title?: string;
+    batch_name?: string;
+    session_date?: string;
+    status: 'present' | 'late' | 'absent' | 'excused';
+    points?: number;
+  }>> {
+    const res = await supabase.rpc('get_my_attendance');
+    return unwrap(res, []) || [];
+  },
 };

@@ -10,6 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
@@ -32,6 +33,7 @@ import {
 } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 import { useT } from '../../core/i18n';
+import { layoutNeedsReload, applyLayoutDirection, reloadApp } from '../../core/i18n/direction';
 
 export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
@@ -115,7 +117,24 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
             activeOpacity={0.7}
             onPress={() => {
               RTCHaptics.selection();
-              setAppLanguage(language === 'ar' ? 'en' : 'ar');
+              const next = language === 'ar' ? 'en' : 'ar';
+              // Instant switch when direction stays the same; otherwise
+              // confirm, apply the new direction and reload (v100.4.0d).
+              if (!layoutNeedsReload(next)) {
+                setAppLanguage(next);
+                return;
+              }
+              Alert.alert(t('dirSwitchTitle'), t('dirSwitchMessage'), [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('dirSwitchConfirm'),
+                  onPress: () => {
+                    setAppLanguage(next);
+                    applyLayoutDirection(next);
+                    reloadApp();
+                  },
+                },
+              ]);
             }}
             style={styles.menuItem}
           >

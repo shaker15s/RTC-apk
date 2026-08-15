@@ -4,7 +4,7 @@
  * Fully bilingual via the reactive i18n engine.
  */
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Modal, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Modal, Linking, Alert } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { CustomCard } from '../../components/common/CustomCard';
@@ -14,6 +14,7 @@ import { ConfirmModal } from '../../components/feedback/ConfirmModal';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
 import { useT, t } from '../../core/i18n';
+import { layoutNeedsReload, applyLayoutDirection, reloadApp } from '../../core/i18n/direction';
 import { maskPhone } from '../../core/security/sanitizers';
 import { Moon, Globe, ChevronLeft, Edit3, ShieldCheck, User, LifeBuoy, LogOut, MapPin, Phone, ExternalLink } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
@@ -141,7 +142,24 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
             activeOpacity={0.7}
             onPress={() => {
               RTCHaptics.selection();
-              setAppLanguage(language === 'ar' ? 'en' : 'ar');
+              const next = language === 'ar' ? 'en' : 'ar';
+              // Instant switch when direction stays the same; otherwise
+              // confirm, apply the new direction and reload (v100.4.0d).
+              if (!layoutNeedsReload(next)) {
+                setAppLanguage(next);
+                return;
+              }
+              Alert.alert(t('dirSwitchTitle'), t('dirSwitchMessage'), [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('dirSwitchConfirm'),
+                  onPress: () => {
+                    setAppLanguage(next);
+                    applyLayoutDirection(next);
+                    reloadApp();
+                  },
+                },
+              ]);
             }}
             style={styles.menuItem}
           >

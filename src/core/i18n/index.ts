@@ -794,6 +794,9 @@ export const STRINGS = {
     relV100B1: '🚀 إطلاق منصة مسار RTC لمراكز رسالة للتدريب',
     relV100B2: '🎓 إدارة المجموعات، الحضور بالباركود، الشهادات، والنقاط',
     freeNotice: 'تعلّم مجاني ١٠٠٪',
+    dirSwitchTitle: 'تغيير اتجاه الواجهة',
+    dirSwitchMessage: 'تغيير اللغة يتطلب إعادة تشغيل التطبيق لتفعيل اتجاه الواجهة الجديد (RTL/LTR). هل تريد المتابعة؟',
+    dirSwitchConfirm: 'إعادة التشغيل الآن',
   },
 
   en: {
@@ -1162,6 +1165,9 @@ export const STRINGS = {
     // ---------- Leaderboard ----------
     leaderboardTitle: 'Leaderboard',
     leaderboardSubtitle: 'Top students this week',
+    dirSwitchTitle: 'Change layout direction',
+    dirSwitchMessage: 'Switching the language requires restarting the app to apply the new layout direction (RTL/LTR). Continue?',
+    dirSwitchConfirm: 'Restart now',
     freeNotice: '100% Free Learning',
 
   // ---------- v100.4.0c: changelog content ----------

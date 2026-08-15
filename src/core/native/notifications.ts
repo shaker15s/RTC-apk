@@ -23,6 +23,18 @@ try {
   });
 } catch (e) {}
 
+// Android local notifications are delivered through the "default"
+// channel — pre-configure it with HIGH importance so lecture reminders
+// show heads-up with sound (fixes silent/quiet reminders on Android 8+).
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'تذكيرات المحاضرات — Lecture reminders',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
+  }).catch(() => {});
+}
+
 export const RTCNotifications = {
   /**
    * Request notification permissions for local and remote notifications.

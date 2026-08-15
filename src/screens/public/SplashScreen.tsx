@@ -23,10 +23,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     }
     // Safety cap: never strand the user on the splash if auth hangs.
     const timer = setTimeout(() => {
+      useAuthStore.setState({ isInitialized: true, isLoading: false });
       onFinish?.();
-    }, 2500);
+    }, 2000);
     return () => clearTimeout(timer);
-  }, [isInitialized]);
+  }, [isInitialized, onFinish]);
 
   return (
     <LinearGradient colors={['#001A6B', '#00288E', '#003C36']} style={styles.container}>

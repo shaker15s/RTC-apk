@@ -72,13 +72,16 @@ class ErrorBoundary extends Component<Props, State> {
 
 export default function App() {
   const { isDark, prefsReady, initNetworkListener, initPreferences } = useAppStore();
-  const { refreshProfile } = useAuthStore();
+  const { refreshProfile, initAuth } = useAuthStore();
 
   useEffect(() => {
     // 1. Initialize user theme & language preferences
     initPreferences();
 
-    // 2. Initialize offline/online network watcher (real NetInfo — P0-3)
+    // 2. Initialize auth state & persisted session
+    initAuth();
+
+    // 3. Initialize offline/online network watcher (real NetInfo — P0-3)
     const cleanupNet = initNetworkListener();
 
     // 3. Foreground app state listener for token / data refresh

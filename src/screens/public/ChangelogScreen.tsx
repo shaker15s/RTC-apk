@@ -9,6 +9,7 @@ import { GlassHeader } from '../../components/layout/GlassHeader';
 import { CustomCard } from '../../components/common/CustomCard';
 import { Sparkles, Check, ShieldCheck, Zap } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
+import { useT } from '../../core/i18n';
 
 export interface ChangelogScreenProps {
   onBack: () => void;
@@ -16,12 +17,21 @@ export interface ChangelogScreenProps {
 
 export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
 
   const releases = [
     {
+      version: 'v100.3.0 (دعم اللغة الإنجليزية)',
+      date: 'أغسطس 2026',
+      badge: t('releaseI18n'),
+      items: [
+        '🌐 دعم كامل للغة الإنجليزية في واجهات الطالب والعامة — Full English support for student & public screens',
+      ],
+    },
+    {
       version: 'v100.2.0 (تجربة النيتف الكاملة)',
       date: 'أغسطس 2026',
-      badge: 'تحديث كبير',
+      badge: t('releaseNative'),
       items: [
         '🧭 تنقل نيتف حقيقي: انتقالات أصلية ورجوع بالسحب ودعم الروابط العميقة',
         '📅 سجل حضور تفصيلي لكل محاضرة بحالتها ونقاطها وتاريخها',
@@ -33,7 +43,7 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
     {
       version: 'v100.1.0 (تحديث الجودة الشامل)',
       date: 'أغسطس 2026',
-      badge: 'إصلاحات QA',
+      badge: t('releaseQuality'),
       items: [
         '🔧 زر منح النقاط للمشرفين أصبح حقيقياً ومتصلاً بقاعدة البيانات',
         '🔔 إشعارات وتذكيرات المحاضرات متصلة الآن وتسجيل جهازك للتنبيهات',
@@ -48,7 +58,7 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
     {
       version: 'v100.0.0 (النسخة الاحترافية الشاملة)',
       date: 'أغسطس 2026',
-      badge: 'إصدار رئيسي',
+      badge: t('releaseMajor'),
       items: [
         '✨ واجهة نيتف فائقة السرعة مع رسوم متحركة 60fps باستخدام Reanimated',
         '⚡ تحديثات فورية حية Realtime عبر Supabase للحضور والإشعارات',
@@ -62,7 +72,7 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
     {
       version: 'v1.0.0',
       date: 'يوليو 2026',
-      badge: 'الإطلاق الأولي',
+      badge: t('releaseLaunch'),
       items: [
         '🚀 إطلاق منصة مسار RTC لمراكز رسالة للتدريب',
         '🎓 إدارة المجموعات، الحضور بالباركود، الشهادات، والنقاط',
@@ -73,8 +83,8 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="ما الجديد؟"
-        subtitle="سجل التحديثات والتطوير"
+        title={t('changelogTitle')}
+        subtitle={t('changelogSubtitle')}
         showBack
         onBack={onBack}
         showNotif={false}

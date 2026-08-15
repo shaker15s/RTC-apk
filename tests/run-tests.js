@@ -279,10 +279,55 @@ assert(canAccess('s-analytics', 'admin') === true, 'Admin can access shared anal
 assert(canAccess('s-analytics', 'student') === false, 'Student blocked from analytics');
 
 // -------------------------------------------------------------
+// 4b. i18n ENGINE — execute the REAL bilingual module (v100.3.0)
+// -------------------------------------------------------------
+console.log('\n🌐 4b. Testing the REAL i18n engine (loading core/i18n)...');
+
+try {
+  const ts = require(path.join(repoRoot, 'node_modules/typescript'));
+  const i18nSrc = fs.readFileSync(path.join(__dirname, '../src/core/i18n/index.ts'), 'utf8');
+  const i18nJs = ts.transpileModule(i18nSrc, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const i18nModule = { exports: {} };
+  new Function('module', 'exports', 'require', i18nJs)(i18nModule, i18nModule.exports, require);
+  const realI18n = i18nModule.exports;
+
+  assert(typeof realI18n.t === 'function', 'i18n.t() is exported');
+  assert(typeof realI18n.setLanguage === 'function', 'i18n.setLanguage() is exported');
+
+  const arKeys = Object.keys(realI18n.STRINGS.ar);
+  const enKeys = Object.keys(realI18n.STRINGS.en);
+  assert(arKeys.length > 200, `Dictionary has ${arKeys.length}+ Arabic keys`);
+  assert(
+    arKeys.length === enKeys.length && arKeys.every((k) => enKeys.includes(k)),
+    'Arabic and English dictionaries have identical key sets'
+  );
+
+  // Interpolation
+  assert(
+    realI18n.t('pointsToNext', { p: 50, n: 100 }) === '50 / 100 نقطة للمستوى التالي',
+    'Arabic interpolation works'
+  );
+
+  // Live language switching
+  realI18n.setLanguage('en');
+  assert(realI18n.t('home') === 'Home', 'Language switch to English works');
+  assert(realI18n.t('pointsToNext', { p: 50, n: 100 }) === '50 / 100 points to next level', 'English interpolation works');
+  realI18n.setLanguage('ar');
+  assert(realI18n.t('home') === 'الرئيسية', 'Language switch back to Arabic works');
+
+  // Missing keys must never surface raw keys to users — Arabic fallback.
+  assert(realI18n.t('this_key_does_not_exist') === 'this_key_does_not_exist', 'Unknown keys fall back safely');
+} catch (e) {
+  console.error('  i18n module load failed:', e);
+  assert(false, 'i18n module loads and runs');
+}
+
+// -------------------------------------------------------------
 // 5. CONFIG & APP JSON AUDIT
 // -------------------------------------------------------------
 console.log('\n⚙️ 5. Testing App Configuration & Native Settings...');
-
 const appJsonPath = path.join(__dirname, '../app.json');
 assert(fs.existsSync(appJsonPath), 'app.json exists');
 const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));

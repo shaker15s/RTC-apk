@@ -38,9 +38,11 @@ import {
   ExternalLink,
 } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
+import { useT } from '../../core/i18n';
 
 export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage } = useAppStore();
+  const { t } = useT();
   const { profile, signOut } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -146,33 +148,38 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
                 <Moon color={colors.primary} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>الوضع الليلي (OLED Dark)</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مريح للعين وموفر للبطارية</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('darkTitle')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('darkSubtitle')}</Text>
               </View>
             </View>
-            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label="الوضع الليلي" />
+            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label={t('darkSwitchLabel')} />
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
-          {/* Honest language row (fixes F-5): the old toggle switched a
-              store flag but no screen actually used the i18n engine.
-              The bilingual engine stays in core/i18n for the upcoming
-              English release. */}
-          <View style={styles.menuItem}>
+          {/* LIVE language toggle (v100.3.0): switches the whole
+              translated UI instantly via the reactive i18n engine. */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              RTCHaptics.selection();
+              setAppLanguage(language === 'ar' ? 'en' : 'ar');
+            }}
+            style={styles.menuItem}
+          >
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: colors.teal + '18' }]}>
                 <Globe color={colors.teal} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>اللغة (Language)</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('langTitle')}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>
-                  العربية (Arabic) — الإنجليزية قريباً
+                  {language === 'ar' ? t('langArabic') : t('langEnglish')}
                 </Text>
               </View>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
-          </View>
+          </TouchableOpacity>
         </CustomCard>
 
         {/* Shortcuts Section */}
@@ -186,7 +193,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
               <View style={[styles.menuIcon, { backgroundColor: colors.gold + '18' }]}>
                 <ShieldCheck color={colors.gold} size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>التحقق من صحة شهادة</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('verifyShortcut')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>

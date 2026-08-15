@@ -10,6 +10,7 @@ import { TextInputField } from '../../components/common/TextInputField';
 import { CustomButton } from '../../components/common/CustomButton';
 import { CustomCard } from '../../components/common/CustomCard';
 import { RTCHaptics } from '../../core/native/haptics';
+import { useT } from '../../core/i18n';
 import { ShieldCheck, CheckCircle2, XCircle, Search, Award, Calendar, User, ArrowRight } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
@@ -19,6 +20,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
 }) => {
   const insets = useSafeAreaInsets();
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
 
   const [serial, setSerial] = useState(initialSerial || '');
   const [loading, setLoading] = useState(false);
@@ -28,7 +30,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
   const runVerify = async (rawSerial: string) => {
     const cleanSerial = rawSerial.trim().toUpperCase();
     if (!cleanSerial) {
-      showToast('يرجى إدخال الرقم التسلسلي للشهادة', 'warn');
+      showToast(t('verifyEnterSerialWarn'), 'warn');
       return;
     }
 
@@ -46,7 +48,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
         RTCHaptics.error();
       }
     } catch (e: any) {
-      showToast(e?.message || 'تعذر التحقق من الشهادة', 'err');
+      showToast(e?.message || t('verifyError'), 'err');
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
             <ArrowRight color={colors.txt} size={20} />
           </TouchableOpacity>
         ) : null}
-        <Text style={[styles.headerTitle, { color: colors.txt }]}>التحقق من صحة الشهادة</Text>
+        <Text style={[styles.headerTitle, { color: colors.txt }]}>{t('verifyTitle')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -83,25 +85,25 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
           <View style={[styles.iconWrap, { backgroundColor: colors.primarySoft }]}>
             <ShieldCheck color={colors.primary} size={36} />
           </View>
-          <Text style={[styles.heroTitle, { color: colors.txt }]}>بوابة التحقق الرسمية</Text>
+          <Text style={[styles.heroTitle, { color: colors.txt }]}>{t('verifyHero')}</Text>
           <Text style={[styles.heroSubtitle, { color: colors.mut }]}>
-            أدخل الرقم التسلسلي المطبوع أسفل الشهادة أو رمز التحقق الرقمي للتأكد من اعتمادها
+            {t('verifyHeroSub')}
           </Text>
         </View>
 
         {/* Input Card */}
         <CustomCard style={styles.searchCard}>
           <TextInputField
-            label="الرقم التسلسلي للشهادة (Serial Number)"
+            label={t('serialFieldLabel')}
             value={serial}
             onChangeText={setSerial}
-            placeholder="مثال: RTC-A1B2C3D4"
+            placeholder={t('serialPlaceholder')}
             maxLength={64}
             icon={<Search color={colors.mut} size={18} />}
           />
 
           <CustomButton
-            title="فحص واعتماد الشهادة"
+            title={t('verifyCta')}
             onPress={handleVerify}
             variant="primary"
             size="big"
@@ -117,7 +119,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
             <CustomCard style={[styles.resultCard, { borderColor: colors.teal }]}>
               <View style={[styles.validBanner, { backgroundColor: colors.teal + '18' }]}>
                 <CheckCircle2 color={colors.teal} size={24} />
-                <Text style={[styles.validTitle, { color: colors.teal }]}>شهادة موثّقة ومعتمدة ✓</Text>
+                <Text style={[styles.validTitle, { color: colors.teal }]}>{t('verifyValid')}</Text>
               </View>
 
               <View style={styles.detailsList}>
@@ -126,7 +128,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
                     <Award color={colors.primary} size={18} />
                   </View>
                   <View style={styles.detailTextWrap}>
-                    <Text style={[styles.detailLabel, { color: colors.mut }]}>الدورة التدريبية</Text>
+                    <Text style={[styles.detailLabel, { color: colors.mut }]}>{t('verifyCourseField')}</Text>
                     <Text style={[styles.detailValue, { color: colors.txt }]}>{result.course_title}</Text>
                   </View>
                 </View>
@@ -136,7 +138,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
                     <User color={colors.teal} size={18} />
                   </View>
                   <View style={styles.detailTextWrap}>
-                    <Text style={[styles.detailLabel, { color: colors.mut }]}>اسم المتدرب</Text>
+                    <Text style={[styles.detailLabel, { color: colors.mut }]}>{t('verifyStudentField')}</Text>
                     <Text style={[styles.detailValue, { color: colors.txt }]}>{result.student_name}</Text>
                   </View>
                 </View>
@@ -146,7 +148,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
                     <Calendar color={colors.gold} size={18} />
                   </View>
                   <View style={styles.detailTextWrap}>
-                    <Text style={[styles.detailLabel, { color: colors.mut }]}>تاريخ الإصدار</Text>
+                    <Text style={[styles.detailLabel, { color: colors.mut }]}>{t('verifyDateField')}</Text>
                     <Text style={[styles.detailValue, { color: colors.txt }]}>{result.issued_date || '—'}</Text>
                   </View>
                 </View>
@@ -156,7 +158,7 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
                     <ShieldCheck color={colors.primary} size={18} />
                   </View>
                   <View style={styles.detailTextWrap}>
-                    <Text style={[styles.detailLabel, { color: colors.mut }]}>الرقم التسلسلي</Text>
+                    <Text style={[styles.detailLabel, { color: colors.mut }]}>{t('verifySerialField')}</Text>
                     <Text style={[styles.detailValue, { color: colors.txt }]}>
                       {result.serial}
                     </Text>
@@ -169,10 +171,10 @@ export const VerifyCertScreen: React.FC<{ onBack?: () => void; initialSerial?: s
             <CustomCard style={[styles.resultCard, { borderColor: colors.red }]}>
               <View style={[styles.validBanner, { backgroundColor: colors.red + '18' }]}>
                 <XCircle color={colors.red} size={24} />
-                <Text style={[styles.validTitle, { color: colors.red }]}>لم يتم العثور على الشهادة</Text>
+                <Text style={[styles.validTitle, { color: colors.red }]}>{t('verifyNotFound')}</Text>
               </View>
               <Text style={[styles.invalidDesc, { color: colors.mut }]}>
-                تأكد من كتابة الرقم التسلسلي بشكل صحيح كما هو مطبوع على الشهادة دون مسافات إضافية.
+                {t('verifyNotFoundDesc')}
               </Text>
             </CustomCard>
           )

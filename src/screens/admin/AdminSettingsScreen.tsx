@@ -31,9 +31,11 @@ import {
   LifeBuoy,
 } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
+import { useT } from '../../core/i18n';
 
 export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
+  const { t } = useT();
   const { profile, signOut, refreshProfile } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -47,7 +49,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
   const handleRefreshCache = async () => {
     RTCHaptics.light();
     await refreshProfile();
-    showToast('تم تحديث البيانات وإعادة مزامنة الحساب بنجاح', 'ok');
+    showToast(t('refreshDone'), 'ok');
   };
 
   return (
@@ -99,30 +101,37 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <Moon color={colors.primary} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>الوضع الليلي (OLED Dark)</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مظهر داكن مريح للعين</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('darkTitle')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('darkSubtitle')}</Text>
               </View>
             </View>
-            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label="الوضع الليلي" />
+            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label={t('darkSwitchLabel')} />
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
-          {/* Honest language row (fixes F-5): no dead toggle anymore */}
-          <View style={styles.menuItem}>
+          {/* LIVE language toggle (v100.3.0) */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              RTCHaptics.selection();
+              setAppLanguage(language === 'ar' ? 'en' : 'ar');
+            }}
+            style={styles.menuItem}
+          >
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: colors.teal + '18' }]}>
                 <Globe color={colors.teal} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>اللغة (Language)</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('langTitle')}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>
-                  العربية (Arabic) — الإنجليزية قريباً
+                  {language === 'ar' ? t('langArabic') : t('langEnglish')}
                 </Text>
               </View>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
-          </View>
+          </TouchableOpacity>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
@@ -132,8 +141,8 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <RefreshCw color={colors.gold} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>تحديث ومزامنة البيانات</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>إعادة تحميل الملف الشخصي والفروع</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('refresh')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('refreshSub')}</Text>
               </View>
             </View>
             <ChevronLeft color={colors.mut} size={18} />

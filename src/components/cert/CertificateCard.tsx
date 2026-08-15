@@ -8,6 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import { RTC_CONFIG } from '../../core/config';
+import { useT } from '../../core/i18n';
 import { GraduationCap, ShieldCheck } from 'lucide-react-native';
 
 export interface CertificateCardProps {
@@ -23,6 +24,8 @@ export const CertificateCard: React.FC<CertificateCardProps> = ({
   serial,
   issuedDate,
 }) => {
+  const { t } = useT();
+
   return (
     <LinearGradient
       colors={['#001A6B', '#00288E', '#00554E']}
@@ -35,23 +38,23 @@ export const CertificateCard: React.FC<CertificateCardProps> = ({
         <View style={styles.badgeIcon}>
           <GraduationCap color="#FFFFFF" size={20} />
         </View>
-        <Text style={styles.org}>جمعية رسالة — مراكز التدريب</Text>
+        <Text style={styles.org}>{t('certCardOrg')}</Text>
         <View style={styles.verifiedPill}>
           <ShieldCheck color="#89F5E7" size={12} />
-          <Text style={styles.verifiedText}>موثقة</Text>
+          <Text style={styles.verifiedText}>{t('certCardVerified')}</Text>
         </View>
       </View>
 
       {/* Title */}
-      <Text style={styles.title}>شهادة إتمام دورة تدريبية</Text>
-      <Text style={styles.subtitle}>تشهد جمعية رسالة بأن</Text>
+      <Text style={styles.title}>{t('certCardTitle')}</Text>
+      <Text style={styles.subtitle}>{t('certCardBody1')}</Text>
 
       {/* Student name */}
       <Text style={styles.studentName} numberOfLines={2}>
         {studentName || '—'}
       </Text>
 
-      <Text style={styles.subtitle}>قد أتم بنجاح متطلبات دورة</Text>
+      <Text style={styles.subtitle}>{t('certCardBody2')}</Text>
       <Text style={styles.courseTitle} numberOfLines={2}>
         {courseTitle || '—'}
       </Text>
@@ -67,9 +70,9 @@ export const CertificateCard: React.FC<CertificateCardProps> = ({
           />
         </View>
         <View style={styles.metaWrap}>
-          <Text style={styles.metaLabel}>الرقم التسلسلي</Text>
+          <Text style={styles.metaLabel}>{t('certCardSerial')}</Text>
           <Text style={styles.metaValue}>{serial}</Text>
-          <Text style={styles.metaLabel}>تاريخ الإصدار</Text>
+          <Text style={styles.metaLabel}>{t('certCardDate')}</Text>
           <Text style={styles.metaValue}>{issuedDate || '—'}</Text>
         </View>
       </View>

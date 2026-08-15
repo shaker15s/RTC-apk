@@ -27,6 +27,7 @@ import { useSessionStore } from '../state/sessionStore';
 import { canAccess } from '../core/security/sanitizers';
 import { RTCHaptics } from '../core/native/haptics';
 import { navigationRef } from './navigationRef';
+import { t } from '../core/i18n';
 
 // Layout & Feedback Components
 import { OfflineBanner } from '../components/layout/OfflineBanner';
@@ -96,7 +97,7 @@ function makeScreen(Screen: React.ComponentType<any>, extraProps?: (props: any) 
       const role = profile?.role || 'student';
       if (!canAccess(screenId, role)) {
         RTCHaptics.error();
-        showToast('ليس لديك صلاحية الوصول لهذه الشاشة', 'warn');
+        showToast(t('routeDenied'), 'warn');
         return;
       }
       navigation.push(screenId, params || {});
@@ -302,7 +303,7 @@ function RootShell() {
         return false; // second press → exit app
       }
       lastPressAt = now;
-      showToast('اضغط مرة أخرى للخروج من التطبيق', 'info');
+      showToast(t('exitToast'), 'info');
       return true;
     });
     return () => sub.remove();
@@ -314,7 +315,7 @@ function RootShell() {
     const role = profile?.role || 'student';
     if (!canAccess(screenId, role)) {
       RTCHaptics.error();
-      showToast('ليس لديك صلاحية الوصول لهذه الشاشة', 'warn');
+      showToast(t('routeDenied'), 'warn');
       return;
     }
     if (!navigationRef.isReady()) return;

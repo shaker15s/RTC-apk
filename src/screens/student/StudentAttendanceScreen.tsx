@@ -15,6 +15,7 @@ import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
+import { useT } from '../../core/i18n';
 import { RTCHaptics } from '../../core/native/haptics';
 import { CheckCircle2, Clock, XCircle, ShieldCheck, CalendarCheck, CalendarDays } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
@@ -31,12 +32,12 @@ export interface AttendanceRecord {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; colorKey: 'teal' | 'amber' | 'red' | 'primary' }
+  { labelKey: 'present' | 'late' | 'absent' | 'excused'; colorKey: 'teal' | 'amber' | 'red' | 'primary' }
 > = {
-  present: { label: 'حاضر', colorKey: 'teal' },
-  late: { label: 'متأخر', colorKey: 'amber' },
-  absent: { label: 'غائب', colorKey: 'red' },
-  excused: { label: 'معذور', colorKey: 'primary' },
+  present: { labelKey: 'present', colorKey: 'teal' },
+  late: { labelKey: 'late', colorKey: 'amber' },
+  absent: { labelKey: 'absent', colorKey: 'red' },
+  excused: { labelKey: 'excused', colorKey: 'primary' },
 };
 
 export const StudentAttendanceScreen: React.FC<{
@@ -44,6 +45,7 @@ export const StudentAttendanceScreen: React.FC<{
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
 
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export const StudentAttendanceScreen: React.FC<{
       if (e?.message?.includes('Could not find') || e?.code === 'PGRST202') {
         setRpcMissing(true);
       } else {
-        showToast('تعذر تحميل سجل الحضور — اسحب للتحديث', 'warn');
+        showToast(t('attendanceLoadError'), 'warn');
       }
     } finally {
       setLoading(false);
@@ -87,7 +89,7 @@ export const StudentAttendanceScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="سجل الحضور التفصيلي" subtitle="كل محاضرة وكل حالة على حدة" showBack onBack={onBack} />
+      <GlassHeader title={t('attendanceTitle')} subtitle={t('attendanceSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -101,19 +103,19 @@ export const StudentAttendanceScreen: React.FC<{
               <View style={styles.summaryItem}>
                 <CalendarDays color={colors.primary} size={20} />
                 <Text style={[styles.summaryVal, { color: colors.txt }]}>{totalCount}</Text>
-                <Text style={[styles.summaryLbl, { color: colors.mut }]}>محاضرة مسجلة</Text>
+                <Text style={[styles.summaryLbl, { color: colors.mut }]}>{t('recordedSessions')}</Text>
               </View>
               <View style={[styles.summaryDivider, { backgroundColor: colors.line }]} />
               <View style={styles.summaryItem}>
                 <CheckCircle2 color={colors.teal} size={20} />
                 <Text style={[styles.summaryVal, { color: colors.teal }]}>{presentCount}</Text>
-                <Text style={[styles.summaryLbl, { color: colors.mut }]}>حضور كامل</Text>
+                <Text style={[styles.summaryLbl, { color: colors.mut }]}>{t('fullAttendance')}</Text>
               </View>
               <View style={[styles.summaryDivider, { backgroundColor: colors.line }]} />
               <View style={styles.summaryItem}>
                 <CalendarCheck color={colors.gold} size={20} />
                 <Text style={[styles.summaryVal, { color: colors.gold }]}>{attendanceRate}%</Text>
-                <Text style={[styles.summaryLbl, { color: colors.mut }]}>نسبة الالتزام</Text>
+                <Text style={[styles.summaryLbl, { color: colors.mut }]}>{t('commitmentRate')}</Text>
               </View>
             </View>
           </CustomCard>
@@ -127,13 +129,13 @@ export const StudentAttendanceScreen: React.FC<{
           </View>
         ) : rpcMissing ? (
           <EmptyStateView
-            title="السجل غير متاح بعد"
-            description="يتم تفعيل سجل الحضور التفصيلي على الخادم قريباً — تواصل مع فريق الدعم لو استمرت المشكلة."
+            title={t('attendanceUnavailableTitle')}
+            description={t('attendanceUnavailableDesc')}
             icon={<ShieldCheck color={colors.primary} size={32} />}
             action={
               onNavigate ? (
                 <CustomButton
-                  title="العودة للدورات"
+                  title={t('backToCourses')}
                   onPress={() => onNavigate('s-courses')}
                   variant="primary"
                   size="mid"
@@ -171,7 +173,7 @@ export const StudentAttendanceScreen: React.FC<{
 
                   <View style={styles.recordInfo}>
                     <Text style={[styles.sessionTitle, { color: colors.txt }]}>
-                      {rec.session_title || rec.course_title || 'محاضرة'}
+                      {rec.session_title || rec.course_title || t('lectureWord')}
                     </Text>
                     {rec.batch_name ? (
                       <Text style={[styles.batchName, { color: colors.mut }]}>{rec.batch_name}</Text>
@@ -183,10 +185,10 @@ export const StudentAttendanceScreen: React.FC<{
 
                   <View style={styles.recordRight}>
                     <View style={[styles.statusBadge, { backgroundColor: color + '18' }]}>
-                      <Text style={[styles.statusText, { color }]}>{cfg.label}</Text>
+                      <Text style={[styles.statusText, { color }]}>{t(cfg.labelKey)}</Text>
                     </View>
                     {typeof rec.points === 'number' && rec.points > 0 ? (
-                      <Text style={[styles.pointsText, { color: colors.gold }]}>+{rec.points} نقطة</Text>
+                      <Text style={[styles.pointsText, { color: colors.gold }]}>{t('plusPoints', { p: rec.points })}</Text>
                     ) : null}
                   </View>
                 </View>
@@ -195,8 +197,8 @@ export const StudentAttendanceScreen: React.FC<{
           })
         ) : (
           <EmptyStateView
-            title="لا يوجد سجل حضور بعد"
-            description="سجّل حضورك أول محاضرة وسيظهر كل شيء هنا بالتفصيل."
+            title={t('attendanceEmptyTitle')}
+            description={t('attendanceEmptyDesc')}
             icon={<CalendarCheck color={colors.primary} size={32} />}
           />
         )}

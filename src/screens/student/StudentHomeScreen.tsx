@@ -21,6 +21,7 @@ import { AnimatedNumber } from '../../components/common/AnimatedNumber';
 import { EmptyState } from '../../components/common/EmptyState';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
+import { useT } from '../../core/i18n';
 import { useRealtimeNotifications } from '../../data/realtime/useRealtimeNotifications';
 import Animated, {
   FadeInDown,
@@ -48,6 +49,7 @@ export interface StudentHomeScreenProps {
 
 export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { profile, refreshProfile } = useAuthStore();
   const { notifications } = useRealtimeNotifications();
 
@@ -61,7 +63,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
       const list = await Repository.fetchMyEnrollments();
       setEnrollments(list);
     } catch (e) {
-      showToast('تعذر تحميل بياناتك — اسحب للتحديث', 'warn');
+      showToast(t('homeLoadError'), 'warn');
     }
 
     // Real upcoming session from the backend (fixes F-2). If the RPC is
@@ -122,8 +124,8 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="الرئيسية"
-        subtitle="مسار RTC"
+        title={t('home')}
+        subtitle={t('appName')}
         showNotif
         onNotifPress={() => onNavigate('s-notifications')}
         showAvatar
@@ -140,15 +142,15 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
           <LinearGradient colors={['#00288E', '#1E40AF', '#00554E']} style={[styles.gradHero, Shadows.soft]}>
             <View style={styles.heroTop}>
               <View style={styles.heroGreeting}>
-                <Text style={styles.greetingSub}>مرحباً بك يا</Text>
+                <Text style={styles.greetingSub}>{t('greetingSub')}</Text>
                 <Text style={styles.greetingName} numberOfLines={1}>
-                  {profile?.full_name || 'طالب RTC'} 👋
+                  {profile?.full_name || t('studentFallback')} 👋
                 </Text>
-                <Text style={styles.greetingBranch}>{profile?.branch_name || 'مركز رسالة التدريبي'}</Text>
+                <Text style={styles.greetingBranch}>{profile?.branch_name || t('branchFallback')}</Text>
               </View>
 
               <View style={styles.levelBadge}>
-                <Text style={styles.levelBadgeSub}>المستوى</Text>
+                <Text style={styles.levelBadgeSub}>{t('levelLabel')}</Text>
                 <Text style={styles.levelBadgeNum}>{level} ⭐</Text>
               </View>
             </View>
@@ -158,7 +160,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
               <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
             </View>
             <Text style={styles.progressText}>
-              {points} / {nextLevelPoints} نقطة للمستوى التالي
+              {t('pointsToNext', { p: points, n: nextLevelPoints })}
             </Text>
 
             {/* Stat Pills */}
@@ -170,14 +172,14 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
                   value={activeEnrollments.length}
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>دورة جارية</Text>
+                <Text style={styles.statPillLbl}>{t('activeCoursesStat')}</Text>
               </View>
               <View style={styles.statPill}>
                 <AnimatedNumber
                   value={points}
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>نقطة</Text>
+                <Text style={styles.statPillLbl}>{t('pointsStat')}</Text>
               </View>
               <View style={styles.statPill}>
                 <AnimatedNumber
@@ -185,7 +187,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
                   prefix="🔥 "
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>سلسلة</Text>
+                <Text style={styles.statPillLbl}>{t('streakStat')}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -200,7 +202,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: colors.primary + '18' }]}>
               <Compass color={colors.primary} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>استكشف</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('explore')}</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -210,7 +212,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: colors.teal + '18' }]}>
               <QrCode color={colors.teal} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>سجّل حضورك</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('checkinHome')}</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -220,7 +222,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: colors.gold + '22' }]}>
               <Bell color={colors.gold} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>التنبيهات</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('notifShort')}</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -230,7 +232,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: '#7A30D818' }]}>
               <LifeBuoy color="#7A30D8" size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>المساعدة</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('supportShort')}</Text>
           </AnimatedPressable>
         </Animated.View>
 
@@ -248,8 +250,8 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
                 <Facebook color="#FFFFFF" size={20} />
               </View>
               <View>
-                <Text style={[styles.fbTitle, { color: colors.txt }]}>صفحة فرعك الرسمية</Text>
-                <Text style={[styles.fbSub, { color: colors.mut }]}>تابع أحدث الجداول ومواعيد المقابلات</Text>
+                <Text style={[styles.fbTitle, { color: colors.txt }]}>{t('facebookTitle')}</Text>
+                <Text style={[styles.fbSub, { color: colors.mut }]}>{t('facebookSubtitle')}</Text>
               </View>
             </View>
             <ExternalLink color="#1877F2" size={18} />
@@ -265,13 +267,13 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
               <View style={styles.nextHeader}>
                 <View style={[styles.tagPill, { backgroundColor: colors.teal + '18' }]}>
                   <Calendar color={colors.teal} size={14} />
-                  <Text style={[styles.tagText, { color: colors.teal }]}>المحاضرة القادمة</Text>
+                  <Text style={[styles.tagText, { color: colors.teal }]}>{t('nextLecture')}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => onNavigate('s-courses')}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                 >
-                  <Text style={[styles.viewAllText, { color: colors.primary }]}>كورساتي</Text>
+                  <Text style={[styles.viewAllText, { color: colors.primary }]}>{t('myCourses')}</Text>
                   <ChevronLeft color={colors.primary} size={16} />
                 </TouchableOpacity>
               </View>
@@ -312,7 +314,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
                 >
                   <MonitorPlay color={colors.primary} size={16} />
                   <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
-                    انضم للمحاضرة أونلاين
+                    {t('joinOnlineCta')}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -321,9 +323,9 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
         ) : (
           <EmptyState
             icon={<Compass color={colors.primary} size={32} />}
-            title="لست منضماً لأي دورة تدريبية حالياً"
-            subtitle="استكشف الدورات المتاحة في فرعك وسجّل مجاناً لتطوير مهاراتك"
-            actionLabel="استكشاف الكورسات"
+            title={t('noCoursesTitle')}
+            subtitle={t('noCoursesSubtitle')}
+            actionLabel={t('exploreCoursesCta')}
             onAction={() => onNavigate('s-explore')}
           />
         )}

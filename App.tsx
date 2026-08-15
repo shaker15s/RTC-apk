@@ -22,6 +22,7 @@ import { useSessionStore } from './src/state/sessionStore';
 import { RTCNotifications } from './src/core/native/notifications';
 import { CustomButton } from './src/components/common/CustomButton';
 import { supabase } from './src/data/supabaseClient';
+import { t } from './src/core/i18n';
 
 interface Props {
   children: ReactNode;
@@ -51,12 +52,12 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>حدث خطأ غير متوقع</Text>
+          <Text style={styles.errorTitle}>{t('errorTitle')}</Text>
           <Text style={styles.errorSubtitle}>
-            نعتذر عن هذا الخطأ. يمكنك إعادة تشغيل التطبيق للمتابعة.
+            {t('errorSubtitle')}
           </Text>
           <CustomButton
-            title="إعادة المحاولة"
+            title={t('retryCta')}
             onPress={() => this.setState({ hasError: false, error: null })}
             variant="primary"
             size="mid"

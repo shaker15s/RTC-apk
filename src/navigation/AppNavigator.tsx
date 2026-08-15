@@ -11,13 +11,12 @@
  * Every existing screen keeps its exact prop interface (onNavigate /
  * onBack) through thin adapters, so no screen code needed rewriting.
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, BackHandler } from 'react-native';
 import {
   NavigationContainer,
   useNavigation,
   useRoute,
-  useNavigationState,
   StackActions,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -284,11 +283,10 @@ function RootFlow() {
   );
 }
 
-function RootShell() {
+function RootShell({ currentRoute, setCurrentRoute }: { currentRoute: string; setCurrentRoute: (r: string) => void }) {
   const { colors } = useAppStore();
   const { session, profile } = useAuthStore();
   const showToast = useAppStore((s) => s.showToast);
-  const routeName = useNavigationState((state) => state?.routes[state.index]?.name as string);
 
   // Double-press-to-exit at the stack root (U-5). Native-stack handles
   // its own back behaviour when there is history.
@@ -309,7 +307,7 @@ function RootShell() {
     return () => sub.remove();
   }, [showToast]);
 
-  const showTabBar = !!session && TAB_SCREENS.includes(routeName);
+  const showTabBar = !!session && TAB_SCREENS.includes(currentRoute);
 
   const handleTabPress = (screenId: string) => {
     const role = profile?.role || 'student';
@@ -319,10 +317,11 @@ function RootShell() {
       return;
     }
     if (!navigationRef.isReady()) return;
-    if (screenId === routeName) return;
+    if (screenId === currentRoute) return;
     // Tab switch = reset stack to the tab (mimics old tab behaviour)
     navigationRef.dispatch(StackActions.popToTop());
     navigationRef.navigate(screenId as never);
+    setCurrentRoute(screenId);
   };
 
   return (
@@ -332,7 +331,7 @@ function RootShell() {
         <RootFlow />
       </View>
       {showTabBar ? (
-        <BottomNavigationBar currentScreen={routeName} onTabPress={handleTabPress} />
+        <BottomNavigationBar currentScreen={currentRoute} onTabPress={handleTabPress} />
       ) : null}
       <ToastContainer />
     </View>
@@ -340,9 +339,25 @@ function RootShell() {
 }
 
 export const AppNavigator: React.FC = () => {
+  const [currentRoute, setCurrentRoute] = useState<string>('splash');
+
+  const updateCurrentRoute = () => {
+    if (navigationRef.isReady()) {
+      const route = navigationRef.getCurrentRoute();
+      if (route?.name) {
+        setCurrentRoute(route.name);
+      }
+    }
+  };
+
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
-      <RootShell />
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      onReady={updateCurrentRoute}
+      onStateChange={updateCurrentRoute}
+    >
+      <RootShell currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} />
     </NavigationContainer>
   );
 };

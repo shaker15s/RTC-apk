@@ -253,7 +253,7 @@ export const StudentExcuseScreen: React.FC<{
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

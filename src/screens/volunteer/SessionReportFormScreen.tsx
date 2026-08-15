@@ -202,7 +202,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
           onBack();
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

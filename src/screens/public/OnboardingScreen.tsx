@@ -57,8 +57,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
   const [branchError, setBranchError] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (session?.user && (!profile?.phone || !profile?.branch_id)) {
-      setStep(2);
+    if (session?.user) {
+      if (!fullName) {
+        setFullName(profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || '');
+      }
+      if (profile?.phone) {
+        setPhone(profile.phone);
+      }
+      if (profile?.branch_id) {
+        setSelectedBranchId(profile.branch_id);
+      }
+      if (!profile?.phone || !profile?.branch_id) {
+        setStep(2);
+      }
     }
   }, [session, profile]);
 

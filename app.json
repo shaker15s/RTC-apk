@@ -13,6 +13,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#00288E"
     },
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.resala.rtc.masar",
@@ -22,9 +26,6 @@
         "NSPhotoLibraryUsageDescription": "نحتاج إذن الصور لاختيار صورتك الشخصية أو إرفاق مستندات الأعذار.",
         "NSPhotoLibraryAddUsageDescription": "لحفظ الشهادات الرقمية ومشاركتها.",
         "UIBackgroundModes": [
-          "remote-notification",
-          "remote-notification",
-          "remote-notification",
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -44,18 +45,8 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.VIBRATE",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.RECORD_AUDIO"
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [

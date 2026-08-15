@@ -91,7 +91,19 @@ export const RTCSecureStorage = {
 
   async clear(): Promise<void> {
     try {
+      // Clear the known Supabase session keys from SecureStore
+      const supabaseKeys = [
+        'supabase-auth-token',
+        'supabase.auth.token',
+        'sb-jwhedqmszbdougsqqmhv-auth-token',
+      ];
+      for (const key of supabaseKeys) {
+        await this.removeItem(key);
+      }
+      // Also clear memory fallback
       for (const k in memoryFallback) delete memoryFallback[k];
-    } catch (e) {}
+    } catch (e) {
+      for (const k in memoryFallback) delete memoryFallback[k];
+    }
   },
 };

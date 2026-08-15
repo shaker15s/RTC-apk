@@ -62,7 +62,7 @@ import { ChangelogScreen } from '../screens/public/ChangelogScreen';
 
 export const AppNavigator: React.FC = () => {
   const { colors, showToast } = useAppStore();
-  const { session, profile, isLoading, initAuth } = useAuthStore();
+  const { session, profile, isLoading, isInitialized, initAuth } = useAuthStore();
 
   const [currentScreen, setCurrentScreen] = useState<string>('splash');
   const [screenParams, setScreenParams] = useState<any>({});
@@ -75,11 +75,12 @@ export const AppNavigator: React.FC = () => {
 
   // Handle default screen routing on auth state change
   useEffect(() => {
-    if (isLoading) {
-      setCurrentScreen('splash');
+    // While initializing, stay on splash
+    if (!isInitialized) {
       return;
     }
 
+    // Not loading AND no session → go to onboarding (unless on public verify screen)
     if (!session) {
       if (currentScreen !== 'verify') {
         setCurrentScreen('onboarding');
@@ -87,7 +88,16 @@ export const AppNavigator: React.FC = () => {
       return;
     }
 
-    // Role-based home default
+    // Session exists — check if profile is complete
+    // If profile has no phone or branch_id, stay on onboarding step 2
+    if (session && (!profile?.phone || !profile?.branch_id)) {
+      if (currentScreen === 'splash' || currentScreen !== 'onboarding') {
+        setCurrentScreen('onboarding');
+      }
+      return;
+    }
+
+    // Session exists AND profile is complete → route to role-based home
     const role = profile?.role || 'student';
     if (currentScreen === 'splash' || currentScreen === 'onboarding') {
       if (role === 'admin') {
@@ -98,7 +108,7 @@ export const AppNavigator: React.FC = () => {
         setCurrentScreen('s-home');
       }
     }
-  }, [session, profile?.role, isLoading]);
+  }, [session, profile, isInitialized, isLoading]);
 
   // Android Hardware Back Button Handler
   useEffect(() => {

@@ -1,20 +1,22 @@
 /**
  * Root Application Entry for Masar RTC Mobile (org.resala.rtc.masar)
- * Features ErrorBoundary, foreground session refresh, deep-linking, and QueryClient.
+ *
+ * KEY FIX: Deep link handler now uses the shared handleOAuthReturnUrl()
+ * from authStore, ensuring consistent code/token exchange.
+ * The onAuthStateChange listener in authStore handles all session state updates.
  */
 import React, { Component, ErrorInfo, ReactNode, useEffect } from 'react';
-import { View, Text, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { View, Text, StyleSheet, AppState, AppStateStatus, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAppStore } from './src/state/appStore';
-import { useAuthStore } from './src/state/authStore';
+import { useAuthStore, handleOAuthReturnUrl } from './src/state/authStore';
 import { RTCNotifications } from './src/core/native/notifications';
 import { CustomButton } from './src/components/common/CustomButton';
 import { supabase } from './src/data/supabaseClient';
-import { RPC } from './src/data/rpc';
 
 interface Props {
   children: ReactNode;
@@ -88,52 +90,43 @@ export default function App() {
     // 4. Foreground app state listener for token / data refresh
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
-        refreshProfile();
+        // When app comes to foreground, refresh session & profile
+        supabase.auth.getSession().then(({ data }) => {
+          if (data?.session) {
+            refreshProfile();
+          }
+        });
       }
     };
     const appStateSub = AppState.addEventListener('change', handleAppStateChange);
 
-    // 5. Setup Deep Link Handling (org.resala.rtc.masar://auth or https://...)
+    // 5. Setup Deep Link Handling
+    // This catches OAuth redirects that arrive via Android Intent filter
+    // (when Chrome Custom Tab redirects to org.resala.rtc.masar://auth?code=...)
     const handleDeepLink = async (event: { url: string }) => {
       const { url } = event;
       if (!url) return;
+      console.log('[App] Deep link received:', url);
 
-      if (url.includes('access_token') || url.includes('code=')) {
-        try {
-          const parsed = Linking.parse(url);
-          if (parsed.queryParams?.code) {
-            const { data: sessionData } = await supabase.auth.exchangeCodeForSession(parsed.queryParams.code as string);
-            const userMeta = sessionData?.session?.user?.user_metadata;
-            await RPC.ensureMyProfile(userMeta?.full_name || userMeta?.name || 'مستخدم مسار');
-            await refreshProfile();
-          } else if (url.includes('access_token')) {
-            const hashPart = url.split('#')[1] || url.split('?')[1] || '';
-            const params = new URLSearchParams(hashPart);
-            const accessToken = params.get('access_token');
-            const refreshToken = params.get('refresh_token');
-
-            if (accessToken && refreshToken) {
-              const { data: sessionData } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-              const userMeta = sessionData?.session?.user?.user_metadata;
-              await RPC.ensureMyProfile(userMeta?.full_name || userMeta?.name || 'مستخدم مسار');
-              await refreshProfile();
-            }
-          }
-        } catch (e) {}
+      // Only process auth-related URLs
+      if (url.includes('code=') || url.includes('access_token')) {
+        await handleOAuthReturnUrl(url);
       }
     };
 
-    const sub = Linking.addEventListener('url', handleDeepLink);
+    const linkSub = Linking.addEventListener('url', handleDeepLink);
+
+    // Also check if the app was opened via a deep link (cold start)
     Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink({ url });
+      if (url) {
+        console.log('[App] Initial URL:', url);
+        handleDeepLink({ url });
+      }
     });
 
     return () => {
       cleanupNet();
-      sub.remove();
+      linkSub.remove();
       appStateSub.remove();
     };
   }, []);

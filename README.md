@@ -126,6 +126,22 @@ eas build --platform ios --profile production
 
 ---
 
+## 🔄 آلية التحديث (Expo Go vs APK + OTA)
+
+التحديث بيوصل بطريقتين مختلفتين تماماً حسب طريقة تشغيلك للتطبيق:
+
+| الوضع | إزاي بيوصل التحديث |
+|---|---|
+| **Expo Go** (من بلاي ستور) | بس عبر السيرفر المحلي `npx expo start` — التعديلات بتوصل فورياً (Fast Refresh). **`eas update` مش بيأثر على Expo Go إطلاقاً.** |
+| **APK حقيقي** (من `eas build`) | تحديثات OTA من فرع `preview` (القناة متظبطة في eas.json). التحديث بيتنزّل في الخلفية عند فتح التطبيق، ويتفعّل عند إعادة الفتح. |
+
+**القواعد الذهبية:**
+1. تعديل على شاشات/منطق (JS/TSX) → `npx eas-cli update --branch preview --message "..."` كفاية.
+2. تعديل على `app.json` أو أي حاجة نيتف → مطلوب `eas build` جديد.
+3. أي **رفع للإصدار** (`version`) → مطلوب build جديد مرة واحدة، لأن الـ OTA مربوط بالإصدار (`runtimeVersion: appVersion`) — النسخ القديمة مش هتقبل تحديثات الإصدار الجديد.
+
+---
+
 ## 🔒 حماية البيانات والأمان (Security Standards)
 
 - **Zero-Trust Backend:** لا يمكن لأي مستخدم تجاوز الصلاحيات الممنوحة له بفضل RLS و `SECURITY DEFINER` في PostgreSQL.

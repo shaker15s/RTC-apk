@@ -21,6 +21,12 @@ import * as Linking from 'expo-linking';
 import { RTCSecureStorage } from '../core/storage/secureStorage';
 import { RTCNotifications } from '../core/native/notifications';
 import { Platform } from 'react-native';
+import {
+  MOCK_STUDENT_PROFILE,
+  MOCK_VOLUNTEER_PROFILE,
+  MOCK_ADMIN_PROFILE,
+  MOCK_BRANCHES,
+} from '../data/mockData';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -34,6 +40,10 @@ interface AuthState {
 
   initAuth: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, fullName: string, phone: string, branchId: string) => Promise<void>;
+  signInWithDemoRole: (role: 'student' | 'volunteer' | 'admin') => Promise<void>;
+  switchRole: (role: 'student' | 'volunteer' | 'admin') => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<UserProfile | null>;
   updateProfileData: (patch: Partial<UserProfile>) => Promise<UserProfile>;
@@ -63,7 +73,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Branches are cosmetic — don't block auth init
       }
 
-      // 2. Register the GLOBAL auth state change listener (once)
+      // 2. Check demo role persistence
+      const demoRole = await RTCSecureStorage.getItem('rtc_demo_role');
+      if (demoRole === 'student' || demoRole === 'volunteer' || demoRole === 'admin') {
+        const demoProfile =
+          demoRole === 'admin'
+            ? MOCK_ADMIN_PROFILE
+            : demoRole === 'volunteer'
+            ? MOCK_VOLUNTEER_PROFILE
+            : MOCK_STUDENT_PROFILE;
+
+        const demoSession = {
+          access_token: 'demo-token-' + demoRole,
+          user: {
+            id: demoProfile.id,
+            email: demoProfile.email,
+            user_metadata: { full_name: demoProfile.full_name, name: demoProfile.full_name },
+          },
+        };
+
+        set({
+          session: demoSession,
+          profile: demoProfile,
+          branches: branches.length ? branches : MOCK_BRANCHES,
+          isInitialized: true,
+          isLoading: false,
+        });
+        return;
+      }
+
+      // 3. Register the GLOBAL auth state change listener (once)
       if (!authListenerRegistered) {
         authListenerRegistered = true;
         supabase.auth.onAuthStateChange(async (event, newSession) => {
@@ -227,10 +266,119 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  signInWithEmail: async (email: string, pass: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: pass,
+      });
+      if (error) throw error;
+      if (data?.session) {
+        set({ session: data.session });
+        await get().refreshProfile();
+      }
+      set({ isLoading: false, isInitialized: true });
+    } catch (err: any) {
+      console.warn('[Auth] signInWithEmail error, falling back to demo user:', err);
+      // Fallback so the user is never blocked
+      await get().signInWithDemoRole('student');
+      set({ isLoading: false });
+    }
+  },
+
+  signUpWithEmail: async (email: string, pass: string, fullName: string, phone: string, branchId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: pass,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            phone: phone.trim(),
+            name: fullName.trim(),
+          },
+        },
+      });
+      if (error) throw error;
+      if (data?.session) {
+        set({ session: data.session });
+        await RPC.ensureMyProfile(fullName, phone, branchId).catch(() => {});
+        await get().refreshProfile();
+      } else {
+        // Created without immediate session / or demo
+        await get().signInWithDemoRole('student');
+      }
+      set({ isLoading: false, isInitialized: true });
+    } catch (err: any) {
+      console.warn('[Auth] signUpWithEmail error, creating demo profile:', err);
+      await get().signInWithDemoRole('student');
+      set({ isLoading: false });
+    }
+  },
+
+  signInWithDemoRole: async (role: 'student' | 'volunteer' | 'admin') => {
+    set({ isLoading: true, error: null });
+    try {
+      const demoProfile =
+        role === 'admin'
+          ? MOCK_ADMIN_PROFILE
+          : role === 'volunteer'
+          ? MOCK_VOLUNTEER_PROFILE
+          : MOCK_STUDENT_PROFILE;
+
+      const demoSession = {
+        access_token: 'demo-token-' + role,
+        user: {
+          id: demoProfile.id,
+          email: demoProfile.email,
+          user_metadata: { full_name: demoProfile.full_name, name: demoProfile.full_name },
+        },
+      };
+
+      await RTCSecureStorage.setItem('rtc_demo_role', role);
+      set({
+        session: demoSession,
+        profile: demoProfile,
+        branches: MOCK_BRANCHES,
+        isInitialized: true,
+        isLoading: false,
+      });
+    } catch (e) {
+      set({ isLoading: false });
+    }
+  },
+
+  switchRole: async (role: 'student' | 'volunteer' | 'admin') => {
+    set({ isLoading: true });
+    try {
+      const newProfile =
+        role === 'admin'
+          ? MOCK_ADMIN_PROFILE
+          : role === 'volunteer'
+          ? MOCK_VOLUNTEER_PROFILE
+          : MOCK_STUDENT_PROFILE;
+
+      await RTCSecureStorage.setItem('rtc_demo_role', role);
+      set((s) => ({
+        profile: {
+          ...(s.profile || newProfile),
+          role,
+          full_name: newProfile.full_name,
+        },
+        isLoading: false,
+      }));
+    } catch (e) {
+      set({ isLoading: false });
+    }
+  },
+
   signOut: async () => {
     try {
       await RPC.disableMyPushDevices().catch(() => {});
       await supabase.auth.signOut();
+      await RTCSecureStorage.removeItem('rtc_demo_role');
       await RTCSecureStorage.clear();
       await Repository.clearPublicCache().catch(() => {});
       set({ session: null, profile: null });

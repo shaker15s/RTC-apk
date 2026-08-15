@@ -1,5 +1,9 @@
 /**
- * Onboarding Screen with 2-step flow (Google Sign-In + Complete Profile).
+ * Onboarding Screen with Multi-mode Access:
+ * 1. Fast Demo One-Tap Access (Student / Volunteer / Admin)
+ * 2. Email & Password Sign-In / Sign-Up
+ * 3. Google Sign-In
+ * 4. Step 2: Profile Data Completion (Phone & Branch)
  */
 import React, { useState } from 'react';
 import {
@@ -13,8 +17,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,11 +38,18 @@ import {
   LifeBuoy,
   MapPin,
   Check,
-  CheckCircle2,
   ChevronDown,
   X,
+  GraduationCap,
+  Users,
+  Shield,
+  Mail,
+  KeyRound,
+  UserPlus,
+  LogIn,
+  Zap,
 } from 'lucide-react-native';
-import { Radii } from '../../core/theme/tokens';
+import { Radii, Shadows } from '../../core/theme/tokens';
 
 export interface OnboardingScreenProps {
   onLoginSuccess?: () => void;
@@ -55,6 +64,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
     profile,
     branches,
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    signInWithDemoRole,
     updateProfileData,
     resetAuthData,
     initAuth,
@@ -63,9 +75,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
   const { t } = useT();
 
   const [step, setStep] = useState<1 | 2>(session?.user && !profile?.phone ? 2 : 1);
+  const [authTab, setAuthTab] = useState<'demo' | 'email' | 'google'>('demo');
+
+  // Email form state
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [emailNameInput, setEmailNameInput] = useState('');
+  const [emailPhoneInput, setEmailPhoneInput] = useState('');
+
+  // Step 2 state
   const [fullName, setFullName] = useState(profile?.full_name || session?.user?.user_metadata?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
-  const [selectedBranchId, setSelectedBranchId] = useState(profile?.branch_id || '');
+  const [selectedBranchId, setSelectedBranchId] = useState(profile?.branch_id || (branches[0]?.id || 'b1'));
   const [branchModalVisible, setBranchModalVisible] = useState(false);
 
   const [nameError, setNameError] = useState<string | null>(null);
@@ -88,6 +110,55 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
       }
     }
   }, [session, profile]);
+
+  const handleDemoSignIn = async (role: 'student' | 'volunteer' | 'admin') => {
+    RTCHaptics.selection();
+    await signInWithDemoRole(role);
+    showToast(
+      role === 'student'
+        ? 'مرحباً بك كطالب في مسار RTC! 🎓'
+        : role === 'volunteer'
+        ? 'مرحباً بك كمدرب / متطوع! 👨‍🏫'
+        : 'مرحباً بك في لوحة تحكم المسؤول 👑',
+      'ok'
+    );
+    if (onLoginSuccess) onLoginSuccess();
+  };
+
+  const handleEmailAuth = async () => {
+    RTCHaptics.light();
+    if (!emailInput || !emailInput.includes('@')) {
+      showToast('يرجى إدخال بريد إلكتروني صحيح', 'err');
+      return;
+    }
+    if (!passwordInput || passwordInput.length < 6) {
+      showToast('كلمة المرور يجب أن تكون ٦ أحرف على الأقل', 'err');
+      return;
+    }
+
+    if (isSignUp) {
+      if (!emailNameInput.trim()) {
+        showToast('يرجى إدخال الاسم الثلاثي بالكامل', 'err');
+        return;
+      }
+      if (!validateEgyptianPhone(emailPhoneInput)) {
+        showToast('يرجى إدخال رقم موبايل مصري صحيح (11 رقم)', 'err');
+        return;
+      }
+      await signUpWithEmail(
+        emailInput,
+        passwordInput,
+        emailNameInput,
+        emailPhoneInput,
+        selectedBranchId
+      );
+      showToast('تم إنشاء الحساب بنجاح! مرحباً بك في مسار 🌟', 'ok');
+    } else {
+      await signInWithEmail(emailInput, passwordInput);
+      showToast('تم تسجيل الدخول بنجاح! 🚀', 'ok');
+    }
+    if (onLoginSuccess) onLoginSuccess();
+  };
 
   const handleGoogleSignIn = async () => {
     RTCHaptics.light();
@@ -132,8 +203,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
       RTCHaptics.success();
       showToast(t('profileSaved'), 'ok');
 
-      // Contextual notification permission (U-1): the user just became
-      // a real member — this is the moment lecture reminders matter.
       RTCNotifications.requestPermissions()
         .then((granted) => {
           if (granted) {
@@ -148,8 +217,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
 
   const handleHelpPress = () => {
     RTCHaptics.light();
-    // Real help menu (fixes F-14): the old button silently signed the
-    // user out — now every action is explicit and confirmed.
     Alert.alert(t('helpTitle'), t('helpMessage'), [
       {
         text: t('helpReload'),
@@ -187,7 +254,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
     ]);
   };
 
-  const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+  const selectedBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
 
   return (
     <KeyboardAvoidingView
@@ -231,16 +298,15 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         contentContainerStyle={[styles.scrollContent, { minHeight: '90%' }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
       >
         {step === 1 ? (
-          /* Step 1: Welcome & Google Sign-In */
+          /* Step 1: Welcome & Flexible Sign-In */
           <View style={styles.step1Wrap}>
             {/* Top Brand Pill */}
             <View style={styles.badgeRow}>
               <View style={[styles.freePill, { backgroundColor: colors.teal + '18', borderColor: colors.teal + '40' }]}>
                 <Gift color={colors.teal} size={16} />
-                <Text style={[styles.freeText, { color: colors.teal }]}>{t('freePill')}</Text>
+                <Text style={[styles.freeText, { color: colors.teal }]}>منصة رسالة للتدريب مجاناً 100%</Text>
               </View>
             </View>
 
@@ -248,54 +314,234 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
             <View style={styles.headlineWrap}>
               <View style={styles.eyebrowRow}>
                 <Sparkles color={colors.gold} size={18} />
-                <Text style={[styles.eyebrow, { color: colors.gold }]}>{t('eyebrow')}</Text>
+                <Text style={[styles.eyebrow, { color: colors.gold }]}>مسار RTC الذكي</Text>
               </View>
               <Text style={[styles.title, { color: colors.txt }]}>{t('welcomeTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.mut }]}>
-                {t('welcomeSubtitle')}
+                ابدأ رحلتك التدريبية، سجل حضورك بالـ QR، واستلم شهاداتك المعتمدة فوراً.
               </Text>
             </View>
 
-            {/* Trust Metrics Bar */}
-            <View style={[styles.trustRow, { backgroundColor: colors.card, borderColor: colors.line }]}>
-              <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.primary }]}>{t('trustYears')}</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>{t('trustYearsLabel')}</Text>
-              </View>
-              <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
-              <View style={styles.trustItem}>
-                {/* Live branch count from the database (fixes U-6) */}
-                <Text style={[styles.trustNum, { color: colors.teal }]}>
-                  {branches.length > 0 ? t('branchesCount', { n: branches.length }) : t('branchesDefault')}
+            {/* Auth Mode Switcher Tabs */}
+            <View style={[styles.authTabsRow, { backgroundColor: colors.card2, borderColor: colors.line }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  RTCHaptics.selection();
+                  setAuthTab('demo');
+                }}
+                style={[
+                  styles.authTabBtn,
+                  authTab === 'demo' && { backgroundColor: colors.primary, elevation: 2 },
+                ]}
+              >
+                <Zap color={authTab === 'demo' ? '#FFFFFF' : colors.mut} size={16} />
+                <Text
+                  style={[
+                    styles.authTabText,
+                    { color: authTab === 'demo' ? '#FFFFFF' : colors.mut },
+                  ]}
+                >
+                  ⚡ دخول تجريبي فوري
                 </Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>{t('trustBranchesLabel')}</Text>
-              </View>
-              <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
-              <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.gold }]}>{t('trustFree')}</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>{t('trustFreeLabel')}</Text>
-              </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  RTCHaptics.selection();
+                  setAuthTab('email');
+                }}
+                style={[
+                  styles.authTabBtn,
+                  authTab === 'email' && { backgroundColor: colors.primary, elevation: 2 },
+                ]}
+              >
+                <Mail color={authTab === 'email' ? '#FFFFFF' : colors.mut} size={16} />
+                <Text
+                  style={[
+                    styles.authTabText,
+                    { color: authTab === 'email' ? '#FFFFFF' : colors.mut },
+                  ]}
+                >
+                  إيميل وكلمة سر
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  RTCHaptics.selection();
+                  setAuthTab('google');
+                }}
+                style={[
+                  styles.authTabBtn,
+                  authTab === 'google' && { backgroundColor: colors.primary, elevation: 2 },
+                ]}
+              >
+                <ShieldCheck color={authTab === 'google' ? '#FFFFFF' : colors.mut} size={16} />
+                <Text
+                  style={[
+                    styles.authTabText,
+                    { color: authTab === 'google' ? '#FFFFFF' : colors.mut },
+                  ]}
+                >
+                  Google
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Google Sign-In Card */}
-            <CustomCard style={styles.googleGate} innerStyle={{ padding: 22, gap: 16 }}>
-              <CustomButton
-                title={t('googleCta')}
-                onPress={handleGoogleSignIn}
-                variant="primary"
-                size="big"
-                loading={isLoading}
-                icon={<ShieldCheck color="#FFFFFF" size={22} />}
-                style={{ width: '100%' }}
-              />
+            {/* TAB 1: Fast Demo Accounts */}
+            {authTab === 'demo' && (
+              <CustomCard style={styles.demoCard} innerStyle={{ padding: 18, gap: 14 }}>
+                <View style={styles.demoHeader}>
+                  <Text style={[styles.demoHeaderText, { color: colors.txt }]}>
+                    اختر الدور الذي ترغب في تجربته بنقرة واحدة:
+                  </Text>
+                </View>
 
-              <View style={styles.privacyNote}>
-                <Lock color={colors.mut} size={15} />
-                <Text style={[styles.privacyText, { color: colors.mut }]}>
-                  {t('privacyNote')}
-                </Text>
-              </View>
-            </CustomCard>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleDemoSignIn('student')}
+                  style={[styles.roleOptionCard, { backgroundColor: colors.primarySoft, borderColor: colors.primary + '40' }]}
+                >
+                  <View style={[styles.roleOptionIcon, { backgroundColor: colors.primary }]}>
+                    <GraduationCap color="#FFFFFF" size={22} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.roleOptionTitle, { color: colors.txt }]}>حساب طالب نشط 🎓</Text>
+                    <Text style={[styles.roleOptionDesc, { color: colors.mut }]}>
+                      (عبدالله شاكر) - دورات مسجلة، سجل حضور ذكي، نقاط، شارات وشهادات.
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleDemoSignIn('volunteer')}
+                  style={[styles.roleOptionCard, { backgroundColor: colors.teal + '14', borderColor: colors.teal + '40' }]}
+                >
+                  <View style={[styles.roleOptionIcon, { backgroundColor: colors.teal }]}>
+                    <Users color="#FFFFFF" size={22} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.roleOptionTitle, { color: colors.txt }]}>حساب مدرب / متطوع 👨‍🏫</Text>
+                    <Text style={[styles.roleOptionDesc, { color: colors.mut }]}>
+                      (م. أحمد شاكر) - مجموعات تدريبية، توليد باركود التحضير، وتقارير المحاضرات.
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleDemoSignIn('admin')}
+                  style={[styles.roleOptionCard, { backgroundColor: colors.gold + '14', borderColor: colors.gold + '40' }]}
+                >
+                  <View style={[styles.roleOptionIcon, { backgroundColor: colors.gold }]}>
+                    <Shield color="#FFFFFF" size={22} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.roleOptionTitle, { color: colors.txt }]}>حساب مسؤول نظام 👑</Text>
+                    <Text style={[styles.roleOptionDesc, { color: colors.mut }]}>
+                      (أ. شاكر عبدالله) - لوحة تحكم كاملة، إدارة المستخدمين والفروع والشهادات.
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </CustomCard>
+            )}
+
+            {/* TAB 2: Email & Password Sign-In / Sign-Up */}
+            {authTab === 'email' && (
+              <CustomCard style={styles.emailCard} innerStyle={{ padding: 18, gap: 12 }}>
+                <View style={styles.emailToggleRow}>
+                  <TouchableOpacity
+                    onPress={() => setIsSignUp(false)}
+                    style={[styles.emailToggleBtn, !isSignUp && { backgroundColor: colors.primary }]}
+                  >
+                    <Text style={{ color: !isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
+                      تسجيل دخول
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setIsSignUp(true)}
+                    style={[styles.emailToggleBtn, isSignUp && { backgroundColor: colors.primary }]}
+                  >
+                    <Text style={{ color: isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
+                      إنشاء حساب جديد
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {isSignUp && (
+                  <>
+                    <TextInputField
+                      label="الاسم بالكامل"
+                      value={emailNameInput}
+                      onChangeText={setEmailNameInput}
+                      placeholder="مثال: عبدالله شاكر محمود"
+                      required
+                    />
+                    <TextInputField
+                      label="رقم الموبايل"
+                      value={emailPhoneInput}
+                      onChangeText={setEmailPhoneInput}
+                      placeholder="010XXXXXXXX"
+                      keyboardType="phone-pad"
+                      maxLength={11}
+                      required
+                    />
+                  </>
+                )}
+
+                <TextInputField
+                  label="البريد الإلكتروني"
+                  value={emailInput}
+                  onChangeText={setEmailInput}
+                  placeholder="name@domain.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  required
+                />
+
+                <TextInputField
+                  label="كلمة المرور"
+                  value={passwordInput}
+                  onChangeText={setPasswordInput}
+                  placeholder="••••••••"
+                  secureTextEntry
+                  required
+                />
+
+                <CustomButton
+                  title={isSignUp ? 'إنشاء حساب والدخول' : 'تسجيل الدخول'}
+                  onPress={handleEmailAuth}
+                  variant="primary"
+                  size="big"
+                  loading={isLoading}
+                  icon={isSignUp ? <UserPlus color="#FFFFFF" size={20} /> : <LogIn color="#FFFFFF" size={20} />}
+                  style={{ marginTop: 8 }}
+                />
+              </CustomCard>
+            )}
+
+            {/* TAB 3: Google Sign-In */}
+            {authTab === 'google' && (
+              <CustomCard style={styles.googleGate} innerStyle={{ padding: 22, gap: 16 }}>
+                <CustomButton
+                  title={t('googleCta')}
+                  onPress={handleGoogleSignIn}
+                  variant="primary"
+                  size="big"
+                  loading={isLoading}
+                  icon={<ShieldCheck color="#FFFFFF" size={22} />}
+                  style={{ width: '100%' }}
+                />
+
+                <View style={styles.privacyNote}>
+                  <Lock color={colors.mut} size={15} />
+                  <Text style={[styles.privacyText, { color: colors.mut }]}>
+                    {t('privacyNote')}
+                  </Text>
+                </View>
+              </CustomCard>
+            )}
 
             {/* Quick Actions & Verification */}
             <View style={styles.quickAccessRow}>
@@ -448,20 +694,36 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
                     style={[
                       styles.branchItem,
                       {
-                        backgroundColor: isSelected ? colors.primarySoft : colors.card2,
+                        backgroundColor: isSelected ? colors.primarySoft : 'transparent',
                         borderColor: isSelected ? colors.primary : colors.line,
                       },
                     ]}
                   >
                     <View style={styles.branchItemLeft}>
-                      <Text style={[styles.branchItemName, { color: colors.txt }]}>{item.name_ar}</Text>
-                      {item.city ? <Text style={[styles.branchItemCity, { color: colors.mut }]}>{item.city}</Text> : null}
+                      <MapPin color={isSelected ? colors.primary : colors.mut} size={18} />
+                      <View>
+                        <Text
+                          style={[
+                            styles.branchItemName,
+                            {
+                              color: isSelected ? colors.primary : colors.txt,
+                              fontWeight: isSelected ? '700' : '500',
+                            },
+                          ]}
+                        >
+                          {item.name_ar}
+                        </Text>
+                        {item.address ? (
+                          <Text style={[styles.branchItemAddress, { color: colors.mut }]}>
+                            {item.address}
+                          </Text>
+                        ) : null}
+                      </View>
                     </View>
-                    {isSelected ? <CheckCircle2 color={colors.primary} size={20} /> : null}
+                    {isSelected ? <Check color={colors.primary} size={18} /> : null}
                   </TouchableOpacity>
                 );
               }}
-              contentContainerStyle={{ paddingVertical: 12, gap: 8 }}
             />
           </View>
         </View>
@@ -483,12 +745,12 @@ const styles = StyleSheet.create({
   },
   dots: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
+    alignItems: 'center',
   },
   dot: {
     height: 8,
-    borderRadius: Radii.full,
+    borderRadius: 4,
   },
   helpBtn: {
     flexDirection: 'row',
@@ -500,7 +762,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   helpText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '600',
   },
   scrollContent: {
@@ -508,27 +770,30 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   step1Wrap: {
+    flex: 1,
+    justifyContent: 'space-between',
+    gap: 16,
     paddingTop: 10,
-    gap: 18,
   },
   badgeRow: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   freePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: Radii.full,
     borderWidth: 1,
   },
   freeText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   headlineWrap: {
-    gap: 6,
+    alignItems: 'center',
+    gap: 8,
   },
   eyebrowRow: {
     flexDirection: 'row',
@@ -536,45 +801,94 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   title: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '900',
+    textAlign: 'center',
     lineHeight: 34,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13.5,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 10,
   },
-  trustRow: {
+  authTabsRow: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+    gap: 4,
+  },
+  authTabBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingVertical: 16,
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: Radii.md,
+  },
+  authTabText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  demoCard: {
     borderRadius: Radii.xl,
+  },
+  demoHeader: {
+    marginBottom: 4,
+  },
+  demoHeaderText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  roleOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: Radii.lg,
     borderWidth: 1,
   },
-  trustItem: {
+  roleOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  trustNum: {
-    fontSize: 15,
+  roleOptionTitle: {
+    fontSize: 14,
     fontWeight: '800',
     marginBottom: 2,
   },
-  trustLabel: {
+  roleOptionDesc: {
     fontSize: 11,
-    fontWeight: '500',
+    lineHeight: 15,
   },
-  trustDivider: {
-    width: 1,
-    height: 28,
+  emailCard: {
+    borderRadius: Radii.xl,
+  },
+  emailToggleRow: {
+    flexDirection: 'row',
+    backgroundColor: '#00000010',
+    borderRadius: Radii.md,
+    padding: 3,
+    marginBottom: 6,
+  },
+  emailToggleBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: Radii.sm,
   },
   googleGate: {
-    gap: 14,
-    padding: 20,
+    borderRadius: Radii.xl,
   },
   privacyNote: {
     flexDirection: 'row',
@@ -583,76 +897,68 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   privacyText: {
-    fontSize: 11.5,
-    textAlign: 'center',
-  },
-  linksRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 14,
+    fontSize: 12,
   },
   quickAccessRow: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
     marginTop: 4,
   },
   verifyCertBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: Radii.full,
     borderWidth: 1,
-    width: '100%',
   },
   verifyCertText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  linksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 10,
   },
   footerLink: {
     fontSize: 12,
     fontWeight: '600',
   },
   step2Wrap: {
-    paddingTop: 10,
-    gap: 16,
+    gap: 18,
+    paddingTop: 16,
   },
   step2Header: {
-    alignItems: 'center',
     gap: 6,
   },
   step2Title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
   },
   step2Subtitle: {
-    fontSize: 12.5,
-    textAlign: 'center',
+    fontSize: 13,
     lineHeight: 18,
-    maxWidth: 300,
   },
   formCard: {
-    padding: 20,
+    padding: 18,
+    gap: 6,
   },
   branchLabel: {
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     marginBottom: 6,
-    textAlign: 'right',
   },
   branchPickerBtn: {
-    height: 52,
-    borderRadius: Radii.md,
-    borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: Radii.md,
+    borderWidth: 1,
   },
   branchInner: {
     flexDirection: 'row',
@@ -662,58 +968,59 @@ const styles = StyleSheet.create({
   branchIcon: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   branchSelectedText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '600',
   },
   branchErrorText: {
-    fontSize: 11,
+    fontSize: 11.5,
     marginTop: 4,
-    textAlign: 'right',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: '#00000060',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    maxHeight: '75%',
     borderTopLeftRadius: Radii.xxl,
     borderTopRightRadius: Radii.xxl,
+    maxHeight: '75%',
     padding: 20,
+    gap: 14,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   branchItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: Radii.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: Radii.md,
     borderWidth: 1,
+    marginBottom: 8,
   },
   branchItemLeft: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   branchItemName: {
     fontSize: 14,
-    fontWeight: '700',
   },
-  branchItemCity: {
-    fontSize: 12,
+  branchItemAddress: {
+    fontSize: 11,
+    marginTop: 2,
   },
 });

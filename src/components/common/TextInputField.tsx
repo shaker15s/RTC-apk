@@ -15,6 +15,7 @@ export interface TextInputFieldProps {
   required?: boolean;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   maxLength?: number;
   multiline?: boolean;
   numberOfLines?: number;
@@ -33,6 +34,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
   required = false,
   secureTextEntry = false,
   keyboardType = 'default',
+  autoCapitalize = 'sentences',
   maxLength,
   multiline = false,
   numberOfLines = 1,
@@ -72,6 +74,7 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
           accessibilityLabel={label || placeholder}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
           maxLength={maxLength}
           multiline={multiline}
           numberOfLines={numberOfLines}

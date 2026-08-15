@@ -16,13 +16,28 @@ import { RTC_CONFIG } from '../../core/config';
 import { useT, t } from '../../core/i18n';
 import { layoutNeedsReload, applyLayoutDirection, reloadApp } from '../../core/i18n/direction';
 import { maskPhone } from '../../core/security/sanitizers';
-import { Moon, Globe, ChevronLeft, Edit3, ShieldCheck, User, LifeBuoy, LogOut, MapPin, Phone, ExternalLink } from 'lucide-react-native';
+import {
+  Moon,
+  Globe,
+  ChevronLeft,
+  Edit3,
+  ShieldCheck,
+  User,
+  LifeBuoy,
+  LogOut,
+  MapPin,
+  Phone,
+  ExternalLink,
+  Users,
+  Shield,
+  GraduationCap,
+} from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
-  const { colors, isDark, toggleDarkMode, language, setAppLanguage } = useAppStore();
+  const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
   const { t } = useT();
-    const { profile, signOut } = useAuthStore();
+  const { profile, signOut, switchRole } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
@@ -117,6 +132,93 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
             <Edit3 color={colors.primary} size={16} />
             <Text style={[styles.editProfileText, { color: colors.primary }]}>{t('editProfileCta')}</Text>
           </TouchableOpacity>
+        </CustomCard>
+
+        {/* Live Role Switcher (Experience All App Roles) */}
+        <CustomCard style={[styles.roleSwitchCard, { borderColor: colors.primary + '30' }]}>
+          <Text style={[styles.roleSwitchTitle, { color: colors.txt }]}>⚡ التبديل السريع بين أدوار التطبيق</Text>
+          <Text style={[styles.roleSwitchSubtitle, { color: colors.mut }]}>
+            جرب شاشات ومميزات كل دور (طالب / مدرب / مسؤول) بضغطة واحدة:
+          </Text>
+          <View style={styles.roleSwitchRow}>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={async () => {
+                RTCHaptics.selection();
+                await switchRole('student');
+                showToast('تم التبديل إلى حساب الطالب 🎓', 'ok');
+              }}
+              style={[
+                styles.roleSwitchBtn,
+                {
+                  backgroundColor: profile?.role === 'student' ? colors.primary : colors.card2,
+                  borderColor: profile?.role === 'student' ? colors.primary : colors.line,
+                },
+              ]}
+            >
+              <GraduationCap color={profile?.role === 'student' ? '#FFFFFF' : colors.txt} size={18} />
+              <Text
+                style={[
+                  styles.roleSwitchBtnText,
+                  { color: profile?.role === 'student' ? '#FFFFFF' : colors.txt },
+                ]}
+              >
+                طالب
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={async () => {
+                RTCHaptics.selection();
+                await switchRole('volunteer');
+                showToast('تم التبديل إلى حساب المدرب / المتطوع 👨‍🏫', 'ok');
+              }}
+              style={[
+                styles.roleSwitchBtn,
+                {
+                  backgroundColor: profile?.role === 'volunteer' ? colors.teal : colors.card2,
+                  borderColor: profile?.role === 'volunteer' ? colors.teal : colors.line,
+                },
+              ]}
+            >
+              <Users color={profile?.role === 'volunteer' ? '#FFFFFF' : colors.txt} size={18} />
+              <Text
+                style={[
+                  styles.roleSwitchBtnText,
+                  { color: profile?.role === 'volunteer' ? '#FFFFFF' : colors.txt },
+                ]}
+              >
+                مدرب
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={async () => {
+                RTCHaptics.selection();
+                await switchRole('admin');
+                showToast('تم التبديل إلى لوحة تحكم المسؤول 👑', 'ok');
+              }}
+              style={[
+                styles.roleSwitchBtn,
+                {
+                  backgroundColor: profile?.role === 'admin' ? colors.gold : colors.card2,
+                  borderColor: profile?.role === 'admin' ? colors.gold : colors.line,
+                },
+              ]}
+            >
+              <Shield color={profile?.role === 'admin' ? '#FFFFFF' : colors.txt} size={18} />
+              <Text
+                style={[
+                  styles.roleSwitchBtnText,
+                  { color: profile?.role === 'admin' ? '#FFFFFF' : colors.txt },
+                ]}
+              >
+                مسؤول
+              </Text>
+            </TouchableOpacity>
+          </View>
         </CustomCard>
 
         {/* Preferences Section */}
@@ -355,6 +457,38 @@ const styles = StyleSheet.create({
   },
   editProfileText: {
     fontSize: 13,
+    fontWeight: '700',
+  },
+  roleSwitchCard: {
+    padding: 16,
+    gap: 12,
+    borderWidth: 1.5,
+  },
+  roleSwitchTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  roleSwitchSubtitle: {
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  roleSwitchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  roleSwitchBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+  },
+  roleSwitchBtnText: {
+    fontSize: 12.5,
     fontWeight: '700',
   },
   menuCard: {

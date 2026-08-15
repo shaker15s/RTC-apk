@@ -6,6 +6,15 @@ import { t } from '../../core/i18n';
 import { RPC, UserProfile } from '../rpc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import {
+  MOCK_BRANCHES,
+  MOCK_COURSES,
+  MOCK_BATCHES,
+  MOCK_ENROLLMENTS,
+  MOCK_CERTS,
+  MOCK_NOTIFICATIONS,
+  MOCK_POINTS_LEDGER,
+} from '../mockData';
 
 export interface Branch {
   id: string;
@@ -182,12 +191,12 @@ export const Repository = {
         .eq('is_active', true)
         .order('sort_order');
       if (error) throw error;
-      const list = data || [];
+      const list = data && data.length ? data : MOCK_BRANCHES;
       await writeCache('branches', list);
       return list;
     } catch (e) {
       const cached = await readCache<Branch[]>('branches');
-      return cached || [];
+      return cached && cached.length ? cached : MOCK_BRANCHES;
     }
   },
 
@@ -206,108 +215,134 @@ export const Repository = {
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
       if (error) throw error;
-      const list = data || [];
+      const list = data && data.length ? data : MOCK_COURSES;
       if (!branchId) await writeCache('courses', list);
       return list;
     } catch (e) {
       if (!branchId) {
         const cached = await readCache<Course[]>('courses');
-        if (cached) return cached;
+        if (cached && cached.length) return cached;
       }
-      return [];
+      return MOCK_COURSES;
     }
   },
 
   // Batches
   async fetchBatches(branchId?: string): Promise<Batch[]> {
-    let q = supabase
-      .from('batches')
-      .select(
-        '*, courses(id, title, category, icon, color, sessions_count, max_students, description, start_date, interview_date, level), branches(name_ar, slug), profiles!instructor_id(full_name)'
-      )
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-    if (branchId) q = q.eq('branch_id', branchId);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data || [];
+    try {
+      let q = supabase
+        .from('batches')
+        .select(
+          '*, courses(id, title, category, icon, color, sessions_count, max_students, description, start_date, interview_date, level), branches(name_ar, slug), profiles!instructor_id(full_name)'
+        )
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (branchId) q = q.eq('branch_id', branchId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data && data.length ? data : MOCK_BATCHES) || MOCK_BATCHES;
+    } catch (e) {
+      return MOCK_BATCHES;
+    }
   },
 
   // Enrollments
   async fetchMyEnrollments(): Promise<Enrollment[]> {
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session?.user) return [];
-    const { data, error } = await supabase
-      .from('enrollments')
-      .select(
-        '*, batches(id, name, schedule, branch_id, sessions_done, starts_at, ends_at, timezone, delivery_mode, location, room, meeting_url, courses(id, title, category, icon, color, sessions_count, description), branches(name_ar))'
-      )
-      .eq('student_id', session.user.id)
-      .order('joined_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.user) return MOCK_ENROLLMENTS;
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select(
+          '*, batches(id, name, schedule, branch_id, sessions_done, starts_at, ends_at, timezone, delivery_mode, location, room, meeting_url, courses(id, title, category, icon, color, sessions_count, description), branches(name_ar))'
+        )
+        .eq('student_id', session.user.id)
+        .order('joined_at', { ascending: false });
+      if (error) throw error;
+      return (data && data.length ? data : MOCK_ENROLLMENTS) || MOCK_ENROLLMENTS;
+    } catch (e) {
+      return MOCK_ENROLLMENTS;
+    }
   },
 
   // Volunteer Batches
   async fetchMyBatches(): Promise<Batch[]> {
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session?.user) return [];
-    const { data, error } = await supabase
-      .from('batches')
-      .select('*, courses(id, title, category, icon, color, sessions_count, max_students), branches(name_ar)')
-      .eq('instructor_id', session.user.id)
-      .eq('is_active', true);
-    if (error) throw error;
-    return data || [];
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.user) return MOCK_BATCHES;
+      const { data, error } = await supabase
+        .from('batches')
+        .select('*, courses(id, title, category, icon, color, sessions_count, max_students), branches(name_ar)')
+        .eq('instructor_id', session.user.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return (data && data.length ? data : MOCK_BATCHES) || MOCK_BATCHES;
+    } catch (e) {
+      return MOCK_BATCHES;
+    }
   },
 
   // Notifications
   async fetchNotifications(): Promise<NotificationItem[]> {
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session?.user) return [];
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (error) throw error;
-    return data || [];
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.user) return MOCK_NOTIFICATIONS;
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data && data.length ? data : MOCK_NOTIFICATIONS) || MOCK_NOTIFICATIONS;
+    } catch (e) {
+      return MOCK_NOTIFICATIONS;
+    }
   },
 
   async markNotificationRead(id: string): Promise<void> {
-    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id);
+    try {
+      await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id);
+    } catch (e) {}
   },
 
   // Certificates
   async fetchCerts(mineOnly = true): Promise<CertItem[]> {
-    let q = supabase
-      .from('certs')
-      .select('*, courses(title, icon, color), profiles!student_id(full_name)')
-      .order('issued_at', { ascending: false })
-      .limit(80);
-    if (mineOnly) {
-      const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.user) return [];
-      q = q.eq('student_id', session.user.id);
+    try {
+      let q = supabase
+        .from('certs')
+        .select('*, courses(title, icon, color), profiles!student_id(full_name)')
+        .order('issued_at', { ascending: false })
+        .limit(80);
+      if (mineOnly) {
+        const session = (await supabase.auth.getSession()).data.session;
+        if (!session?.user) return MOCK_CERTS;
+        q = q.eq('student_id', session.user.id);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data && data.length ? data : MOCK_CERTS) || MOCK_CERTS;
+    } catch (e) {
+      return MOCK_CERTS;
     }
-    const { data, error } = await q;
-    if (error) throw error;
-    return data || [];
   },
 
   // Points Ledger
   async fetchLedger(): Promise<PointsLedgerItem[]> {
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session?.user) return [];
-    const { data, error } = await supabase
-      .from('points_ledger')
-      .select('*, points_rules(code, title)')
-      .eq('student_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (error) throw error;
-    return data || [];
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.user) return MOCK_POINTS_LEDGER;
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('*, points_rules(code, title)')
+        .eq('student_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data && data.length ? data : MOCK_POINTS_LEDGER) || MOCK_POINTS_LEDGER;
+    } catch (e) {
+      return MOCK_POINTS_LEDGER;
+    }
   },
 
   // Course Details

@@ -17,10 +17,12 @@ import { TextInputField } from '../../components/common/TextInputField';
 import { CustomButton } from '../../components/common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
 import { Send, Megaphone, AlertCircle, ShieldAlert } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -29,7 +31,7 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
 
   const handleSendBroadcast = async () => {
     if (!title.trim() || !message.trim()) {
-      showToast('يرجى ملء عنوان التنبيه ونص الرسالة', 'warn');
+      showToast(t('abrFillWarn'), 'warn');
       return;
     }
 
@@ -44,12 +46,12 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
       );
 
       RTCHaptics.success();
-      showToast('تم إرسال التنبيه العام لجميع المستخدمين بنجاح 📢', 'ok');
+      showToast(t('abrSent'), 'ok');
       setTitle('');
       setMessage('');
       onBack();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر إرسال التنبيه', 'err');
+      showToast(e?.message || t('abrError'), 'err');
     } finally {
       setSending(false);
     }
@@ -57,7 +59,7 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="إرسال تنبيه عام" subtitle="بث إشعار لجميع طلاب ومدربي المنظومة" showBack onBack={onBack} />
+      <GlassHeader title={t('abrGeneral')} subtitle={t('abrSubtitle')} showBack onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <CustomCard style={styles.formCard}>
@@ -65,32 +67,32 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
             <View style={[styles.iconWrap, { backgroundColor: colors.primarySoft }]}>
               <Megaphone color={colors.primary} size={28} />
             </View>
-            <Text style={[styles.formTitle, { color: colors.txt }]}>تنبيه فوري لجميع المستخدمين</Text>
+            <Text style={[styles.formTitle, { color: colors.txt }]}>{t('abrTitle')}</Text>
             <Text style={[styles.formSub, { color: colors.mut }]}>
-              سيظهر هذا الإشعار في شاشات التنبيهات لدى جميع الطلاب والمتطوعين المسجلين في التطبيق.
+              {t('abrNote')}
             </Text>
           </View>
 
           <TextInputField
-            label="عنوان الإشعار"
+            label={t('abrTitleLabel')}
             value={title}
             onChangeText={setTitle}
-            placeholder="مثال: بدء التسجيل في دورات الشهر القادم"
+            placeholder={t('abrTitlePlaceholder')}
             required
           />
 
           <TextInputField
-            label="نص الرسالة والتفاصيل"
+            label={t('abrBodyLabel')}
             value={message}
             onChangeText={setMessage}
-            placeholder="اكتب نص الإشعار بالتفصيل..."
+            placeholder={t('abrBodyPlaceholder')}
             multiline
             numberOfLines={5}
             required
           />
 
           <CustomButton
-            title="إرسال وبث التنبيه الآن"
+            title={t('abrSend')}
             onPress={handleSendBroadcast}
             variant="primary"
             size="big"

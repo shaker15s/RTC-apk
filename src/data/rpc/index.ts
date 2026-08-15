@@ -355,14 +355,18 @@ export const RPC = {
     return unwrap(res, null);
   },
 
-  // 30. get_my_attendance (student — added in v100.2.0, fixes F-10)
+  // 30. get_my_attendance (student — added in v100.2.0, enhanced v100.4.0)
   // Returns the student's detailed per-session attendance history.
-  // Requires the SQL function in docs/sql/2026-08-15-quality-fixes.sql
-  // — the attendance screen degrades gracefully if not deployed.
+  // The enhanced SQL (docs/sql/2026-08-16-attendance-v2.sql) also returns
+  // course_id + course_sessions_count so the client can compute real
+  // per-course commitment and certificate eligibility. Falls back
+  // gracefully when the old version of the function is deployed.
   async getMyAttendance(): Promise<Array<{
     session_id: string;
     session_title?: string;
     course_title?: string;
+    course_id?: string;
+    course_sessions_count?: number;
     batch_name?: string;
     session_date?: string;
     status: 'present' | 'late' | 'absent' | 'excused';

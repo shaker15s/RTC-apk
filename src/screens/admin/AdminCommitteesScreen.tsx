@@ -22,10 +22,12 @@ import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import { Layers, PlusCircle, Users, MapPin, X, CheckCircle2 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
 
   const [committees, setCommittees] = useState<VolunteerCommittee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,18 +59,18 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
 
   const handleAdd = () => {
     if (!name.trim()) {
-      showToast('أدخل اسم اللجنة', 'warn');
+      showToast(t('acoNameHint'), 'warn');
       return;
     }
-    showToast('تمت إضافة اللجنة بنجاح', 'ok');
+    showToast(t('acoSaved'), 'ok');
     setModalVisible(false);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="إدارة اللجان والفرق"
-        subtitle="اللجان التنظيمية بـ RTC"
+        title={t('acoTitle')}
+        subtitle={t('acoSubtitle')}
         showBack
         onBack={onBack}
         rightAction={
@@ -80,7 +82,7 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
             style={[styles.addHeaderBtn, { backgroundColor: colors.teal + '18' }]}
           >
             <PlusCircle color={colors.teal} size={16} />
-            <Text style={[styles.addHeaderText, { color: colors.teal }]}>لجنة جديدة</Text>
+            <Text style={[styles.addHeaderText, { color: colors.teal }]}>{t('acoNew')}</Text>
           </TouchableOpacity>
         }
       />
@@ -114,8 +116,8 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
           ))
         ) : (
           <EmptyStateView
-            title="لا توجد لجان مسجلة"
-            description="اضغط على «لجنة جديدة» لإنشاء لجنة تنظيمية."
+            title={t('acoEmptyTitle')}
+            description={t('acoEmptyDesc')}
             icon={<Layers color={colors.teal} size={32} />}
           />
         )}
@@ -126,31 +128,31 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>إنشاء لجنة تنظيمية</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('acoModalTitle')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
             </View>
 
             <TextInputField
-              label="اسم اللجنة"
+              label={t('acoName')}
               value={name}
               onChangeText={setName}
-              placeholder="مثال: لجنة المدربين ومراجعة المناهج"
+              placeholder={t('acoNamePlaceholder')}
               required
             />
 
             <TextInputField
-              label="وصف مهام اللجنة"
+              label={t('acoDescLabel')}
               value={desc}
               onChangeText={setDesc}
-              placeholder="وصف اختصاصات اللجنة..."
+              placeholder={t('acoDescPlaceholder')}
               multiline
               numberOfLines={3}
             />
 
             <CustomButton
-              title="حفظ اللجنة"
+              title={t('acoSave')}
               onPress={handleAdd}
               variant="primary"
               size="big"

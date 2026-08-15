@@ -17,10 +17,12 @@ import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { PlusCircle, MinusCircle, Award, Calendar } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
 
   const [ledger, setLedger] = useState<PointsLedgerItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack })
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="سجل حركة النقاط" subtitle="كشف الحساب التفصيلي" showBack onBack={onBack} />
+      <GlassHeader title={t('plTitle')} subtitle={t('plSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -93,7 +95,7 @@ export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack })
 
                   <View style={styles.textWrap}>
                     <Text style={[styles.title, { color: colors.txt }]}>
-                      {item.points_rules?.title || item.notes || 'حركة نقاط'}
+                      {item.points_rules?.title || item.notes || t('plEntry')}
                     </Text>
                     <View style={styles.dateRow}>
                       <Calendar color={colors.mut} size={12} />
@@ -126,8 +128,8 @@ export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack })
           })
         ) : (
           <EmptyStateView
-            title="لا توجد حركات نقاط سابقة"
-            description="احضر المحاضرات وشارك في الأنشطة لتجميع النقاط وفتح الشارات المميزة."
+            title={t('plEmptyTitle')}
+            description={t('plEmptyDesc')}
             icon={<Award color={colors.primary} size={32} />}
           />
         )}

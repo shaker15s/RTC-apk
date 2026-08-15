@@ -4,6 +4,7 @@
  * Gracefully adapts when running in Expo Go or standalone APK build.
  */
 import * as Notifications from 'expo-notifications';
+import { t } from '../i18n';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
@@ -100,7 +101,7 @@ export const RTCNotifications = {
 
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'محاضرتك بعد ساعة ⏰',
+          title: t('notifReminderTitle'),
           body: `${title} ${location ? '— ' + location : ''}`,
           data: { screen: 's-courses', batchId },
           sound: true,

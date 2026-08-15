@@ -2,6 +2,7 @@
  * Native Share Sheet integration using expo-sharing & react-native Share.
  */
 import * as Sharing from 'expo-sharing';
+import { t } from '../i18n';
 import { Share as RNShare } from 'react-native';
 import { RTC_CONFIG } from '../config';
 
@@ -25,7 +26,7 @@ export const RTCSharing = {
       if (!isAvailable) return false;
       await Sharing.shareAsync(fileUri, {
         mimeType,
-        dialogTitle: 'مشاركة ملف الشهادة',
+        dialogTitle: t('pdfShareTitle'),
       });
       return true;
     } catch (e) {

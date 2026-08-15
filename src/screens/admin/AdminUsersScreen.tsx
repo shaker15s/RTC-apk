@@ -36,10 +36,12 @@ import {
   X,
   CheckCircle2,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,11 +97,11 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
     try {
       await RPC.changeUserRole(selectedUser.id, newRole);
       RTCHaptics.success();
-      showToast('تم تحديث دور المستخدم بنجاح', 'ok');
+      showToast(t('auRoleChanged'), 'ok');
       setRoleModalVisible(false);
       await loadUsers();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر تغيير الدور', 'err');
+      showToast(e?.message || t('auRoleError'), 'err');
     } finally {
       setUpdatingRole(false);
     }
@@ -109,7 +111,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
     if (!awardUser) return;
     const pts = parseInt(pointsAmount, 10);
     if (isNaN(pts) || pts <= 0) {
-      showToast('أدخل عدد نقاط صحيح موجب', 'warn');
+      showToast(t('auPointsValid'), 'warn');
       return;
     }
 
@@ -120,7 +122,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
       // admin_award_points (docs/sql/2026-08-15-quality-fixes.sql).
       await RPC.adminAwardPoints(awardUser.id, pts, pointsReason.trim() || undefined);
       RTCHaptics.success();
-      showToast(`تمت إضافة ${pts} نقطة إلى رصيد المستخدم 🎉`, 'ok');
+      showToast(t('auAwardDone', { n: pts }), 'ok');
       setAwardModalVisible(false);
       setPointsAmount('20');
       setPointsReason('');
@@ -129,7 +131,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
       RTCHaptics.error();
       // Honest failure: no fake success. If the DB function is not
       // deployed yet, the admin sees the real error instead of lies.
-      showToast(e?.message || 'تعذر منح النقاط — تأكد من اتصال الشبكة', 'err');
+      showToast(e?.message || t('auAwardError'), 'err');
     } finally {
       setAwarding(false);
     }
@@ -141,22 +143,22 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
   });
 
   const filterChips = [
-    { id: 'all', label: 'الكل' },
-    { id: 'student', label: 'الطلاب' },
-    { id: 'volunteer', label: 'المتطوعين / المدربين' },
-    { id: 'admin', label: 'المشرفين' },
+    { id: 'all', label: t('filterAll') },
+    { id: 'student', label: t('students') },
+    { id: 'volunteer', label: t('auVolunteers') },
+    { id: 'admin', label: t('auAdmins') },
   ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="إدارة المستخدمين" subtitle="الصلاحيات والأدوار والنقاط" showBack onBack={onBack} />
+      <GlassHeader title={t('auTitle')} subtitle={t('auSubtitle')} showBack onBack={onBack} />
 
       {/* Search Input */}
       <View style={styles.searchWrap}>
         <TextInputField
           value={searchInput}
           onChangeText={setSearchInput}
-          placeholder="ابحث بالاسم أو رقم الهاتف..."
+          placeholder={t('auSearchPlaceholder')}
           icon={<Search color={colors.mut} size={18} />}
           style={{ marginBottom: 6 }}
         />
@@ -180,7 +182,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
               user.role === 'admin' ? colors.red : user.role === 'volunteer' ? colors.teal : colors.primary;
 
             const roleLabel =
-              user.role === 'admin' ? 'مشرف' : user.role === 'volunteer' ? 'مدرب / متطوع' : 'طالب';
+              user.role === 'admin' ? t('admin') : user.role === 'volunteer' ? t('auVolunteerRole') : t('student');
 
             return (
               <CustomCard key={user.id} style={styles.userCard}>
@@ -196,7 +198,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                   <View style={styles.userInfo}>
                     <View style={styles.userNameRow}>
                       <Text style={[styles.userName, { color: colors.txt }]} numberOfLines={1}>
-                        {user.full_name || 'مستخدم بدون اسم'}
+                        {user.full_name || t('auNoName')}
                       </Text>
                       <View style={[styles.roleBadge, { backgroundColor: roleColor + '18' }]}>
                         <Text style={[styles.roleText, { color: roleColor }]}>{roleLabel}</Text>
@@ -208,7 +210,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                         {maskPhone(user.phone)}
                       </Text>
                       <Text style={[styles.userPoints, { color: colors.gold }]}>
-                        ⭐ {user.points || 0} نقطة
+                        ⭐ {user.points || 0} {t('pointsStat')}
                       </Text>
                     </View>
                   </View>
@@ -217,7 +219,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                 {/* Actions Row */}
                 <View style={styles.userActions}>
                   <CustomButton
-                    title="تعديل الدور"
+                    title={t('auChangeRole')}
                     onPress={() => {
                       RTCHaptics.light();
                       setSelectedUser(user);
@@ -231,7 +233,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                   />
 
                   <CustomButton
-                    title="منح نقاط"
+                    title={t('auAwardPointsBtn')}
                     onPress={() => {
                       RTCHaptics.light();
                       setAwardUser(user);
@@ -250,8 +252,8 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
           })
         ) : (
           <EmptyStateView
-            title="لم نجد مستخدمين مطابقين"
-            description="جرّب تعديل كلمة البحث أو التصفية."
+            title={t('auEmptyTitle')}
+            description={t('auEmptyDesc')}
             icon={<Users color={colors.primary} size={32} />}
           />
         )}
@@ -262,20 +264,20 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>تعديل رتبة وصلاحية المستخدم</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('auChangeRoleSub')}</Text>
               <TouchableOpacity onPress={() => setRoleModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
             </View>
 
             <Text style={[styles.targetUserName, { color: colors.txt }]}>
-              المستخدم: {selectedUser?.full_name}
+              {t('auUserLabel')} {selectedUser?.full_name}
             </Text>
 
             <View style={styles.roleOptions}>
               {(['student', 'volunteer', 'admin'] as const).map((r) => {
                 const isSelected = newRole === r;
-                const rTitle = r === 'admin' ? 'مشرف نظام (Admin)' : r === 'volunteer' ? 'مدرب ومتطوع (Volunteer)' : 'طالب متدرب (Student)';
+                const rTitle = r === 'admin' ? t('auRoleAdmin') : r === 'volunteer' ? t('auRoleVolunteer') : t('auRoleStudent');
                 return (
                   <TouchableOpacity
                     key={r}
@@ -297,7 +299,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
             </View>
 
             <CustomButton
-              title="تأكيد وحفظ الصلاحية"
+              title={t('auConfirmRole')}
               onPress={handleUpdateRole}
               variant="primary"
               size="big"
@@ -313,33 +315,33 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>منح نقاط تشجيعية</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('auAwardPoints')}</Text>
               <TouchableOpacity onPress={() => setAwardModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
             </View>
 
             <Text style={[styles.targetUserName, { color: colors.txt }]}>
-              المستفيد: {awardUser?.full_name}
+              {t('auBeneficiaryLabel')} {awardUser?.full_name}
             </Text>
 
             <TextInputField
-              label="عدد النقاط"
+              label={t('auPointsAmount')}
               value={pointsAmount}
               onChangeText={setPointsAmount}
               keyboardType="numeric"
-              placeholder="مثال: 50"
+              placeholder={t('auPointsPlaceholder')}
             />
 
             <TextInputField
-              label="سبب المنح والملاحظة"
+              label={t('auReasonLabel')}
               value={pointsReason}
               onChangeText={setPointsReason}
-              placeholder="مثال: تميز في التطبيق العملي"
+              placeholder={t('auReasonPlaceholder')}
             />
 
             <CustomButton
-              title="إيداع النقاط في رصيد الطالب"
+              title={t('auAwardSub')}
               onPress={handleAwardPoints}
               variant="primary"
               size="big"

@@ -26,6 +26,7 @@ import {
   CheckCheck,
   Megaphone,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const NotificationsScreen: React.FC<{
@@ -33,6 +34,7 @@ export const NotificationsScreen: React.FC<{
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
   const { colors, resetUnread } = useAppStore();
+  const { t } = useT();
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export const NotificationsScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="التنبيهات والإشعارات" subtitle="آخر المستجدات" showBack onBack={onBack} />
+      <GlassHeader title={t('notifTitle')} subtitle={t('notifSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -158,8 +160,8 @@ export const NotificationsScreen: React.FC<{
           })
         ) : (
           <EmptyStateView
-            title="صندوق التنبيهات فارغ"
-            description="ستصلك هنا إشعارات المحاضرات ومواعيد المقابلات وتحديثات الشهادات فور صدورها."
+            title={t('nfEmptyTitle')}
+            description={t('nfEmptyDesc')}
             icon={<Bell color={colors.primary} size={32} />}
           />
         )}

@@ -54,7 +54,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="إعدادات المشرف" subtitle="إدارة النظام والحساب" showAvatar={false} />
+      <GlassHeader title={t('asTitle')} subtitle={t('asSubtitle')} showAvatar={false} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
@@ -67,15 +67,15 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
             <View style={styles.profileInfo}>
               <View style={styles.nameRoleRow}>
                 <Text style={[styles.fullName, { color: colors.txt }]} numberOfLines={1}>
-                  {profile?.full_name || 'مشرف النظام'}
+                  {profile?.full_name || t('asRole')}
                 </Text>
                 <View style={[styles.roleBadge, { backgroundColor: colors.red + '18' }]}>
-                  <Text style={[styles.roleBadgeText, { color: colors.red }]}>مشرف عام</Text>
+                  <Text style={[styles.roleBadgeText, { color: colors.red }]}>{t('asRoleAlt')}</Text>
                 </View>
               </View>
 
               <Text style={[styles.infoText, { color: colors.mut }]}>
-                {profile?.branch_name || 'الإدارة المركزية - جمعية رسالة'}
+                {profile?.branch_name || t('asBranch')}
               </Text>
             </View>
           </View>
@@ -89,7 +89,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
             style={[styles.editProfileBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
           >
             <Edit3 color={colors.primary} size={16} />
-            <Text style={[styles.editProfileText, { color: colors.primary }]}>تعديل البيانات والصورة</Text>
+            <Text style={[styles.editProfileText, { color: colors.primary }]}>{t('editProfileCta')}</Text>
           </TouchableOpacity>
         </CustomCard>
 
@@ -160,7 +160,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
               <View style={[styles.menuIcon, { backgroundColor: '#7A30D818' }]}>
                 <LifeBuoy color="#7A30D8" size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>مركز الدعم والمساعدة</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('asSupport')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>
@@ -173,21 +173,21 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
           style={[styles.logoutBtn, { backgroundColor: colors.red + '14', borderColor: colors.red + '30' }]}
         >
           <LogOut color={colors.red} size={18} />
-          <Text style={[styles.logoutText, { color: colors.red }]}>تسجيل الخروج من الحساب</Text>
+          <Text style={[styles.logoutText, { color: colors.red }]}>{t('logoutCta')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.versionText, { color: colors.mut }]}>
-          مسار RTC — لوحة المشرف {RTC_CONFIG.version} (Native Build 10000)
+          {t('versionAdminLine', { v: RTC_CONFIG.version })}
         </Text>
       </ScrollView>
 
       {/* Logout Confirm Modal */}
       <ConfirmModal
         visible={logoutModalVisible}
-        title="تسجيل الخروج"
-        message="هل تريد الخروج من حساب المشرف؟"
-        confirmLabel="تسجيل الخروج"
-        cancelLabel="البقاء"
+        title={t('logout')}
+        message={t('asLogoutConfirm')}
+        confirmLabel={t('logout')}
+        cancelLabel={t('stay')}
         isDestructive
         onConfirm={handleLogout}
         onCancel={() => setLogoutModalVisible(false)}

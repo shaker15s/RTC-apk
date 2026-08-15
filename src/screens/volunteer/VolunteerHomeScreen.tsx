@@ -32,12 +32,14 @@ import {
   GraduationCap,
   Sparkles,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, params?: any) => void }> = ({
   onNavigate,
 }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
   const { profile, refreshProfile } = useAuthStore();
 
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -67,8 +69,8 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="لوحة المتطوع"
-        subtitle="إدارة المجموعات والمحاضرات"
+        title={t('vhDashboardTitle')}
+        subtitle={t('vhDashboardSubtitle')}
         showNotif
         onNotifPress={() => onNavigate('s-notifications')}
         showAvatar
@@ -83,29 +85,29 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
         {/* Volunteer Hero */}
         <LinearGradient colors={['#00554E', '#003C36', '#00288E']} style={styles.heroCard}>
           <View style={styles.heroGreeting}>
-            <Text style={styles.heroSub}>أهلاً بعودتك يا مدرب</Text>
+            <Text style={styles.heroSub}>{t('vhWelcome')}</Text>
             <Text style={styles.heroName} numberOfLines={1}>
-              {profile?.full_name || 'مدرب مسار'} 🌟
+              {profile?.full_name || t('coachRole')} 🌟
             </Text>
-            <Text style={styles.heroBranch}>{profile?.branch_name || 'مراكز رسالة للتدريب'}</Text>
+            <Text style={styles.heroBranch}>{profile?.branch_name || t('rtcCenters')}</Text>
           </View>
 
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatVal}>{batches.length}</Text>
-              <Text style={styles.heroStatLbl}>مجموعاتي</Text>
+              <Text style={styles.heroStatLbl}>{t('myGroups')}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatVal}>
                 {batches.reduce((acc, b) => acc + (b.sessions_done || 0), 0)}
               </Text>
-              <Text style={styles.heroStatLbl}>محاضرات منفذة</Text>
+              <Text style={styles.heroStatLbl}>{t('vhLecturesDone')}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatVal}>{profile?.points || 0}</Text>
-              <Text style={styles.heroStatLbl}>نقاط التطوع</Text>
+              <Text style={styles.heroStatLbl}>{t('vhVolunteerPoints')}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -120,7 +122,7 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
             <View style={[styles.quickIcon, { backgroundColor: colors.teal + '18' }]}>
               <Play color={colors.teal} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>بدء محاضرة</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('vhStartLecture')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -131,7 +133,7 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
             <View style={[styles.quickIcon, { backgroundColor: colors.primarySoft }]}>
               <FileCheck2 color={colors.primary} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>مراجعة الأعذار</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('vhReviewExcuses')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -142,15 +144,15 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
             <View style={[styles.quickIcon, { backgroundColor: colors.gold + '18' }]}>
               <BarChart3 color={colors.gold} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>التحليلات</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('analytics')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* My Batches List */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>مجموعاتي التدريبية الحالية</Text>
+          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('vhCurrentGroups')}</Text>
           <TouchableOpacity onPress={() => onNavigate('v-batches')}>
-            <Text style={[styles.viewAllText, { color: colors.primary }]}>عرض الكل</Text>
+            <Text style={[styles.viewAllText, { color: colors.primary }]}>{t('vhViewAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -177,7 +179,7 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
 
                   <View style={[styles.sessionsBadge, { backgroundColor: colors.teal + '18' }]}>
                     <Text style={[styles.sessionsText, { color: colors.teal }]}>
-                      الجلسة {batch.sessions_done + 1}
+                      {t('sessionN', { n: batch.sessions_done + 1 })}
                     </Text>
                   </View>
                 </View>
@@ -202,8 +204,8 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
           ))
         ) : (
           <EmptyStateView
-            title="لا توجد مجموعات مسندة إليك حالياً"
-            description="عندما يقوم المشرف بإسناد مجموعات تدريبية لك ستظهر في هذه اللوحة لإدارتها وبدء محاضراتها."
+            title={t('vhEmptyGroupsTitle')}
+            description={t('vhEmptyGroupsDesc')}
             icon={<GraduationCap color={colors.teal} size={32} />}
           />
         )}

@@ -36,10 +36,12 @@ import {
   X,
   CheckCircle2,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { branches } = useAuthStore();
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -49,7 +51,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
   // New Course Modal State
   const [courseModalVisible, setCourseModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState('برمجة وتكنولوجيا');
+  const [newCategory, setNewCategory] = useState(t('acProgTech'));
   const [newSessions, setNewSessions] = useState('8');
   const [newDescription, setNewDescription] = useState('');
   const [creatingCourse, setCreatingCourse] = useState(false);
@@ -85,7 +87,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
 
   const handleCreateCourse = async () => {
     if (!newTitle.trim()) {
-      showToast('أدخل اسم الدورة التدريبية', 'warn');
+      showToast(t('acCourseNameHint'), 'warn');
       return;
     }
 
@@ -100,13 +102,13 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
       });
 
       RTCHaptics.success();
-      showToast('تم إنشاء الدورة التدريبية بنجاح 🎉', 'ok');
+      showToast(t('acCourseCreated'), 'ok');
       setCourseModalVisible(false);
       setNewTitle('');
       setNewDescription('');
       await loadCourses();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر إنشاء الدورة', 'err');
+      showToast(e?.message || t('acCourseError'), 'err');
     } finally {
       setCreatingCourse(false);
     }
@@ -114,7 +116,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
 
   const handleCreateBatch = async () => {
     if (!selectedCourseForBatch || !batchName.trim()) {
-      showToast('أدخل اسم المجموعة التدريبية', 'warn');
+      showToast(t('acGroupNameHint'), 'warn');
       return;
     }
 
@@ -129,13 +131,13 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
       });
 
       RTCHaptics.success();
-      showToast('تم إنشاء المجموعة التدريبية بنجاح 🎉', 'ok');
+      showToast(t('acGroupCreated'), 'ok');
       setBatchModalVisible(false);
       setBatchName('');
       setBatchSchedule('');
       setBatchLocation('');
     } catch (e: any) {
-      showToast(e?.message || 'تعذر إنشاء المجموعة', 'err');
+      showToast(e?.message || t('acGroupError'), 'err');
     } finally {
       setCreatingBatch(false);
     }
@@ -144,8 +146,8 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="إدارة الدورات والمقررات"
-        subtitle="المناهج والمجموعات التدريبية"
+        title={t('acTitle')}
+        subtitle={t('acSubtitle')}
         showBack
         onBack={onBack}
         rightAction={
@@ -157,7 +159,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
             style={[styles.addHeaderBtn, { backgroundColor: colors.primarySoft }]}
           >
             <PlusCircle color={colors.primary} size={16} />
-            <Text style={[styles.addHeaderText, { color: colors.primary }]}>دورة جديدة</Text>
+            <Text style={[styles.addHeaderText, { color: colors.primary }]}>{t('acNewCourse')}</Text>
           </TouchableOpacity>
         }
       />
@@ -179,7 +181,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               <View style={styles.cardHeader}>
                 <View style={styles.titleWrap}>
                   <View style={[styles.catBadge, { backgroundColor: colors.teal + '18' }]}>
-                    <Text style={[styles.catText, { color: colors.teal }]}>{course.category || 'عام'}</Text>
+                    <Text style={[styles.catText, { color: colors.teal }]}>{course.category || t('acGeneral')}</Text>
                   </View>
                   <Text style={[styles.courseTitle, { color: colors.txt }]}>{course.title}</Text>
                 </View>
@@ -194,12 +196,12 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               <View style={styles.specsRow}>
                 <View style={styles.specItem}>
                   <Calendar color={colors.mut} size={14} />
-                  <Text style={[styles.specText, { color: colors.mut }]}>{course.sessions_count} محاضرات</Text>
+                  <Text style={[styles.specText, { color: colors.mut }]}>{course.sessions_count} {t('lecturesSuffix')}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <MapPin color={colors.mut} size={14} />
                   <Text style={[styles.specText, { color: colors.mut }]}>
-                    {course.branches?.name_ar || 'جميع الفروع'}
+                    {course.branches?.name_ar || t('acAllBranches')}
                   </Text>
                 </View>
               </View>
@@ -207,11 +209,11 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               {/* Action Buttons */}
               <View style={styles.actionsRow}>
                 <CustomButton
-                  title="+ مجموعة جديدة"
+                  title={t('acNewGroup')}
                   onPress={() => {
                     RTCHaptics.light();
                     setSelectedCourseForBatch(course);
-                    setBatchName(`دفعة ${new Date().toLocaleDateString('ar-EG', { month: 'short', year: 'numeric' })}`);
+                    setBatchName(t('acBatchPrefix', { d: new Date().toLocaleDateString('ar-EG', { month: 'short', year: 'numeric' }) }));
                     setBatchModalVisible(true);
                   }}
                   variant="primary"
@@ -223,8 +225,8 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
           ))
         ) : (
           <EmptyStateView
-            title="لا توجد دورات تدريبية حتى الآن"
-            description="اضغط على «دورة جديدة» بالأعلى لإنشاء أول دورة تدريبية في المنصة."
+            title={t('acEmptyTitle')}
+            description={t('acEmptyDesc')}
             icon={<BookOpen color={colors.primary} size={32} />}
           />
         )}
@@ -235,29 +237,29 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>إنشاء دورة تدريبية جديدة</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('acNewCourseModal')}</Text>
               <TouchableOpacity onPress={() => setCourseModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
             </View>
 
             <TextInputField
-              label="اسم الدورة التدريبية"
+              label={t('acCourseName')}
               value={newTitle}
               onChangeText={setNewTitle}
-              placeholder="مثال: أساسيات بايثون وتحليل البيانات"
+              placeholder={t('acCoursePlaceholder')}
               required
             />
 
             <TextInputField
-              label="التصنيف / التخصص"
+              label={t('acCategory')}
               value={newCategory}
               onChangeText={setNewCategory}
-              placeholder="مثال: برمجة، لغات، جرافيك، إدارة أعمال"
+              placeholder={t('acCategoryPlaceholder')}
             />
 
             <TextInputField
-              label="عدد المحاضرات"
+              label={t('acSessionsCount')}
               value={newSessions}
               onChangeText={setNewSessions}
               keyboardType="numeric"
@@ -265,16 +267,16 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
             />
 
             <TextInputField
-              label="وصف الدورة (اختياري)"
+              label={t('acDescription')}
               value={newDescription}
               onChangeText={setNewDescription}
-              placeholder="وصف مختصر لمحتوى الدورة وأهدافها..."
+              placeholder={t('acDescriptionPlaceholder')}
               multiline
               numberOfLines={3}
             />
 
             <CustomButton
-              title="حفظ وإنشاء الدورة"
+              title={t('acSaveCourse')}
               onPress={handleCreateCourse}
               variant="primary"
               size="big"
@@ -291,7 +293,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.txt }]}>
-                فتح مجموعة جديدة — {selectedCourseForBatch?.title}
+                {t('acNewBatchTitle', { course: selectedCourseForBatch?.title })}
               </Text>
               <TouchableOpacity onPress={() => setBatchModalVisible(false)}>
                 <X color={colors.mut} size={22} />
@@ -299,29 +301,29 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
             </View>
 
             <TextInputField
-              label="اسم المجموعة / الدفعة"
+              label={t('acGroupName')}
               value={batchName}
               onChangeText={setBatchName}
-              placeholder="مثال: مجموعة السبت والثلاثاء (صباحي)"
+              placeholder={t('acGroupPlaceholder')}
               required
             />
 
             <TextInputField
-              label="المواعيد والجدول"
+              label={t('acSchedule')}
               value={batchSchedule}
               onChangeText={setBatchSchedule}
-              placeholder="مثال: السبت والثلاثاء ٥:٠٠ م - ٧:٠٠ م"
+              placeholder={t('acSchedulePlaceholder')}
             />
 
             <TextInputField
-              label="مكان الانعقاد / القاعة"
+              label={t('acVenue')}
               value={batchLocation}
               onChangeText={setBatchLocation}
-              placeholder="مثال: مبنى التدريب - معمل الحاسب 2"
+              placeholder={t('acVenuePlaceholder')}
             />
 
             <CustomButton
-              title="فتح المجموعة للتسجيل"
+              title={t('acOpenRegistration')}
               onPress={handleCreateBatch}
               variant="teal"
               size="big"

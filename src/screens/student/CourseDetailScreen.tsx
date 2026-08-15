@@ -36,6 +36,7 @@ import {
   Award,
   X,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export interface CourseDetailScreenProps {
@@ -50,6 +51,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   onNavigate,
 }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { profile } = useAuthStore();
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -77,7 +79,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
         setSeatCounts(counts);
       }
     } catch (e: any) {
-      showToast('تعذر تحميل تفاصيل الدورة', 'err');
+      showToast(t('courseLoadError'), 'err');
     } finally {
       setLoading(false);
     }
@@ -94,10 +96,10 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
       // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
       const res = await withTimeout(RPC.joinBatch(batchId), 15000);
       if (res?.status === 'waitlist') {
-        showToast('المجموعة مكتملة — تمت إضافتك لقائمة الانتظار', 'warn');
+        showToast(t('waitlisted'), 'warn');
       } else {
         RTCHaptics.success();
-        showToast('تم الانضمام للمجموعة بنجاح 🎉', 'ok');
+        showToast(t('joinBatchOkToast'), 'ok');
 
         // Now is the RIGHT moment to ask for notification permission (U-1):
         // the user just gained a reason to want lecture reminders.
@@ -118,7 +120,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
       }
       await loadData();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر الانضمام للمجموعة', 'err');
+      showToast(e?.message || t('joinBatchError'), 'err');
     } finally {
       setJoiningBatchId(null);
     }
@@ -130,12 +132,12 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
     try {
       await RPC.submitCourseRating(courseId, ratingValue, ratingComment);
       RTCHaptics.success();
-      showToast('شكراً لمشاركتك تقييم الدورة', 'ok');
+      showToast(t('ratingThanks'), 'ok');
       setRatingModalVisible(false);
       setRatingComment('');
       await loadData();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر إرسال التقييم (يجب أن تكون مسجلاً بالدورة)', 'err');
+      showToast(e?.message || t('ratingError'), 'err');
     } finally {
       setRatingSubmitting(false);
     }
@@ -143,7 +145,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title={course?.title || 'تفاصيل الدورة'} subtitle="مسار التدريب" showBack onBack={onBack} />
+      <GlassHeader title={course?.title || t('courseDetails')} subtitle={t('trainingPath')} showBack onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
@@ -158,7 +160,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
             <CustomCard style={styles.heroCard}>
               <View style={styles.categoryRow}>
                 <View style={[styles.catBadge, { backgroundColor: colors.primarySoft }]}>
-                  <Text style={[styles.catText, { color: colors.primary }]}>{course.category || 'تدريب عام'}</Text>
+                  <Text style={[styles.catText, { color: colors.primary }]}>{course.category || t('trainingGeneral')}</Text>
                 </View>
                 {course.level ? (
                   <View style={[styles.levelBadge, { backgroundColor: colors.teal + '18' }]}>
@@ -177,27 +179,27 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
               <View style={styles.specsRow}>
                 <View style={styles.specItem}>
                   <Calendar color={colors.primary} size={18} />
-                  <Text style={[styles.specVal, { color: colors.txt }]}>{course.sessions_count} محاضرات</Text>
-                  <Text style={[styles.specLbl, { color: colors.mut }]}>مدة الدورة</Text>
+                  <Text style={[styles.specVal, { color: colors.txt }]}>{course.sessions_count} {t('lecturesSuffix')}</Text>
+                  <Text style={[styles.specLbl, { color: colors.mut }]}>{t('courseDuration')}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <MapPin color={colors.teal} size={18} />
                   <Text style={[styles.specVal, { color: colors.txt }]}>
-                    {course.branches?.name_ar || 'فرع رسالة'}
+                    {course.branches?.name_ar || t('resalaBranch')}
                   </Text>
-                  <Text style={[styles.specLbl, { color: colors.mut }]}>مكان الانعقاد</Text>
+                  <Text style={[styles.specLbl, { color: colors.mut }]}>{t('venue')}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <Award color={colors.gold} size={18} />
-                  <Text style={[styles.specVal, { color: colors.txt }]}>شهادة معتمدة</Text>
-                  <Text style={[styles.specLbl, { color: colors.mut }]}>عند إتمام ٧٥٪</Text>
+                  <Text style={[styles.specVal, { color: colors.txt }]}>{t('certifiedCert')}</Text>
+                  <Text style={[styles.specLbl, { color: colors.mut }]}>{t('certCondition')}</Text>
                 </View>
               </View>
             </CustomCard>
 
             {/* Available Batches Section */}
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.txt }]}>المجموعات المتاحة للتسجيل</Text>
+              <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('availableBatches')}</Text>
             </View>
 
             {batches.length ? (
@@ -226,7 +228,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                             },
                           ]}
                         >
-                          {isFull ? 'المجموعة مكتملة' : `متبقي ${seatsLeft} مقعد`}
+                          {isFull ? t('cdBatchFull') : t('cdSeatsLeft', { n: seatsLeft })}
                         </Text>
                       </View>
                     </View>
@@ -243,7 +245,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                         <View style={styles.batchDetailItem}>
                           <GraduationCap color={colors.mut} size={15} />
                           <Text style={[styles.batchDetailText, { color: colors.mut }]}>
-                            المدرب: {batch.profiles.full_name}
+                            {t('cdInstructor')} {batch.profiles.full_name}
                           </Text>
                         </View>
                       ) : null}
@@ -259,7 +261,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                     </View>
 
                     <CustomButton
-                      title={isFull ? 'الانضمام لقائمة الانتظار' : 'الانضمام للمجموعة'}
+                      title={isFull ? t('joinWaitlist') : t('joinBatch')}
                       onPress={() => handleJoinBatch(batch.id)}
                       variant={isFull ? 'soft' : 'primary'}
                       size="mid"
@@ -270,15 +272,15 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
               })
             ) : (
               <CustomCard style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: colors.mut, fontSize: 13 }}>لا توجد مجموعات مفتوحة للتسجيل حالياً في هذا الكورس.</Text>
+                <Text style={{ color: colors.mut, fontSize: 13 }}>{t('cdNoOpenBatches')}</Text>
               </CustomCard>
             )}
 
             {/* Ratings Section */}
             <View style={styles.ratingSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.txt }]}>تقييمات وآراء الطلاب</Text>
+              <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('cdReviews')}</Text>
               <TouchableOpacity onPress={() => setRatingModalVisible(true)}>
-                <Text style={[styles.addRatingBtn, { color: colors.primary }]}>+ تقييم الدورة</Text>
+                <Text style={[styles.addRatingBtn, { color: colors.primary }]}>{t('cdAddRating')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -307,7 +309,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
               ))
             ) : (
               <Text style={{ color: colors.mut, fontSize: 12.5, textAlign: 'center', marginVertical: 8 }}>
-                كن أول من يقيّم هذه الدورة التدريبية!
+                {t('cdBeFirst')}
               </Text>
             )}
           </>
@@ -319,7 +321,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>تقييم الدورة التدريبية</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('cdRatingModalTitle')}</Text>
               <TouchableOpacity onPress={() => setRatingModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
@@ -346,16 +348,16 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
             </View>
 
             <TextInputField
-              label="رأيك وملاحظاتك (اختياري)"
+              label={t('cdCommentLabel')}
               value={ratingComment}
               onChangeText={setRatingComment}
-              placeholder="اكتب تقييمك للمدرب والمحتوى..."
+              placeholder={t('cdCommentPlaceholder')}
               multiline
               numberOfLines={3}
             />
 
             <CustomButton
-              title="إرسال التقييم"
+              title={t('submitRating')}
               onPress={handleSubmitRating}
               variant="primary"
               size="big"

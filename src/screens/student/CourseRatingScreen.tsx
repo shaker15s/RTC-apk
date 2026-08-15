@@ -17,6 +17,7 @@ import { SuccessAnimation } from '../../components/feedback/SuccessAnimation';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RPC } from '../../data/rpc';
 import { Star, MessageSquare } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export interface CourseRatingScreenProps {
@@ -27,10 +28,11 @@ export interface CourseRatingScreenProps {
 
 export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
   courseId,
-  courseTitle = 'الدورة التدريبية',
+  courseTitle = t('certCourseFallback'),
   onBack,
 }) => {
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -38,7 +40,7 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
 
   const handleSubmit = async () => {
     if (rating < 1) {
-      showToast('يرجى تحديد التقييم بالنجوم', 'warn');
+      showToast(t('crPickStars'), 'warn');
       return;
     }
 
@@ -47,7 +49,7 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
       await RPC.submitCourseRating(courseId, rating, comment.trim());
       setShowSuccess(true);
     } catch (e: any) {
-      showToast(e?.message || 'فشل إرسال التقييم', 'err');
+      showToast(e?.message || t('crError'), 'err');
     } finally {
       setSubmitting(false);
     }
@@ -60,7 +62,7 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <GlassHeader
-        title="تقييم الدورة"
+        title={t('rateCourse')}
         subtitle={courseTitle}
         showBack
         onBack={onBack}
@@ -74,9 +76,9 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
         keyboardShouldPersistTaps="handled"
       >
         <CustomCard style={styles.card}>
-          <Text style={[styles.heading, { color: colors.txt }]}>كيف كانت تجربتك التعليمية؟</Text>
+          <Text style={[styles.heading, { color: colors.txt }]}>{t('crQuestion')}</Text>
           <Text style={[styles.subheading, { color: colors.mut }]}>
-            رأيك يساعدنا في تحسين جودة التدريب واختيار أفضل المتطوعين
+            {t('crSub')}
           </Text>
 
           {/* Stars Selection */}
@@ -102,26 +104,26 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
 
           <Text style={[styles.ratingLabel, { color: colors.primary }]}>
             {rating === 5
-              ? 'ممتاز جداً 🌟'
+              ? t('crExcellent')
               : rating === 4
-              ? 'جيد جداً 👍'
+              ? t('crVeryGood')
               : rating === 3
-              ? 'متوسط 👌'
+              ? t('crAverage')
               : rating === 2
-              ? 'يحتاج تحسين ⚠️'
-              : 'ضعيف ❌'}
+              ? t('crNeedsImprovement')
+              : t('crPoor')}
           </Text>
 
           {/* Review Text Input */}
           <View style={styles.inputWrap}>
             <View style={styles.inputLabelRow}>
               <MessageSquare size={16} color={colors.mut} />
-              <Text style={[styles.inputLabel, { color: colors.txt }]}>ملاحظاتك ومقترحاتك (اختياري)</Text>
+              <Text style={[styles.inputLabel, { color: colors.txt }]}>{t('crNotesLabel')}</Text>
             </View>
             <TextInput
               value={comment}
               onChangeText={setComment}
-              placeholder="اكتب تقييمك للمدرب والمحتوى والتنظيم..."
+              placeholder={t('crNotesPlaceholder')}
               placeholderTextColor={colors.mut}
               multiline
               numberOfLines={4}
@@ -138,7 +140,7 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
           </View>
 
           <CustomButton
-            title="إرسال التقييم"
+            title={t('submitRating')}
             onPress={handleSubmit}
             loading={submitting}
             variant="primary"
@@ -150,8 +152,8 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
 
       <SuccessAnimation
         visible={showSuccess}
-        title="شكراً لتقييمك!"
-        subtitle="رأيك يساعدنا على تطوير جودة التدريب في مراكز رسالة"
+        title={t('crThanksTitle')}
+        subtitle={t('crThanksSub')}
         onFinish={() => {
           setShowSuccess(false);
           onBack();

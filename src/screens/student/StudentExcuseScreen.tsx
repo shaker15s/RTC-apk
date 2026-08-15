@@ -32,6 +32,7 @@ import {
   X,
   AlertCircle,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const StudentExcuseScreen: React.FC<{
@@ -39,6 +40,7 @@ export const StudentExcuseScreen: React.FC<{
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState('');
@@ -82,21 +84,21 @@ export const StudentExcuseScreen: React.FC<{
         setFileExt(['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'pdf');
         setFileMime(mime);
         RTCHaptics.success();
-        showToast('تم إرفاق المستند بنجاح', 'ok');
+        showToast(t('attachedToast'), 'ok');
       }
     } catch (e) {
-      showToast('تعذر اختيار الملف', 'err');
+      showToast(t('pickDocError'), 'err');
     }
   };
 
   const handleSubmitExcuse = async () => {
     if (!selectedBatchId) {
-      showToast('يرجى اختيار الدورة التدريبية', 'warn');
+      showToast(t('pickCourseWarn'), 'warn');
       return;
     }
 
     if (reason.trim().length < 8) {
-      showToast('يرجى كتابة سبب العذر بالتفصيل (8 أحرف على الأقل)', 'warn');
+      showToast(t('reasonMinWarn'), 'warn');
       return;
     }
 
@@ -104,7 +106,7 @@ export const StudentExcuseScreen: React.FC<{
     try {
       let uploadedFilePath: string | null = null;
       if (fileUri) {
-        showToast('جارٍ رفع المستند المرفق...', 'info');
+        showToast(t('uploadingFileToast'), 'info');
         uploadedFilePath = await Repository.uploadExcuseFile(fileUri, fileExt, fileMime);
       }
 
@@ -115,10 +117,10 @@ export const StudentExcuseScreen: React.FC<{
       });
 
       RTCHaptics.success();
-      showToast('تم تقديم طلب العذر للمدرب بنجاح', 'ok');
+      showToast(t('excuseSubmittedToast'), 'ok');
       onBack();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر تقديم العذر', 'err');
+      showToast(e?.message || t('excuseSubmitError'), 'err');
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +134,7 @@ export const StudentExcuseScreen: React.FC<{
       style={[styles.container, { backgroundColor: colors.bg }]}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <GlassHeader title="طلب عذر غياب" subtitle="إرسال طلب للمدرب للمراجعة" showBack onBack={onBack} />
+      <GlassHeader title={t('excuseTitle')} subtitle={t('excuseSubtitle')} showBack onBack={onBack} />
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
@@ -142,7 +144,7 @@ export const StudentExcuseScreen: React.FC<{
         <CustomCard style={styles.formCard}>
           {/* Select Course/Batch */}
           <View style={{ marginBottom: 14 }}>
-            <Text style={[styles.fieldLabel, { color: colors.txt }]}>الدورة التدريبية / المجموعة</Text>
+            <Text style={[styles.fieldLabel, { color: colors.txt }]}>{t('courseFieldLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setBranchModalVisible(true)}
@@ -158,7 +160,7 @@ export const StudentExcuseScreen: React.FC<{
                 >
                   {selectedEnrollment?.batches?.courses?.title ||
                     selectedEnrollment?.batches?.name ||
-                    'اختر الدورة التدريبية'}
+                    t('sePickCourse')}
                 </Text>
               </View>
               <ChevronDown color={colors.mut} size={18} />
@@ -167,10 +169,10 @@ export const StudentExcuseScreen: React.FC<{
 
           {/* Reason Input */}
           <TextInputField
-            label="سبب الغياب بالتفصيل"
+            label={t('seReasonLabel')}
             value={reason}
             onChangeText={setReason}
-            placeholder="اكتب سبب الغياب لتوضيح الظروف للمدرب..."
+            placeholder={t('seReasonPlaceholder')}
             multiline
             numberOfLines={4}
             required
@@ -178,7 +180,7 @@ export const StudentExcuseScreen: React.FC<{
 
           {/* Document Upload */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={[styles.fieldLabel, { color: colors.txt }]}>مستند إثبات العذر (تقرير طبي / عمل - اختياري)</Text>
+            <Text style={[styles.fieldLabel, { color: colors.txt }]}>{t('seProofLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.75}
               onPress={handlePickDocument}
@@ -202,15 +204,15 @@ export const StudentExcuseScreen: React.FC<{
               ) : (
                 <View style={styles.uploadPlaceholder}>
                   <UploadCloud color={colors.primary} size={28} />
-                  <Text style={[styles.uploadText, { color: colors.txt }]}>اضغط لرفع ملف PDF أو صورة</Text>
-                  <Text style={[styles.uploadSub, { color: colors.mut }]}>الحد الأقصى 4 ميجابايت</Text>
+                  <Text style={[styles.uploadText, { color: colors.txt }]}>{t('seUploadTap')}</Text>
+                  <Text style={[styles.uploadSub, { color: colors.mut }]}>{t('seSizeNote')}</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
           <CustomButton
-            title="إرسال طلب العذر"
+            title={t('submitExcuseCta')}
             onPress={handleSubmitExcuse}
             variant="primary"
             size="big"
@@ -225,7 +227,7 @@ export const StudentExcuseScreen: React.FC<{
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>اختر الدورة التدريبية</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('sePickCourse')}</Text>
               <TouchableOpacity onPress={() => setBranchModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>

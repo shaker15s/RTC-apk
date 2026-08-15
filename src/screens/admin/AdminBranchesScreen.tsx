@@ -28,32 +28,34 @@ import {
   X,
   CheckCircle2,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminBranchesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { branches } = useAuthStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [nameAr, setNameAr] = useState('');
-  const [city, setCity] = useState('القاهرة');
+  const [city, setCity] = useState(t('abDefaultCity'));
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
 
   const handleAddBranch = () => {
     if (!nameAr.trim()) {
-      showToast('أدخل اسم الفرع', 'warn');
+      showToast(t('abNameHint'), 'warn');
       return;
     }
-    showToast('تم حفظ بيانات الفرع بنجاح', 'ok');
+    showToast(t('abSaved'), 'ok');
     setModalVisible(false);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="إدارة الفروع والمقرات"
-        subtitle="فروع مراكز رسالة للتدريب"
+        title={t('abTitle')}
+        subtitle={t('abSubtitle')}
         showBack
         onBack={onBack}
         rightAction={
@@ -65,7 +67,7 @@ export const AdminBranchesScreen: React.FC<{ onBack: () => void }> = ({ onBack }
             style={[styles.addHeaderBtn, { backgroundColor: colors.primarySoft }]}
           >
             <PlusCircle color={colors.primary} size={16} />
-            <Text style={[styles.addHeaderText, { color: colors.primary }]}>فرع جديد</Text>
+            <Text style={[styles.addHeaderText, { color: colors.primary }]}>{t('abNew')}</Text>
           </TouchableOpacity>
         }
       />
@@ -108,36 +110,36 @@ export const AdminBranchesScreen: React.FC<{ onBack: () => void }> = ({ onBack }
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>إضافة فرع تدريبي جديد</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('abModalTitle')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
             </View>
 
             <TextInputField
-              label="اسم الفرع"
+              label={t('abName')}
               value={nameAr}
               onChangeText={setNameAr}
-              placeholder="مثال: فرع المعادي"
+              placeholder={t('abNamePlaceholder')}
               required
             />
 
             <TextInputField
-              label="المحافظة / المدينة"
+              label={t('abCity')}
               value={city}
               onChangeText={setCity}
-              placeholder="القاهرة / الجيزة / الإسكندرية"
+              placeholder={t('abCityPlaceholder')}
             />
 
             <TextInputField
-              label="العنوان التفصيلي"
+              label={t('abAddress')}
               value={address}
               onChangeText={setAddress}
-              placeholder="شارع..."
+              placeholder={t('abAddressPlaceholder')}
             />
 
             <TextInputField
-              label="رقم الهاتف للتواصل"
+              label={t('abPhone')}
               value={phone}
               onChangeText={setPhone}
               placeholder="01XXXXXXXXX"
@@ -145,7 +147,7 @@ export const AdminBranchesScreen: React.FC<{ onBack: () => void }> = ({ onBack }
             />
 
             <CustomButton
-              title="حفظ الفرع"
+              title={t('abSave')}
               onPress={handleAddBranch}
               variant="primary"
               size="big"

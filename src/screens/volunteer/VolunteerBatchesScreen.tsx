@@ -41,6 +41,7 @@ import {
   FileCheck,
   Calendar,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerBatchesScreen: React.FC<{
@@ -48,6 +49,7 @@ export const VolunteerBatchesScreen: React.FC<{
   selectedBatchId?: string;
 }> = ({ onNavigate, selectedBatchId: initialBatchId }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [activeBatchId, setActiveBatchId] = useState<string>(initialBatchId || '');
@@ -76,7 +78,7 @@ export const VolunteerBatchesScreen: React.FC<{
         setActiveBatchId(list[0].id);
       }
     } catch (e) {
-      showToast('تعذر تحميل مجموعاتك — اسحب للتحديث', 'warn');
+      showToast(t('batchesLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,7 +92,7 @@ export const VolunteerBatchesScreen: React.FC<{
       const roster = await RPC.batchRoster(batchId);
       setStudents(roster);
     } catch (e: any) {
-      showToast('تعذر تحميل كشف طلاب الدفعة', 'err');
+      showToast(t('rosterLoadError'), 'err');
     } finally {
       setLoadingStudents(false);
     }
@@ -115,7 +117,7 @@ export const VolunteerBatchesScreen: React.FC<{
             id: s.id,
             batchId: activeBatchId,
             checkinCode: s.checkin_code,
-            title: s.title || 'المحاضرة الحالية',
+            title: s.title || t('currentLecture'),
             startedAt: Date.now(),
           });
         }
@@ -138,15 +140,15 @@ export const VolunteerBatchesScreen: React.FC<{
         id: res.id,
         batchId: activeBatchId,
         checkinCode: res.checkin_code,
-        title: sessionTitle.trim() || 'المحاضرة الحالية',
+        title: sessionTitle.trim() || t('currentLecture'),
         startedAt: Date.now(),
       });
       setStartSessionModal(false);
       setSessionTitle('');
       RTCHaptics.success();
-      showToast('تم بدء الجلسة وتوليد رمز الحضور بنجاح!', 'ok');
+      showToast(t('sessionStartedToast'), 'ok');
     } catch (e: any) {
-      showToast(e?.message || 'تعذر بدء الجلسة', 'err');
+      showToast(e?.message || t('sessionStartError'), 'err');
     } finally {
       setStarting(false);
     }
@@ -158,10 +160,10 @@ export const VolunteerBatchesScreen: React.FC<{
       await RPC.closeSession(activeSession.id);
       clearActiveSession();
       RTCHaptics.success();
-      showToast('تم إغلاق الجلسة واحتساب النقاط وسلسلة الحضور', 'ok');
+      showToast(t('sessionClosedToast'), 'ok');
       await onRefresh();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر إغلاق الجلسة', 'err');
+      showToast(e?.message || t('sessionCloseError'), 'err');
     }
   };
 
@@ -170,7 +172,7 @@ export const VolunteerBatchesScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="كشوف المجموعات" subtitle="إدارة الحضور والجلسات" />
+      <GlassHeader title={t('myBatchesTitle')} subtitle={t('myBatchesSubtitle')} />
 
       {/* Batch selector chips */}
       {batches.length > 1 ? (
@@ -189,14 +191,14 @@ export const VolunteerBatchesScreen: React.FC<{
           <CustomCard style={[styles.liveSessionCard, { borderColor: colors.teal }]}>
             <View style={styles.liveSessionTop}>
               <View style={[styles.liveBadge, { backgroundColor: colors.teal }]}>
-                <Text style={styles.liveBadgeText}>جلسة نشطة الآن 🔴</Text>
+                <Text style={styles.liveBadgeText}>{t('liveSessionBadge')}</Text>
               </View>
               <Text style={[styles.liveTitle, { color: colors.txt }]}>{activeSession.title}</Text>
             </View>
 
             {/* Big Code & REAL QR Display (fixes P1-4) */}
             <View style={[styles.qrDisplayBox, { backgroundColor: colors.card2, borderColor: colors.line }]}>
-              <Text style={[styles.qrCodeLabel, { color: colors.mut }]}>رمز الحضور للطلاب:</Text>
+              <Text style={[styles.qrCodeLabel, { color: colors.mut }]}>{t('checkinCodeLabel')}</Text>
               <Text style={[styles.qrBigCode, { color: colors.primary }]}>
                 {activeSession.checkinCode}
               </Text>
@@ -212,7 +214,7 @@ export const VolunteerBatchesScreen: React.FC<{
 
             <View style={styles.liveActionsRow}>
               <CustomButton
-                title="تسجيل الحضور اليدوي"
+                title={t('manualAttendanceCta')}
                 onPress={() =>
                   onNavigate('v-attendance', {
                     sessionId: activeSession.id,
@@ -226,7 +228,7 @@ export const VolunteerBatchesScreen: React.FC<{
               />
 
               <CustomButton
-                title="إنهاء الجلسة"
+                title={t('endSessionCta')}
                 onPress={handleCloseSession}
                 variant="danger"
                 size="mid"
@@ -245,13 +247,13 @@ export const VolunteerBatchesScreen: React.FC<{
                   {currentBatch.courses?.title || currentBatch.name}
                 </Text>
                 <Text style={[styles.batchSchedule, { color: colors.mut }]}>
-                  {currentBatch.schedule || 'المواعيد محددة من الإدارة'}
+                  {currentBatch.schedule || t('vbScheduleDefault')}
                 </Text>
               </View>
 
               {!activeSession ? (
                 <CustomButton
-                  title="بدء جلسة جديدة"
+                  title={t('startSessionCta')}
                   onPress={() => {
                     RTCHaptics.light();
                     setStartSessionModal(true);
@@ -266,21 +268,21 @@ export const VolunteerBatchesScreen: React.FC<{
             <View style={styles.batchStatsRow}>
               <View style={styles.batchStat}>
                 <Text style={[styles.batchStatVal, { color: colors.primary }]}>{students.length}</Text>
-                <Text style={[styles.batchStatLbl, { color: colors.mut }]}>طالب مسجل</Text>
+                <Text style={[styles.batchStatLbl, { color: colors.mut }]}>{t('enrolledStudents')}</Text>
               </View>
               <View style={[styles.divider, { backgroundColor: colors.line }]} />
               <View style={styles.batchStat}>
                 <Text style={[styles.batchStatVal, { color: colors.teal }]}>
                   {currentBatch.sessions_done || 0}
                 </Text>
-                <Text style={[styles.batchStatLbl, { color: colors.mut }]}>محاضرات تمت</Text>
+                <Text style={[styles.batchStatLbl, { color: colors.mut }]}>{t('sessionsDoneStat')}</Text>
               </View>
               <View style={[styles.divider, { backgroundColor: colors.line }]} />
               <View style={styles.batchStat}>
                 <Text style={[styles.batchStatVal, { color: colors.gold }]}>
                   {currentBatch.courses?.sessions_count || 8}
                 </Text>
-                <Text style={[styles.batchStatLbl, { color: colors.mut }]}>إجمالي المقرر</Text>
+                <Text style={[styles.batchStatLbl, { color: colors.mut }]}>{t('totalSessionsStat')}</Text>
               </View>
             </View>
           </CustomCard>
@@ -288,9 +290,9 @@ export const VolunteerBatchesScreen: React.FC<{
 
         {/* Students Roster Section */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>كشف الطلاب والالتزام</Text>
+          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('rosterTitle')}</Text>
           <Text style={[styles.sectionSubtitle, { color: colors.mut }]}>
-            نسب الحضور وتفاصيل الطلاب المسجلين بالدفعة
+            {t('rosterSubtitle')}
           </Text>
         </View>
 
@@ -320,7 +322,7 @@ export const VolunteerBatchesScreen: React.FC<{
                       onPress={() => {
                         RTCHaptics.light();
                         Clipboard.setStringAsync(student.phone as string).catch(() => {});
-                        showToast('تم نسخ رقم الطالب كاملاً', 'info');
+                        showToast(t('phoneCopied'), 'info');
                       }}
                     >
                       {/* Privacy masking by default (fixes SEC-4): tap to copy full number */}
@@ -335,19 +337,19 @@ export const VolunteerBatchesScreen: React.FC<{
               <View style={styles.studentRight}>
                 <View style={[styles.attBadge, { backgroundColor: colors.teal + '18' }]}>
                   <Text style={[styles.attText, { color: colors.teal }]}>
-                    {student.attendance_pct || 0}% حضور
+                    {t('attendancePct', { p: student.attendance_pct || 0 })}
                   </Text>
                 </View>
                 <Text style={[styles.pointsText, { color: colors.gold }]}>
-                  ⭐ {student.points || 0} ن
+                  ⭐ {student.points || 0} {t('ptShort')}
                 </Text>
               </View>
             </CustomCard>
           ))
         ) : (
           <EmptyStateView
-            title="لا يوجد طلاب مسجلين بعد"
-            description="عندما ينضم الطلاب لهذه المجموعة من التطبيق سيظهر كشف أسمائهم هنا تلقائياً."
+            title={t('noStudentsTitle')}
+            description={t('noStudentsDesc')}
             icon={<Users color={colors.primary} size={32} />}
           />
         )}
@@ -358,25 +360,25 @@ export const VolunteerBatchesScreen: React.FC<{
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>بدء جلسة محاضرة جديدة</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('startSessionModalTitle')}</Text>
               <TouchableOpacity onPress={() => setStartSessionModal(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>
             </View>
 
             <TextInputField
-              label="عنوان المحاضرة (اختياري)"
+              label={t('sessionTitleLabel')}
               value={sessionTitle}
               onChangeText={setSessionTitle}
-              placeholder="مثال: المحاضرة الرابعة - التطبيق العملي"
+              placeholder={t('sessionTitlePlaceholder')}
             />
 
             <Text style={[styles.modalNotice, { color: colors.mut }]}>
-              عند بدء الجلسة سيتم توليد رمز حضور فريد ورمز QR فوري ليتمكن الطلاب من إثبات حضورهم عبر التطبيق.
+              {t('vbSessionNote')}
             </Text>
 
             <CustomButton
-              title="تأكيد وبدء الجلسة الآن"
+              title={t('vbConfirmStart')}
               onPress={handleStartSession}
               variant="teal"
               size="big"

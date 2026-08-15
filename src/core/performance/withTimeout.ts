@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * Request Timeout Helper (fixes A-7)
  * Wraps any promise with a hard timeout so users are never stuck on
@@ -7,7 +8,7 @@
 export function withTimeout<T>(
   promise: Promise<T>,
   ms = 15000,
-  timeoutMessage = 'انتهت مهلة الاتصال — تحقق من الشبكة وحاول مرة أخرى'
+  timeoutMessage = t('timeoutMsg')
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {

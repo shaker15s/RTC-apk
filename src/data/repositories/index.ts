@@ -2,6 +2,7 @@
  * Master Data Repositories with REST queries, storage uploads, and offline caching.
  */
 import { supabase } from '../supabaseClient';
+import { t } from '../../core/i18n';
 import { RPC, UserProfile } from '../rpc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -426,10 +427,10 @@ export const Repository = {
     try {
       const info = await FileSystem.getInfoAsync(fileUri);
       if (info.exists && info.size && info.size > 5 * 1024 * 1024) {
-        throw new Error('حجم الصورة يتجاوز 5 ميجابايت — اختر صورة أصغر');
+        throw new Error(t('avatarSizeError'));
       }
     } catch (e: any) {
-      if (e?.message?.includes('ميجابايت')) throw e;
+      if (e?.message?.includes('MB') || e?.message?.includes('ميجابايت')) throw e;
     }
 
     // Keep the real extension/mime instead of force-labelling everything
@@ -462,16 +463,16 @@ export const Repository = {
     const ext = String(extension || '').toLowerCase().replace('.', '');
     const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
     if (!ALLOWED_EXT.includes(ext)) {
-      throw new Error('نوع الملف غير مدعوم — يُقبل PDF أو صور فقط');
+      throw new Error(t('fileTypeError'));
     }
 
     try {
       const info = await FileSystem.getInfoAsync(fileUri);
       if (info.exists && info.size && info.size > 8 * 1024 * 1024) {
-        throw new Error('حجم الملف يتجاوز 8 ميجابايت');
+        throw new Error(t('fileSizeError'));
       }
     } catch (e: any) {
-      if (e?.message?.includes('ميجابايت')) throw e;
+      if (e?.message?.includes('MB') || e?.message?.includes('ميجابايت')) throw e;
     }
 
     const path = `${session.user.id}/${Date.now()}.${ext}`;

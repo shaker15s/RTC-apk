@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Bell, ChevronRight, User } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { RTCHaptics } from '../../core/native/haptics';
 
 import { Avatar } from '../common/Avatar';
@@ -24,7 +25,7 @@ export interface GlassHeaderProps {
 }
 
 export const GlassHeader: React.FC<GlassHeaderProps> = ({
-  title = 'مسار RTC',
+  title = t('appName'),
   subtitle,
   showBack = false,
   onBack,
@@ -108,7 +109,7 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
             >
               <Avatar
                 uri={profile?.avatar_url}
-                name={profile?.full_name || 'طالب RTC'}
+                name={profile?.full_name || t('studentFallback')}
                 size="sm"
                 borderColor={colors.primary}
               />

@@ -12,6 +12,7 @@
  * This eliminates all race conditions between the two code paths.
  */
 import { create } from 'zustand';
+import { t } from '../core/i18n';
 import { supabase } from '../data/supabaseClient';
 import { RPC, UserProfile } from '../data/rpc';
 import { Repository, Branch } from '../data/repositories';
@@ -146,7 +147,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         isInitialized: true,
         isLoading: false,
-        error: err?.message || 'تعذر تحميل بيانات الجلسة',
+        error: err?.message || t('authSessionError'),
       });
     }
   },
@@ -171,7 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (error) throw error;
-      if (!data?.url) throw new Error('تعذر توليد رابط المصادقة');
+      if (!data?.url) throw new Error(t('authLinkError'));
 
       // OAuth browser opened — token exchange is handled by onAuthStateChange
 
@@ -220,7 +221,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         set({
           isLoading: false,
-          error: err?.message || 'فشل تسجيل الدخول باستخدام Google',
+          error: err?.message || t('authLoginError'),
         });
       }
     }

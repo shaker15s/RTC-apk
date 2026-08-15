@@ -38,22 +38,24 @@ import {
   Trophy,
   X,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const BADGES_CATALOG = [
-  { id: 'welcome', name: 'أول خطوة', icon: 'flag', color: '#00288E', desc: 'انضممت إلى مسار RTC', unlock: 'أنشئ حسابك' },
-  { id: 'firstCourse', name: 'متعلم نشيط', icon: 'book', color: '#00554E', desc: 'انضممت لأول دورة', unlock: 'انضم لمجموعة' },
-  { id: 'firstAttend', name: 'حاضر فعلاً', icon: 'check', color: '#0B6E63', desc: 'سُجّل حضورك أول مرة', unlock: 'احضر محاضرة' },
-  { id: 'points100', name: 'جامع النقاط', icon: 'coins', color: '#D4AF37', desc: 'جمعت ١٠٠ نقطة', unlock: 'اجمع ١٠٠ نقطة' },
-  { id: 'streak5', name: 'مثابر', icon: 'fire', color: '#BA1A1A', desc: 'حضرت ٥ محاضرات متتالية', unlock: 'سلسلة حضور ٥' },
-  { id: 'explorer', name: 'مستكشف', icon: 'compass', color: '#7A30D8', desc: 'انضممت لـ ٣ دورات', unlock: '٣ كورسات' },
-  { id: 'graduate', name: 'خريج معتمد', icon: 'cert', color: '#1E40AF', desc: 'أتممت دورة بنجاح', unlock: 'أكمل كورساً' },
-  { id: 'social', name: 'نجم سوشيال', icon: 'heart', color: '#A8477A', desc: 'شاركت التطبيق', unlock: 'شارك رابط مسار' },
-  { id: 'points500', name: 'بطل النقاط', icon: 'trophy', color: '#854D0E', desc: 'جمعت ٥٠٠ نقطة', unlock: 'اجمع ٥٠٠ نقطة' },
+  { id: 'welcome', name: t('bdWelcomeName'), icon: 'flag', color: '#00288E', desc: t('bdWelcomeDesc'), unlock: t('bdWelcomeUnlock') },
+  { id: 'firstCourse', name: t('bdFirstCourseName'), icon: 'book', color: '#00554E', desc: t('bdFirstCourseDesc'), unlock: t('bdFirstCourseUnlock') },
+  { id: 'firstAttend', name: t('bdFirstAttendName'), icon: 'check', color: '#0B6E63', desc: t('bdFirstAttendDesc'), unlock: t('bdFirstAttendUnlock') },
+  { id: 'points100', name: t('bdPoints100Name'), icon: 'coins', color: '#D4AF37', desc: t('bdPoints100Desc'), unlock: t('bdPoints100Unlock') },
+  { id: 'streak5', name: t('bdStreak5Name'), icon: 'fire', color: '#BA1A1A', desc: t('bdStreak5Desc'), unlock: t('bdStreak5Unlock') },
+  { id: 'explorer', name: t('bdExplorerName'), icon: 'compass', color: '#7A30D8', desc: t('bdExplorerDesc'), unlock: t('bdExplorerUnlock') },
+  { id: 'graduate', name: t('bdGraduateName'), icon: 'cert', color: '#1E40AF', desc: t('bdGraduateDesc'), unlock: t('bdGraduateUnlock') },
+  { id: 'social', name: t('bdSocialName'), icon: 'heart', color: '#A8477A', desc: t('bdSocialDesc'), unlock: t('bdSocialUnlock') },
+  { id: 'points500', name: t('bdPoints500Name'), icon: 'trophy', color: '#854D0E', desc: t('bdPoints500Desc'), unlock: t('bdPoints500Unlock') },
 ];
 
 export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { profile, refreshProfile } = useAuthStore();
 
   const [selectedBadge, setSelectedBadge] = useState<any | null>(null);
@@ -67,8 +69,8 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
     setSharing(true);
     try {
       const shared = await RTCSharing.shareText(
-        'انضم إلى مسار RTC',
-        'تعلّم مجاناً مع مراكز رسالة للتدريب وطوّر مهاراتك خطوة بخطوة!'
+        t('shareAppMessage'),
+        t('shareAppBody')
       );
       if (shared) {
         await RPC.claimSocialBadge();
@@ -111,7 +113,7 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="النقاط والشارات" subtitle="لوحة الإنجازات" />
+      <GlassHeader title={t('pointsTitle')} subtitle={t('achievementsSubtitle')} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Points Big Hero */}
@@ -121,17 +123,17 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
               <Trophy color="#FFFFFF" size={32} />
             </View>
             <Text style={styles.totalPointsNum}>{points}</Text>
-            <Text style={styles.totalPointsLabel}>إجمالي النقاط المكتسبة</Text>
+            <Text style={styles.totalPointsLabel}>{t('spTotalPoints')}</Text>
 
             <View style={styles.statsBar}>
               <View style={styles.statSubItem}>
                 <Flame color="#FF8A00" size={16} />
-                <Text style={styles.statSubText}>{streak} محاضرات متتالية</Text>
+                <Text style={styles.statSubText}>{t('spStreakSub', { n: streak })}</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statSubItem}>
                 <Award color="#FFD700" size={16} />
-                <Text style={styles.statSubText}>{userBadgeIds.length} شارات مفتوحة</Text>
+                <Text style={styles.statSubText}>{t('spBadgesSub', { n: userBadgeIds.length })}</Text>
               </View>
             </View>
           </View>
@@ -140,7 +142,7 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
         {/* Action Buttons Row */}
         <View style={styles.actionsRow}>
           <CustomButton
-            title="دفتر النقاط"
+            title={t('spLedgerBtn')}
             onPress={() => onNavigate('s-ledger')}
             variant="soft"
             size="mid"
@@ -149,7 +151,7 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
           />
 
           <CustomButton
-            title="مشاركة التطبيق (+25)"
+            title={t('spShareBtn')}
             onPress={handleShareApp}
             variant="primary"
             size="mid"
@@ -161,8 +163,8 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
 
         {/* Badges Matrix */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>كتالوج شارات الإنجاز</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.mut }]}>اضغط على أي شارة لمعرفة طريقة فتحها</Text>
+          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('spCatalogTitle')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.mut }]}>{t('spCatalogSub')}</Text>
         </View>
 
         <View style={styles.badgesGrid}>
@@ -205,7 +207,7 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 </Text>
 
                 <Text style={[styles.badgeUnlock, { color: colors.mut }]} numberOfLines={1}>
-                  {isUnlocked ? 'مفتوحة ✓' : badge.unlock}
+                  {isUnlocked ? t('spUnlocked') : badge.unlock}
                 </Text>
               </TouchableOpacity>
             );
@@ -238,14 +240,14 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <Text style={[styles.modalBadgeDesc, { color: colors.mut }]}>{selectedBadge.desc}</Text>
 
                 <View style={[styles.unlockBox, { backgroundColor: colors.card2, borderColor: colors.line }]}>
-                  <Text style={[styles.unlockBoxTitle, { color: colors.txt }]}>طريقة الفتح:</Text>
+                  <Text style={[styles.unlockBoxTitle, { color: colors.txt }]}>{t('spUnlockHow')}</Text>
                   <Text style={[styles.unlockBoxText, { color: colors.mut }]}>{selectedBadge.unlock}</Text>
                 </View>
 
                 {selectedBadge.isUnlocked ? (
                   <View style={styles.unlockedRow}>
                     <CheckCircle2 color={colors.teal} size={18} />
-                    <Text style={{ color: colors.teal, fontWeight: '700', fontSize: 13 }}>شارة مفتوحة بحسابك</Text>
+                    <Text style={{ color: colors.teal, fontWeight: '700', fontSize: 13 }}>{t('spUnlockedBadge')}</Text>
                   </View>
                 ) : null}
               </>

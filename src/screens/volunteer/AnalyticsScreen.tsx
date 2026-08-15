@@ -26,10 +26,12 @@ import {
   CheckCircle2,
   CalendarCheck,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
   const { profile } = useAuthStore();
 
   const [kpis, setKpis] = useState<any>({
@@ -70,7 +72,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="تحليلات الأداء والمؤشرات" subtitle="إحصائيات المنظومة والتدريب" showBack onBack={onBack} />
+      <GlassHeader title={t('anTitle')} subtitle={t('anSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -97,7 +99,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                   <Users color={colors.primary} size={22} />
                 </View>
                 <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis?.active_students || 0}</Text>
-                <Text style={[styles.kpiLbl, { color: colors.mut }]}>الطلاب النشطين</Text>
+                <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anActiveStudents')}</Text>
               </CustomCard>
 
               {/* Total Batches Running */}
@@ -106,7 +108,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                   <BookOpen color={colors.teal} size={22} />
                 </View>
                 <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis?.active_batches || 0}</Text>
-                <Text style={[styles.kpiLbl, { color: colors.mut }]}>المجموعات الجارية</Text>
+                <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anRunningGroups')}</Text>
               </CustomCard>
 
               {/* Average Attendance Rate */}
@@ -117,7 +119,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                 <Text style={[styles.kpiVal, { color: colors.txt }]}>
                   {Math.round(kpis?.avg_attendance_pct || 82)}%
                 </Text>
-                <Text style={[styles.kpiLbl, { color: colors.mut }]}>متوسط الحضور</Text>
+                <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anAvgAttendance')}</Text>
               </CustomCard>
 
               {/* Issued Certificates */}
@@ -126,7 +128,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                   <Award color={colors.gold} size={22} />
                 </View>
                 <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis?.issued_certs || 0}</Text>
-                <Text style={[styles.kpiLbl, { color: colors.mut }]}>الشهادات المعتمدة</Text>
+                <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anCertified')}</Text>
               </CustomCard>
             </View>
 
@@ -134,11 +136,11 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
             <CustomCard style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
                 <TrendingUp color={colors.teal} size={20} />
-                <Text style={[styles.summaryTitle, { color: colors.txt }]}>مؤشرات الجودة والالتزام</Text>
+                <Text style={[styles.summaryTitle, { color: colors.txt }]}>{t('anQuality')}</Text>
               </View>
 
               <View style={styles.indicatorRow}>
-                <Text style={[styles.indLabel, { color: colors.mut }]}>نسبة إتمام الدورات:</Text>
+                <Text style={[styles.indLabel, { color: colors.mut }]}>{t('anCompletion')}</Text>
                 <Text style={[styles.indValue, { color: colors.teal }]}>88%</Text>
               </View>
               <View style={[styles.progressBarTrack, { backgroundColor: colors.card2 }]}>
@@ -146,7 +148,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
               </View>
 
               <View style={[styles.indicatorRow, { marginTop: 12 }]}>
-                <Text style={[styles.indLabel, { color: colors.mut }]}>معدل قبول الأعذار الطبية:</Text>
+                <Text style={[styles.indLabel, { color: colors.mut }]}>{t('anExcuseRate')}</Text>
                 <Text style={[styles.indValue, { color: colors.primary }]}>94%</Text>
               </View>
               <View style={[styles.progressBarTrack, { backgroundColor: colors.card2 }]}>
@@ -154,7 +156,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
               </View>
 
               <View style={[styles.indicatorRow, { marginTop: 12 }]}>
-                <Text style={[styles.indLabel, { color: colors.mut }]}>رضا المتدربين العام:</Text>
+                <Text style={[styles.indLabel, { color: colors.mut }]}>{t('anSatisfaction')}</Text>
                 <Text style={[styles.indValue, { color: colors.gold }]}>4.9 / 5.0 ⭐</Text>
               </View>
               <View style={[styles.progressBarTrack, { backgroundColor: colors.card2 }]}>

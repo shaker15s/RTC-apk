@@ -11,6 +11,10 @@ import {
   Linking,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
@@ -123,7 +127,11 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
   const selectedBranch = branches.find((b) => b.id === selectedBranchId);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bg, paddingTop: insets.top }]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+    >
       {/* Header with dots and help */}
       <View style={styles.header}>
         <View style={styles.dots}>
@@ -163,6 +171,8 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { minHeight: '90%' }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         {step === 1 ? (
           /* Step 1: Welcome & Google Sign-In */
@@ -394,7 +404,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

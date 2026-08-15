@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAppStore } from '../../state/appStore';
@@ -115,10 +117,18 @@ export const StudentExcuseScreen: React.FC<{
   const selectedEnrollment = enrollments.find((e) => e.batch_id === selectedBatchId);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bg }]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
       <GlassHeader title="طلب عذر غياب" subtitle="إرسال طلب للمدرب للمراجعة" showBack onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <CustomCard style={styles.formCard}>
           {/* Select Course/Batch */}
           <View style={{ marginBottom: 14 }}>

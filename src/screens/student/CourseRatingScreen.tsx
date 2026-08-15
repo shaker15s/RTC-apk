@@ -1,7 +1,3 @@
-/**
- * Course Rating Screen (s-course-rating)
- * Allows students to submit star ratings and detailed reviews for finished/enrolled courses.
- */
 import React, { useState } from 'react';
 import {
   View,
@@ -10,6 +6,8 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { GlassHeader } from '../../components/layout/GlassHeader';
@@ -56,7 +54,11 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bg }]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
       <GlassHeader
         title="تقييم الدورة"
         subtitle={courseTitle}
@@ -66,7 +68,11 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
         showAvatar={false}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <CustomCard style={styles.card}>
           <Text style={[styles.heading, { color: colors.txt }]}>كيف كانت تجربتك التعليمية؟</Text>
           <Text style={[styles.subheading, { color: colors.mut }]}>
@@ -144,14 +150,14 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
 
       <SuccessAnimation
         visible={showSuccess}
-        title="شكراً لمشاركتك!"
-        subtitle="تم حفظ تقييمك بنجاح وسيتم أخذه بعين الاعتبار"
+        title="شكراً لتقييمك!"
+        subtitle="رأيك يساعدنا على تطوير جودة التدريب في مراكز رسالة"
         onFinish={() => {
           setShowSuccess(false);
           onBack();
         }}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -12,6 +12,8 @@ import {
   Image,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppStore } from '../../state/appStore';
@@ -123,10 +125,19 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
   const selectedBranch = branches.find((b) => b.id === selectedBranchId);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bg }]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
       <GlassHeader title="تعديل الملف الشخصي" subtitle="تحديث البيانات الشخصية" showBack onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         {/* Avatar Picker Wrap */}
         <View style={styles.avatarSection}>
           <View style={[styles.avatarBox, { borderColor: colors.primary }]}>
@@ -266,7 +277,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

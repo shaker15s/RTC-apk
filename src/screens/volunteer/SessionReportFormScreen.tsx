@@ -1,7 +1,3 @@
-/**
- * Session Report Form Screen (v-report)
- * Allows instructors/volunteers to file post-lecture feedback, understanding rate, and engagement.
- */
 import React, { useState } from 'react';
 import {
   View,
@@ -10,6 +6,8 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { GlassHeader } from '../../components/layout/GlassHeader';
@@ -57,7 +55,11 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bg }]}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
       <GlassHeader
         title="تقرير المحاضرة"
         subtitle={sessionTitle}
@@ -67,7 +69,12 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
         showAvatar={false}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <CustomCard style={styles.card}>
           <Text style={[styles.heading, { color: colors.txt }]}>توثيق إنجاز المحاضرة</Text>
           <Text style={[styles.subheading, { color: colors.mut }]}>

@@ -82,7 +82,9 @@ export const TextInputField: React.FC<TextInputFieldProps> = ({
             {
               color: editable ? colors.txt : colors.mut,
               textAlign: keyboardType === 'phone-pad' || keyboardType === 'email-address' ? 'left' : 'right',
+              textAlignVertical: multiline ? 'top' : 'center',
             },
+            multiline && { minHeight: 80, paddingTop: 10 },
             inputStyle,
           ]}
         />

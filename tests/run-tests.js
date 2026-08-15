@@ -35,6 +35,7 @@ const tsc = spawnSync(npxBin, ['tsc', '--noEmit'], {
   cwd: repoRoot,
   encoding: 'utf8',
   timeout: 180000,
+  shell: true,
 });
 if (tsc.status === 0) {
   console.log('  \x1b[32m✔ PASS:\x1b[0m TypeScript compilation succeeded with zero errors');

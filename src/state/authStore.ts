@@ -111,6 +111,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (exchangeError) throw exchangeError;
 
           set({ session: sessionData.session });
+          
+          // Ensure profile exists in PostgreSQL database for new user
+          const userMeta = sessionData.session?.user?.user_metadata;
+          await RPC.ensureMyProfile(userMeta?.full_name || userMeta?.name || 'مستخدم مسار');
           await get().refreshProfile();
         } 
         // 2. Check Implicit / Hash tokens in URL fragment
@@ -128,6 +132,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (setSessionError) throw setSessionError;
 
             set({ session: sessionData.session });
+            
+            // Ensure profile exists in PostgreSQL database for new user
+            const userMeta = sessionData.session?.user?.user_metadata;
+            await RPC.ensureMyProfile(userMeta?.full_name || userMeta?.name || 'مستخدم مسار');
             await get().refreshProfile();
           }
         }

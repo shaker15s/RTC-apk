@@ -14,6 +14,7 @@ import { useAuthStore } from './src/state/authStore';
 import { RTCNotifications } from './src/core/native/notifications';
 import { CustomButton } from './src/components/common/CustomButton';
 import { supabase } from './src/data/supabaseClient';
+import { RPC } from './src/data/rpc';
 
 interface Props {
   children: ReactNode;
@@ -101,7 +102,9 @@ export default function App() {
         try {
           const parsed = Linking.parse(url);
           if (parsed.queryParams?.code) {
-            await supabase.auth.exchangeCodeForSession(parsed.queryParams.code as string);
+            const { data: sessionData } = await supabase.auth.exchangeCodeForSession(parsed.queryParams.code as string);
+            const userMeta = sessionData?.session?.user?.user_metadata;
+            await RPC.ensureMyProfile(userMeta?.full_name || userMeta?.name || 'مستخدم مسار');
             await refreshProfile();
           } else if (url.includes('access_token')) {
             const hashPart = url.split('#')[1] || url.split('?')[1] || '';
@@ -110,10 +113,12 @@ export default function App() {
             const refreshToken = params.get('refresh_token');
 
             if (accessToken && refreshToken) {
-              await supabase.auth.setSession({
+              const { data: sessionData } = await supabase.auth.setSession({
                 access_token: accessToken,
                 refresh_token: refreshToken,
               });
+              const userMeta = sessionData?.session?.user?.user_metadata;
+              await RPC.ensureMyProfile(userMeta?.full_name || userMeta?.name || 'مستخدم مسار');
               await refreshProfile();
             }
           }

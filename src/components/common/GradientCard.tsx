@@ -42,21 +42,50 @@ export const GradientCard: React.FC<GradientCardProps> = ({
   }
 
   return (
-    <LinearGradient
-      colors={gradColors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.card, Shadows.soft, style]}
+    <View
+      style={[
+        styles.outerHalo,
+        {
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 40, 142, 0.12)',
+        },
+        Shadows.soft,
+        style,
+      ]}
     >
-      {children}
-    </LinearGradient>
+      <LinearGradient
+        colors={gradColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.card}
+      >
+        {/* Top Specular Light */}
+        <View style={styles.specular} />
+        {children}
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
+  outerHalo: {
     borderRadius: Radii.xxl,
-    padding: 16,
+    padding: 1.5,
+    borderWidth: 1,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  card: {
+    borderRadius: Radii.xl,
+    padding: 18,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  specular: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
 });

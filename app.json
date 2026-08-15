@@ -22,8 +22,10 @@
         "NSPhotoLibraryUsageDescription": "نحتاج إذن الصور لاختيار صورتك الشخصية أو إرفاق مستندات الأعذار.",
         "NSPhotoLibraryAddUsageDescription": "لحفظ الشهادات الرقمية ومشاركتها.",
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

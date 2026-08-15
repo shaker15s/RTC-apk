@@ -9,6 +9,8 @@ import { useAuthStore } from '../../state/authStore';
 import { Bell, ChevronRight, User } from 'lucide-react-native';
 import { RTCHaptics } from '../../core/native/haptics';
 
+import { Avatar } from '../common/Avatar';
+
 export interface GlassHeaderProps {
   title?: string;
   subtitle?: string;
@@ -103,19 +105,13 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
                 RTCHaptics.light();
                 onAvatarPress();
               }}
-              style={[
-                styles.avatar,
-                {
-                  borderColor: colors.primary,
-                  backgroundColor: colors.card2,
-                },
-              ]}
             >
-              {profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImg} />
-              ) : (
-                <User color={colors.primary} size={18} />
-              )}
+              <Avatar
+                uri={profile?.avatar_url}
+                name={profile?.full_name || 'طالب RTC'}
+                size="sm"
+                borderColor={colors.primary}
+              />
             </TouchableOpacity>
           ) : null}
         </View>

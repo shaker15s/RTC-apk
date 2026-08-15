@@ -1,0 +1,196 @@
+/**
+ * GlassHeader component matching web header with blur effect, safe-area, notif dot, and avatar.
+ */
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppStore } from '../../state/appStore';
+import { useAuthStore } from '../../state/authStore';
+import { Bell, ChevronRight, User } from 'lucide-react-native';
+import { RTCHaptics } from '../../core/native/haptics';
+
+export interface GlassHeaderProps {
+  title?: string;
+  subtitle?: string;
+  showBack?: boolean;
+  onBack?: () => void;
+  showNotif?: boolean;
+  onNotifPress?: () => void;
+  showAvatar?: boolean;
+  onAvatarPress?: () => void;
+  rightAction?: React.ReactNode;
+}
+
+export const GlassHeader: React.FC<GlassHeaderProps> = ({
+  title = 'مسار RTC',
+  subtitle,
+  showBack = false,
+  onBack,
+  showNotif = true,
+  onNotifPress,
+  showAvatar = true,
+  onAvatarPress,
+  rightAction,
+}) => {
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useAppStore();
+  const { profile } = useAuthStore();
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: Math.max(insets.top, 12),
+          backgroundColor: isDark ? 'rgba(12, 18, 32, 0.92)' : 'rgba(255, 255, 255, 0.94)',
+          borderBottomColor: colors.line,
+        },
+      ]}
+    >
+      <View style={styles.content}>
+        {/* Left side (Back or Logo) */}
+        <View style={styles.left}>
+          {showBack && onBack ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                RTCHaptics.light();
+                onBack();
+              }}
+              style={[styles.iconButton, { backgroundColor: colors.card2, borderColor: colors.line }]}
+            >
+              <ChevronRight color={colors.txt} size={20} />
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.logoWrap, { borderColor: colors.line }]}>
+              <Image
+                source={require('../../../assets/icon.png')}
+                style={styles.logo}
+                defaultSource={require('../../../assets/icon.png')}
+              />
+            </View>
+          )}
+
+          <View style={styles.titleWrap}>
+            {subtitle ? <Text style={[styles.subtitle, { color: colors.mut }]}>{subtitle}</Text> : null}
+            <Text style={[styles.title, { color: colors.txt }]} numberOfLines={1}>
+              {title}
+            </Text>
+          </View>
+        </View>
+
+        {/* Right side (Actions / Notification / Avatar) */}
+        <View style={styles.right}>
+          {rightAction}
+
+          {showNotif && onNotifPress ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                RTCHaptics.light();
+                onNotifPress();
+              }}
+              style={[styles.iconButton, { backgroundColor: colors.card2, borderColor: colors.line }]}
+            >
+              <Bell color={colors.txt} size={19} />
+            </TouchableOpacity>
+          ) : null}
+
+          {showAvatar && onAvatarPress ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                RTCHaptics.light();
+                onAvatarPress();
+              }}
+              style={[
+                styles.avatar,
+                {
+                  borderColor: colors.primary,
+                  backgroundColor: colors.card2,
+                },
+              ]}
+            >
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImg} />
+              ) : (
+                <User color={colors.primary} size={18} />
+              )}
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    borderBottomWidth: 1,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    zIndex: 100,
+  },
+  content: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  right: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  titleWrap: {
+    flex: 1,
+  },
+  subtitle: {
+    fontSize: 10.5,
+    fontWeight: '500',
+  },
+  title: {
+    fontSize: 15.5,
+    fontWeight: '700',
+  },
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1.8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+});

@@ -108,14 +108,8 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              RTCHaptics.selection();
-              setAppLanguage(language === 'ar' ? 'en' : 'ar');
-            }}
-            style={styles.menuItem}
-          >
+          {/* Honest language row (fixes F-5): no dead toggle anymore */}
+          <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: colors.teal + '18' }]}>
                 <Globe color={colors.teal} size={18} />
@@ -123,12 +117,12 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
               <View>
                 <Text style={[styles.menuTitle, { color: colors.txt }]}>اللغة (Language)</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>
-                  {language === 'ar' ? 'العربية (Arabic)' : 'English (الإنجليزية)'}
+                  العربية (Arabic) — الإنجليزية قريباً
                 </Text>
               </View>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
-          </TouchableOpacity>
+          </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 

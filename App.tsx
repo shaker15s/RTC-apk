@@ -1,19 +1,24 @@
 /**
  * Root Application Entry for Masar RTC Mobile (org.resala.rtc.masar)
  *
- * KEY FIX: Deep link handler now uses the shared handleOAuthReturnUrl()
- * from authStore, ensuring consistent code/token exchange.
- * The onAuthStateChange listener in authStore handles all session state updates.
+ * v100.1.0 quality fixes:
+ *  - Boot gate on appStore.prefsReady: no light-mode flash for dark users (F-16)
+ *  - Notification tap handling: routes to the screen requested by the
+ *    notification payload via sessionStore.pendingRoute (F-12)
+ *  - Notification permission is NO LONGER requested at cold boot (U-1);
+ *    it is requested contextually after profile completion.
+ *  - OAuth deep links still flow through the shared handleOAuthReturnUrl().
  */
 import React, { Component, ErrorInfo, ReactNode, useEffect } from 'react';
-import { View, Text, StyleSheet, AppState, AppStateStatus, Platform } from 'react-native';
+import { View, Text, StyleSheet, AppState, AppStateStatus, Platform, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { useAppStore } from './src/state/appStore';
 import { useAuthStore, handleOAuthReturnUrl } from './src/state/authStore';
+import { useSessionStore } from './src/state/sessionStore';
 import { RTCNotifications } from './src/core/native/notifications';
 import { CustomButton } from './src/components/common/CustomButton';
 import { supabase } from './src/data/supabaseClient';
@@ -64,49 +69,39 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutes cache
-    },
-  },
-});
-
 export default function App() {
-  const { isDark, initNetworkListener, initPreferences } = useAppStore();
+  const { isDark, prefsReady, initNetworkListener, initPreferences } = useAppStore();
   const { refreshProfile } = useAuthStore();
 
   useEffect(() => {
     // 1. Initialize user theme & language preferences
     initPreferences();
 
-    // 2. Initialize offline/online network watcher
+    // 2. Initialize offline/online network watcher (real NetInfo — P0-3)
     const cleanupNet = initNetworkListener();
 
-    // 3. Register local notification channels
-    RTCNotifications.requestPermissions();
-
-    // 4. Foreground app state listener for token / data refresh
+    // 3. Foreground app state listener for token / data refresh
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
         // When app comes to foreground, refresh session & profile
         supabase.auth.getSession().then(({ data }) => {
           if (data?.session) {
             refreshProfile();
+            // Retry silent push registration (e.g. user enabled
+            // notifications from system settings — fixes P0-2)
+            RTCNotifications.syncPushRegistration().catch(() => {});
           }
         });
       }
     };
     const appStateSub = AppState.addEventListener('change', handleAppStateChange);
 
-    // 5. Setup Deep Link Handling
+    // 4. Setup Deep Link Handling
     // This catches OAuth redirects that arrive via Android Intent filter
     // (when Chrome Custom Tab redirects to org.resala.rtc.masar://auth?code=...)
     const handleDeepLink = async (event: { url: string }) => {
       const { url } = event;
       if (!url) return;
-      console.log('[App] Deep link received:', url);
 
       // Only process auth-related URLs
       if (url.includes('code=') || url.includes('access_token')) {
@@ -119,7 +114,6 @@ export default function App() {
     // Also check if the app was opened via a deep link (cold start)
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('[App] Initial URL:', url);
         handleDeepLink({ url });
       }
     });
@@ -131,19 +125,59 @@ export default function App() {
     };
   }, []);
 
+  // 5. Notification tap routing (fixes F-12): when the user taps a
+  //    notification (foreground or cold start), hand the target screen
+  //    to the navigator via sessionStore.
+  useEffect(() => {
+    const routeFromPayload = (payload: any) => {
+      const screen = payload?.request?.content?.data?.screen;
+      if (screen && typeof screen === 'string') {
+        useSessionStore.getState().setPendingRoute(screen);
+      }
+    };
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      routeFromPayload(response?.notification);
+    });
+
+    // Cold start: the tap that launched the app
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (response) routeFromPayload(response.notification);
+      })
+      .catch(() => {});
+
+    return () => sub.remove();
+  }, []);
+
+  // Gate rendering until preferences are loaded so dark-mode users
+  // never see a light flash (F-16).
+  if (!prefsReady) {
+    return (
+      <View style={styles.bootContainer}>
+        <StatusBar style="light" />
+        <ActivityIndicator color="#89F5E7" size="small" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor="transparent" translucent />
-          <AppNavigator />
-        </QueryClientProvider>
+        <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor="transparent" translucent />
+        <AppNavigator />
       </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  bootContainer: {
+    flex: 1,
+    backgroundColor: '#001A6B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   errorContainer: {
     flex: 1,
     backgroundColor: '#070B16',

@@ -69,7 +69,12 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
 
       if (!result.canceled && result.assets[0]?.uri) {
         setUploadingAvatar(true);
-        const uploadedUrl = await Repository.uploadAvatar(result.assets[0].uri);
+        showToast('جارٍ رفع صورة الحساب...', 'info');
+        // Pass the real MIME type — no more labelling everything as webp
+        const uploadedUrl = await Repository.uploadAvatar(
+          result.assets[0].uri,
+          result.assets[0].mimeType || 'image/jpeg'
+        );
         setAvatarUrl(uploadedUrl);
         RTCHaptics.success();
         showToast('تم رفع وتحديث صورة الحساب', 'ok');

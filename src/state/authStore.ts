@@ -18,6 +18,7 @@ import { Repository, Branch } from '../data/repositories';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { RTCSecureStorage } from '../core/storage/secureStorage';
+import { RTCNotifications } from '../core/native/notifications';
 import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -65,11 +66,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!authListenerRegistered) {
         authListenerRegistered = true;
         supabase.auth.onAuthStateChange(async (event, newSession) => {
-          console.log('[Auth] onAuthStateChange:', event, !!newSession);
-
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             if (newSession?.user) {
               set({ session: newSession, error: null });
+
+              // Silently sync this device's push registration if the user
+              // already granted permission (fixes P0-2). No prompt here —
+              // the prompt happens contextually after profile completion.
+              RTCNotifications.syncPushRegistration().catch(() => {});
 
               // Ensure profile row exists in PostgreSQL
               try {
@@ -153,7 +157,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Build the redirect URL for the standalone Android/iOS app
       // On standalone builds, Linking.createURL produces: org.resala.rtc.masar://auth
       const redirectUrl = Linking.createURL('auth');
-      console.log('[Auth] redirectUrl:', redirectUrl);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -170,7 +173,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error) throw error;
       if (!data?.url) throw new Error('تعذر توليد رابط المصادقة');
 
-      console.log('[Auth] Opening browser for OAuth...');
+      // OAuth browser opened — token exchange is handled by onAuthStateChange
 
       // Open Chrome Custom Tab / SFSafariViewController
       const result = await WebBrowser.openAuthSessionAsync(
@@ -184,10 +187,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
       );
 
-      console.log('[Auth] Browser result type:', result.type);
+      
 
       if (result.type === 'success' && result.url) {
-        console.log('[Auth] Return URL:', result.url);
+        
         await handleOAuthReturnUrl(result.url);
       } else if (result.type === 'cancel' || result.type === 'dismiss') {
         // User cancelled — not an error
@@ -228,6 +231,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await RPC.disableMyPushDevices().catch(() => {});
       await supabase.auth.signOut();
       await RTCSecureStorage.clear();
+      await Repository.clearPublicCache().catch(() => {});
       set({ session: null, profile: null });
     } catch (e) {
       set({ session: null, profile: null });
@@ -265,6 +269,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   resetAuthData: async () => {
     await RTCSecureStorage.clear();
+    await Repository.clearPublicCache().catch(() => {});
     await supabase.auth.signOut();
     set({ session: null, profile: null, error: null, isLoading: false });
   },
@@ -284,13 +289,13 @@ export async function handleOAuthReturnUrl(url: string): Promise<void> {
     // Path 1: PKCE code in query params — ?code=XXXXXX
     if (parsed.queryParams?.code) {
       const code = parsed.queryParams.code as string;
-      console.log('[Auth] Exchanging PKCE code...');
+      
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         console.error('[Auth] exchangeCodeForSession error:', error.message);
         throw error;
       }
-      console.log('[Auth] PKCE exchange successful');
+      
       return;
     }
 
@@ -305,7 +310,7 @@ export async function handleOAuthReturnUrl(url: string): Promise<void> {
       const refreshToken = params.get('refresh_token');
 
       if (accessToken && refreshToken) {
-        console.log('[Auth] Setting session from implicit tokens...');
+        
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -314,7 +319,7 @@ export async function handleOAuthReturnUrl(url: string): Promise<void> {
           console.error('[Auth] setSession error:', error.message);
           throw error;
         }
-        console.log('[Auth] Implicit token session set');
+        
         return;
       }
     }

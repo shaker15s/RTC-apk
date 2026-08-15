@@ -10,6 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { Repository, Enrollment } from '../../data/repositories';
@@ -20,7 +21,7 @@ import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
-import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3 } from 'lucide-react-native';
+import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export interface StudentCoursesScreenProps {
@@ -28,7 +29,7 @@ export interface StudentCoursesScreenProps {
 }
 
 export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNavigate }) => {
-  const { colors } = useAppStore();
+  const { colors, showToast } = useAppStore();
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [filter, setFilter] = useState<'all' | 'enrolled' | 'waitlist' | 'completed'>('all');
@@ -40,6 +41,7 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
       const data = await Repository.fetchMyEnrollments();
       setEnrollments(data);
     } catch (e) {
+      showToast('تعذر تحميل دوراتك — اسحب للتحديث', 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -166,6 +168,23 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
                       </View>
                     ) : null}
                   </View>
+
+                  {/* Online batch join link (fixes F-11) */}
+                  {batch?.meeting_url ? (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        RTCHaptics.light();
+                        Linking.openURL(batch.meeting_url as string);
+                      }}
+                      style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft }]}
+                    >
+                      <MonitorPlay color={colors.primary} size={15} />
+                      <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
+                        انضم للمحاضرة أونلاين
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </CustomCard>
               </TouchableOpacity>
             );
@@ -280,5 +299,17 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 11.5,
+  },
+  joinOnlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 9,
+    borderRadius: Radii.md,
+  },
+  joinOnlineText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

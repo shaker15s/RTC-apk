@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, BackHandler } from 'react-native';
 import { useAppStore } from '../state/appStore';
 import { useAuthStore } from '../state/authStore';
+import { useSessionStore } from '../state/sessionStore';
 import { canAccess } from '../core/security/sanitizers';
 import { RTCHaptics } from '../core/native/haptics';
 
@@ -67,6 +68,10 @@ export const AppNavigator: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<string>('splash');
   const [screenParams, setScreenParams] = useState<any>({});
   const [navigationStack, setNavigationStack] = useState<Array<{ screen: string; params: any }>>([]);
+  const [lastBackPressAt, setLastBackPressAt] = useState(0);
+
+  // Notification/deep-link target screen (set by App.tsx listener — F-12)
+  const { pendingRoute, setPendingRoute } = useSessionStore();
 
   // Initialize auth session on mount
   useEffect(() => {
@@ -110,19 +115,39 @@ export const AppNavigator: React.FC = () => {
     }
   }, [session, profile, isInitialized, isLoading]);
 
+  // Consume a pending notification/deep-link route once the user is
+  // signed in with a complete profile (F-12).
+  useEffect(() => {
+    if (!pendingRoute || !session || !profile || !isInitialized) return;
+    setPendingRoute(null);
+    if (!profile?.phone || !profile?.branch_id) return; // onboarding first
+    if (canAccess(pendingRoute, profile.role || 'student')) {
+      navigate(pendingRoute);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRoute, session, profile, isInitialized]);
+
   // Android Hardware Back Button Handler
+  // Double-press-to-exit at the root (U-5), normal back otherwise.
   useEffect(() => {
     const onBackPress = () => {
       if (navigationStack.length > 0) {
         handleBack();
         return true;
       }
-      return false; // Exit app if at root
+      const now = Date.now();
+      if (now - lastBackPressAt < 2000) {
+        return false; // second press within 2s → exit app
+      }
+      setLastBackPressAt(now);
+      showToast('اضغط مرة أخرى للخروج من التطبيق', 'info');
+      return true;
     };
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => subscription.remove();
-  }, [navigationStack]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigationStack, lastBackPressAt]);
 
   const navigate = (screenId: string, params: any = {}) => {
     RTCHaptics.selection();
@@ -170,6 +195,7 @@ export const AppNavigator: React.FC = () => {
     'a-certs',
     'a-settings',
     'a-analytics',
+    's-analytics', // shared tab for volunteer & admin (fixes F-4)
   ].includes(currentScreen);
 
   // Render Screen Content
@@ -321,6 +347,12 @@ export const AppNavigator: React.FC = () => {
         <BottomNavigationBar
           currentScreen={currentScreen}
           onTabPress={(screenId) => {
+            // Route-guard tab presses too (fixes SEC-5)
+            if (session && !canAccess(screenId, profile?.role || 'student')) {
+              RTCHaptics.error();
+              showToast('ليس لديك صلاحية الوصول لهذه الشاشة', 'warn');
+              return;
+            }
             setNavigationStack([]);
             setCurrentScreen(screenId);
             setScreenParams({});

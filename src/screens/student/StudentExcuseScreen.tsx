@@ -45,6 +45,8 @@ export const StudentExcuseScreen: React.FC<{
   const [reason, setReason] = useState('');
   const [fileUri, setFileUri] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileExt, setFileExt] = useState('pdf');
+  const [fileMime, setFileMime] = useState('application/pdf');
   const [batchModalVisible, setBranchModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
@@ -70,8 +72,15 @@ export const StudentExcuseScreen: React.FC<{
       });
 
       if (!result.canceled && result.assets[0]?.uri) {
-        setFileUri(result.assets[0].uri);
-        setFileName(result.assets[0].name);
+        const asset = result.assets[0];
+        setFileUri(asset.uri);
+        setFileName(asset.name);
+        // Keep the real extension & MIME so the file is stored honestly
+        // (fixes P1-6: images used to be saved as .pdf)
+        const ext = (asset.name?.split('.').pop() || '').toLowerCase();
+        const mime = asset.mimeType || 'application/pdf';
+        setFileExt(['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'pdf');
+        setFileMime(mime);
         RTCHaptics.success();
         showToast('تم إرفاق المستند بنجاح', 'ok');
       }
@@ -95,7 +104,8 @@ export const StudentExcuseScreen: React.FC<{
     try {
       let uploadedFilePath: string | null = null;
       if (fileUri) {
-        uploadedFilePath = await Repository.uploadExcuseFile(fileUri);
+        showToast('جارٍ رفع المستند المرفق...', 'info');
+        uploadedFilePath = await Repository.uploadExcuseFile(fileUri, fileExt, fileMime);
       }
 
       await RPC.submitExcuse({

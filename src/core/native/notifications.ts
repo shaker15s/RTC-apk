@@ -42,20 +42,44 @@ export const RTCNotifications = {
   },
 
   /**
-   * Get device push token (only in standalone APK / production builds).
+   * Get device push token WITHOUT prompting (only if permission is
+   * already granted). Permission is requested contextually elsewhere
+   * (after profile completion — see OnboardingScreen).
    */
   async getPushToken(): Promise<string | null> {
     if (Platform.OS === 'web' || isExpoGo) {
       return null;
     }
     try {
-      const hasPermission = await this.requestPermissions();
-      if (!hasPermission) return null;
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') return null;
 
       const tokenData = await Notifications.getExpoPushTokenAsync();
       return tokenData.data || null;
     } catch (e) {
       return null;
+    }
+  },
+
+  /**
+   * Silently sync this device's push token with the backend.
+   * Never prompts — call requestPermissions() first where a prompt
+   * makes sense (e.g. after profile completion).
+   */
+  async syncPushRegistration(): Promise<void> {
+    if (Platform.OS === 'web' || isExpoGo) return;
+    try {
+      const token = await this.getPushToken();
+      if (!token) return;
+
+      // Import lazily to avoid a module cycle (notifications ↔ rpc).
+      const { RPC } = require('../../data/rpc');
+      await RPC.registerPushDevice(
+        token,
+        Platform.OS === 'ios' ? 'ios' : 'android'
+      ).catch(() => {});
+    } catch (e) {
+      // non-fatal — registration will be retried on next app foreground
     }
   },
 

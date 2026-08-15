@@ -3,7 +3,8 @@
  */
 import { supabase } from '../supabaseClient';
 import { RPC, UserProfile } from '../rpc';
-import { RTCSecureStorage } from '../../core/storage/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export interface Branch {
   id: string;
@@ -129,9 +130,12 @@ export interface VolunteerCommittee {
 
 const PUBLIC_CACHE_PREFIX = 'rtc_cache_';
 
+// Public data cache lives in AsyncStorage, NOT SecureStore (fixes SEC-3):
+// public rows don't need hardware encryption, SecureStore is limited/slow,
+// and iOS Keychain can outlive an app uninstall.
 async function readCache<T>(key: string): Promise<T | null> {
   try {
-    const raw = await RTCSecureStorage.getItem(PUBLIC_CACHE_PREFIX + key);
+    const raw = await AsyncStorage.getItem(PUBLIC_CACHE_PREFIX + key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed.data as T;
@@ -142,14 +146,28 @@ async function readCache<T>(key: string): Promise<T | null> {
 
 async function writeCache<T>(key: string, data: T): Promise<void> {
   try {
-    await RTCSecureStorage.setItem(
+    await AsyncStorage.setItem(
       PUBLIC_CACHE_PREFIX + key,
       JSON.stringify({ savedAt: Date.now(), data })
     );
   } catch (e) {}
 }
 
+// Clears ALL public cache entries — called on sign-out / reset.
+async function clearPublicCache(): Promise<void> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const cacheKeys = keys.filter((k) => k.startsWith(PUBLIC_CACHE_PREFIX));
+    if (cacheKeys.length) {
+      await AsyncStorage.multiRemove(cacheKeys);
+    }
+  } catch (e) {}
+}
+
 export const Repository = {
+  // Cache management (exposed for sign-out cleanup — SEC-3)
+  clearPublicCache,
+
   // Branches
   async fetchBranches(force = false): Promise<Branch[]> {
     if (!force) {
@@ -404,13 +422,26 @@ export const Repository = {
     const session = (await supabase.auth.getSession()).data.session;
     if (!session?.user) throw new Error('auth required');
 
-    const path = `${session.user.id}/avatar.webp`;
+    // Size guard: max 5MB (fixes SEC-6)
+    try {
+      const info = await FileSystem.getInfoAsync(fileUri);
+      if (info.exists && info.size && info.size > 5 * 1024 * 1024) {
+        throw new Error('حجم الصورة يتجاوز 5 ميجابايت — اختر صورة أصغر');
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('ميجابايت')) throw e;
+    }
+
+    // Keep the real extension/mime instead of force-labelling everything
+    // as webp (fixes the same class of bug as P1-6).
+    const ext = (mimeType || '').includes('png') ? 'png' : 'jpg';
+    const path = `${session.user.id}/avatar.${ext}`;
     const response = await fetch(fileUri);
     const blob = await response.blob();
 
     const { error } = await supabase.storage.from('avatars').upload(path, blob, {
       upsert: true,
-      contentType: 'image/webp',
+      contentType: mimeType || 'image/jpeg',
     });
     if (error) throw error;
 
@@ -419,17 +450,37 @@ export const Repository = {
   },
 
   // Storage Upload Excuse Document
-  async uploadExcuseFile(fileUri: string, extension = 'pdf', mimeType = 'application/pdf'): Promise<string> {
+  async uploadExcuseFile(
+    fileUri: string,
+    extension = 'pdf',
+    mimeType = 'application/pdf'
+  ): Promise<string> {
     const session = (await supabase.auth.getSession()).data.session;
     if (!session?.user) throw new Error('auth required');
 
-    const path = `${session.user.id}/${Date.now()}.${extension}`;
+    // Whitelist + size guard (fixes P1-6 & SEC-6)
+    const ext = String(extension || '').toLowerCase().replace('.', '');
+    const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+    if (!ALLOWED_EXT.includes(ext)) {
+      throw new Error('نوع الملف غير مدعوم — يُقبل PDF أو صور فقط');
+    }
+
+    try {
+      const info = await FileSystem.getInfoAsync(fileUri);
+      if (info.exists && info.size && info.size > 8 * 1024 * 1024) {
+        throw new Error('حجم الملف يتجاوز 8 ميجابايت');
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('ميجابايت')) throw e;
+    }
+
+    const path = `${session.user.id}/${Date.now()}.${ext}`;
     const response = await fetch(fileUri);
     const blob = await response.blob();
 
     const { error } = await supabase.storage.from('excuses').upload(path, blob, {
       upsert: false,
-      contentType: mimeType,
+      contentType: mimeType || 'application/pdf',
     });
     if (error) throw error;
     return path;
@@ -459,7 +510,10 @@ export const Repository = {
       .select('*, profiles(full_name, avatar_url, phone), sessions(title, session_date, batches(name))')
       .order('created_at', { ascending: false });
     if (batchId) {
-      q = q.eq('session.batch_id', batchId);
+      // Filtering an embedded relation must use the embedded table name
+      // as it appears in the select (plural "sessions") — the old code
+      // used "session.batch_id" which is not a valid PostgREST path.
+      q = q.eq('sessions.batch_id', batchId);
     }
     const { data, error } = await q;
     if (error) throw error;

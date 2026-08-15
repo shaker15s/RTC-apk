@@ -32,7 +32,7 @@ export const NotificationsScreen: React.FC<{
   onBack: () => void;
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
-  const { colors } = useAppStore();
+  const { colors, resetUnread } = useAppStore();
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +42,8 @@ export const NotificationsScreen: React.FC<{
     try {
       const data = await Repository.fetchNotifications();
       setNotifications(data);
+      // Opening the notifications screen clears the unread badge (fixes F-3)
+      resetUnread();
     } catch (e) {
     } finally {
       setLoading(false);

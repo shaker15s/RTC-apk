@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 let passedTests = 0;
 let failedTests = 0;
@@ -25,11 +26,54 @@ console.log('🚀 Running Masar RTC Mobile (rtc_mobile) Test Suite');
 console.log('======================================================\n');
 
 // -------------------------------------------------------------
+// 0. REAL COMPILATION CHECK (TypeScript strict)
+// -------------------------------------------------------------
+console.log('🧰 0. Compiling the REAL source with tsc --noEmit...');
+const repoRoot = path.join(__dirname, '..');
+const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const tsc = spawnSync(npxBin, ['tsc', '--noEmit'], {
+  cwd: repoRoot,
+  encoding: 'utf8',
+  timeout: 180000,
+});
+if (tsc.status === 0) {
+  console.log('  \x1b[32m✔ PASS:\x1b[0m TypeScript compilation succeeded with zero errors');
+  passedTests++;
+} else {
+  console.error('  \x1b[31m✘ FAIL:\x1b[0m TypeScript compilation failed');
+  console.error(tsc.stdout || '');
+  console.error(tsc.stderr || '');
+  failedTests++;
+}
+
+// -------------------------------------------------------------
+// 0b. LOAD THE REAL SECURITY MODULE (no more copy-pasted validators)
+// The suite previously re-implemented the validators inside the test
+// file, which let tests pass while the real code behaved differently.
+// Now we transpile and execute the actual sanitizers.ts source.
+// -------------------------------------------------------------
+let realSanitizers = null;
+try {
+  const ts = require(path.join(repoRoot, 'node_modules/typescript'));
+  const src = fs.readFileSync(path.join(repoRoot, 'src/core/security/sanitizers.ts'), 'utf8');
+  const js = ts.transpileModule(src, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const moduleObj = { exports: {} };
+  // sanitizers.ts is dependency-free by design, so a bare module scope is safe.
+  new Function('module', 'exports', 'require', js)(moduleObj, moduleObj.exports, require);
+  realSanitizers = moduleObj.exports;
+} catch (e) {
+  console.error('  Could not load real sanitizers module:', e);
+}
+assert(!!realSanitizers, 'Real sanitizers.ts module loaded and executed');
+
+// -------------------------------------------------------------
 // 1. RPC CONTRACT PARITY (Exact 26 PostgreSQL Functions)
 // -------------------------------------------------------------
 console.log('📦 1. Testing 26 RPC Functions Parity with docs/RPC-CONTRACT.md...');
 
-const ALL_26_RPCS = [
+const ALL_RPCS = [
   'get_my_profile',
   'ensure_my_profile',
   'batch_roster',
@@ -56,6 +100,10 @@ const ALL_26_RPCS = [
   'claim_social_badge',
   'disable_my_push_devices',
   'register_push_device',
+  // v100.1.0 quality-fix RPCs (docs/RPC-CONTRACT.md #27, #28 & #29)
+  'admin_award_points',
+  'get_active_session',
+  'get_my_next_session',
 ];
 
 const rpcFilePath = path.join(__dirname, '../src/data/rpc/index.ts');
@@ -63,7 +111,7 @@ assert(fs.existsSync(rpcFilePath), 'RPC index file exists at src/data/rpc/index.
 
 const rpcCode = fs.readFileSync(rpcFilePath, 'utf8');
 
-ALL_26_RPCS.forEach((rpcName) => {
+ALL_RPCS.forEach((rpcName) => {
   assert(rpcCode.includes(rpcName), `RPC function declared: '${rpcName}'`);
 });
 
@@ -155,94 +203,22 @@ COMPONENTS_TO_CHECK.forEach((cmpPath) => {
 
 // -------------------------------------------------------------
 // 4. SECURITY SANITIZERS & VALIDATORS UNIT TESTS
+//    — executing the REAL functions loaded from sanitizers.ts
 // -------------------------------------------------------------
-console.log('\n🔒 4. Testing Security Sanitizers, Route Guards & Validators...');
+console.log('\n🔒 4. Testing Security Sanitizers, Route Guards & Validators (REAL code)...');
 
-function validateEgyptianPhone(p) {
-  if (!p) return false;
-  return /^01[0125]\d{8}$/.test(p.trim().replace(/[\s-]/g, ''));
-}
+const {
+  validateEgyptianPhone,
+  validateFullName,
+  isUuid,
+  maskPhone,
+  canAccess,
+  maskName,
+  safeUrl,
+} = realSanitizers;
 
-function validateFullName(name) {
-  if (!name) return false;
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return parts.length >= 3;
-}
-
-function isUuid(val) {
-  if (!val) return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
-}
-
-function maskPhone(p) {
-  if (!p || p.length < 11) return p || '';
-  return p.substring(0, 3) + '****' + p.substring(7);
-}
-
-const ROLE_PERMISSIONS = {
-  public: ['splash', 'onboarding', 'verify', 'changelog'],
-  student: [
-    's-home',
-    's-courses',
-    's-course-detail',
-    's-course-rating',
-    's-points',
-    's-ledger',
-    's-certs',
-    's-profile',
-    's-edit-profile',
-    's-explore',
-    's-notifications',
-    's-checkin',
-    's-excuse',
-    's-leaderboard',
-    'support',
-    'verify',
-    'changelog',
-  ],
-  volunteer: [
-    'v-home',
-    'v-batches',
-    'v-attendance',
-    'v-courses',
-    'v-excuses',
-    'v-report',
-    'v-profile',
-    's-analytics',
-    's-edit-profile',
-    's-notifications',
-    'support',
-    'verify',
-    'changelog',
-  ],
-  admin: [
-    'a-home',
-    'a-users',
-    'a-courses',
-    'a-certs',
-    'a-settings',
-    'a-branches',
-    'a-committees',
-    'a-broadcast',
-    'a-analytics',
-    's-analytics',
-    's-edit-profile',
-    's-notifications',
-    'support',
-    'verify',
-    'changelog',
-  ],
-};
-
-function canAccess(screenId, role) {
-  if (!role || role === 'public') {
-    return ROLE_PERMISSIONS.public.includes(screenId);
-  }
-  const allowed = ROLE_PERMISSIONS[role] || [];
-  return allowed.includes(screenId);
-}
-
-// Phone validator tests
+// Phone validator tests — the real validator now normalizes spaces,
+// dashes and Arabic-Indic digits before matching (v100.1.0, fixes F-7).
 assert(validateEgyptianPhone('01012345678') === true, 'Valid Vodafone Egyptian phone (010)');
 assert(validateEgyptianPhone('01112345678') === true, 'Valid Etisalat Egyptian phone (011)');
 assert(validateEgyptianPhone('01212345678') === true, 'Valid Orange Egyptian phone (012)');
@@ -251,21 +227,33 @@ assert(validateEgyptianPhone('01912345678') === false, 'Invalid prefix (019) rej
 assert(validateEgyptianPhone('0101234567') === false, '10-digit number rejected');
 assert(validateEgyptianPhone('010123456789') === false, '12-digit number rejected');
 assert(validateEgyptianPhone('abc010123456') === false, 'Alphabetic characters rejected');
+assert(validateEgyptianPhone('010 1234 5678') === true, 'Phone with spaces accepted (normalized)');
+assert(validateEgyptianPhone('010-123-45678') === true, 'Phone with dashes accepted (normalized)');
+assert(validateEgyptianPhone('٠١٠١٢٣٤٥٦٧٨') === true, 'Arabic-Indic digits accepted (normalized)');
 
 // Full name validator tests
 assert(validateFullName('أحمد محمد علي') === true, 'Valid 3-part Arabic name');
 assert(validateFullName('محمود كمال الدين إبراهيم حسن') === true, 'Valid 4-part Arabic name');
 assert(validateFullName('أحمد') === false, 'Single word name rejected');
 assert(validateFullName('أحمد محمد') === false, 'Two word name rejected');
+assert(validateFullName('أحمد <script>alert(1)</script>') === false, 'HTML injection in name rejected');
 
 // UUID validator tests
 assert(isUuid('a3bb189e-8bf9-3888-9912-ace4e6543002') === true, 'Valid standard UUID v4');
 assert(isUuid('invalid-uuid-1234') === false, 'Invalid UUID rejected');
 
 // Privacy Masking tests
-assert(maskPhone('01012345678') === '010****5678', 'Phone correctly masked for privacy');
+assert(maskPhone('01012345678') === '010••••78', 'Phone correctly masked for privacy');
+assert(maskName('محمد أحمد حسن') === 'م*** أ*** ح***', 'Name correctly masked for privacy');
+assert(maskPhone('') === '—', 'Empty phone masked as dash');
 
-// Route Guard security tests
+// URL safety tests
+assert(safeUrl('https://resala.org') === 'https://resala.org/', 'HTTPS url allowed');
+assert(safeUrl('javascript:alert(1)') === '', 'javascript: url rejected');
+assert(safeUrl('https://user:pass@evil.com') === '', 'URL with credentials rejected');
+assert(safeUrl('tel:19450') === 'tel:19450', 'tel: url allowed');
+
+// Route Guard security tests (REAL canAccess from sanitizers.ts)
 assert(canAccess('s-home', 'student') === true, 'Student can access s-home');
 assert(canAccess('s-course-rating', 'student') === true, 'Student can access s-course-rating');
 assert(canAccess('v-report', 'volunteer') === true, 'Volunteer can access v-report');
@@ -274,7 +262,10 @@ assert(canAccess('a-users', 'student') === false, 'Student blocked from admin us
 assert(canAccess('a-broadcast', 'volunteer') === false, 'Volunteer blocked from admin broadcast');
 assert(canAccess('v-batches', 'volunteer') === true, 'Volunteer can access v-batches');
 assert(canAccess('a-users', 'admin') === true, 'Admin can access a-users');
-assert(canAccess('verify', 'public') === true, 'Public unauthenticated user can access verify');
+assert(canAccess('verify', null) === true, 'Public unauthenticated user can access verify');
+assert(canAccess('s-analytics', 'volunteer') === true, 'Volunteer can access shared analytics tab');
+assert(canAccess('s-analytics', 'admin') === true, 'Admin can access shared analytics tab');
+assert(canAccess('s-analytics', 'student') === false, 'Student blocked from analytics');
 
 // -------------------------------------------------------------
 // 5. CONFIG & APP JSON AUDIT

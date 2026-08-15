@@ -14,8 +14,12 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
+import { useSessionStore, ActiveSession } from '../../state/sessionStore';
 import { Repository, Batch } from '../../data/repositories';
 import { RPC, BatchRosterStudent } from '../../data/rpc';
+import { maskPhone } from '../../core/security/sanitizers';
+import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { CustomButton } from '../../components/common/CustomButton';
@@ -26,7 +30,6 @@ import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import {
   Play,
-  QrCode,
   Users,
   CheckCircle2,
   Clock,
@@ -53,11 +56,17 @@ export const VolunteerBatchesScreen: React.FC<{
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Live session modal
-  const [activeSession, setActiveSession] = useState<{ id: string; checkin_code: string; title?: string } | null>(null);
-  const [sessionTitle, setSessionTitle] = useState('');
+  // Live session lives in the GLOBAL store (fixes P0-5): it survives
+  // screen unmount/remount by the custom navigator and is persisted.
+  const {
+    activeSession,
+    setActiveSession,
+    clearActiveSession,
+    restoreActiveSession,
+  } = useSessionStore();
   const [startSessionModal, setStartSessionModal] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState('');
 
   const loadBatches = async () => {
     try {
@@ -67,6 +76,7 @@ export const VolunteerBatchesScreen: React.FC<{
         setActiveBatchId(list[0].id);
       }
     } catch (e) {
+      showToast('تعذر تحميل مجموعاتك — اسحب للتحديث', 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,12 +98,29 @@ export const VolunteerBatchesScreen: React.FC<{
 
   useEffect(() => {
     loadBatches();
+    restoreActiveSession().catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (activeBatchId) {
-      loadStudents(activeBatchId);
-    }
+    if (!activeBatchId) return;
+    loadStudents(activeBatchId);
+
+    // Re-sync with the backend when available: if a session is open for
+    // this batch (started from another device), adopt it. If the RPC is
+    // not deployed yet, fall back silently to the local store.
+    RPC.getActiveSession(activeBatchId)
+      .then((s) => {
+        if (s?.id) {
+          setActiveSession({
+            id: s.id,
+            batchId: activeBatchId,
+            checkinCode: s.checkin_code,
+            title: s.title || 'المحاضرة الحالية',
+            startedAt: Date.now(),
+          });
+        }
+      })
+      .catch(() => {});
   }, [activeBatchId]);
 
   const onRefresh = async () => {
@@ -109,8 +136,10 @@ export const VolunteerBatchesScreen: React.FC<{
       const res = await RPC.startSession(activeBatchId, sessionTitle.trim() || undefined);
       setActiveSession({
         id: res.id,
-        checkin_code: res.checkin_code,
+        batchId: activeBatchId,
+        checkinCode: res.checkin_code,
         title: sessionTitle.trim() || 'المحاضرة الحالية',
+        startedAt: Date.now(),
       });
       setStartSessionModal(false);
       setSessionTitle('');
@@ -127,7 +156,7 @@ export const VolunteerBatchesScreen: React.FC<{
     if (!activeSession) return;
     try {
       await RPC.closeSession(activeSession.id);
-      setActiveSession(null);
+      clearActiveSession();
       RTCHaptics.success();
       showToast('تم إغلاق الجلسة واحتساب النقاط وسلسلة الحضور', 'ok');
       await onRefresh();
@@ -165,14 +194,19 @@ export const VolunteerBatchesScreen: React.FC<{
               <Text style={[styles.liveTitle, { color: colors.txt }]}>{activeSession.title}</Text>
             </View>
 
-            {/* Big Code & QR Display */}
+            {/* Big Code & REAL QR Display (fixes P1-4) */}
             <View style={[styles.qrDisplayBox, { backgroundColor: colors.card2, borderColor: colors.line }]}>
               <Text style={[styles.qrCodeLabel, { color: colors.mut }]}>رمز الحضور للطلاب:</Text>
               <Text style={[styles.qrBigCode, { color: colors.primary }]}>
-                {activeSession.checkin_code}
+                {activeSession.checkinCode}
               </Text>
-              <View style={styles.qrIconWrap}>
-                <QrCode color={colors.txt} size={120} />
+              <View style={styles.qrBox}>
+                <QRCode
+                  value={activeSession.checkinCode}
+                  size={180}
+                  color="#001A6B"
+                  backgroundColor="#FFFFFF"
+                />
               </View>
             </View>
 
@@ -281,9 +315,19 @@ export const VolunteerBatchesScreen: React.FC<{
                 <View style={styles.studentInfo}>
                   <Text style={[styles.studentName, { color: colors.txt }]}>{student.full_name}</Text>
                   {student.phone ? (
-                    <Text style={[styles.studentPhone, { color: colors.mut }]}>
-                      {student.phone}
-                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        RTCHaptics.light();
+                        Clipboard.setStringAsync(student.phone as string).catch(() => {});
+                        showToast('تم نسخ رقم الطالب كاملاً', 'info');
+                      }}
+                    >
+                      {/* Privacy masking by default (fixes SEC-4): tap to copy full number */}
+                      <Text style={[styles.studentPhone, { color: colors.mut }]}>
+                        {maskPhone(student.phone)} 👆
+                      </Text>
+                    </TouchableOpacity>
                   ) : null}
                 </View>
               </View>
@@ -400,11 +444,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 6,
   },
-  qrIconWrap: {
-    padding: 12,
+  qrBox: {
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
+    padding: 12,
     borderRadius: Radii.lg,
-    marginVertical: 4,
+    marginTop: 4,
   },
   liveActionsRow: {
     flexDirection: 'row',

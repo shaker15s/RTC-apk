@@ -77,6 +77,9 @@
 | 24 | `claim_social_badge` | `RPC.claimSocialBadge()` | `authenticated` | مطابقة تامة ✔ |
 | 25 | `disable_my_push_devices`| `RPC.disableMyPushDevices()` | `authenticated` | مطابقة تامة ✔ |
 | 26 | `register_push_device` | `RPC.registerPushDevice(token, platform, version)` | `authenticated` | مطابقة تامة ✔ |
+| 27 | `admin_award_points` | `RPC.adminAwardPoints(userId, points, reason)` | `admin` | إصلاح v100.1.0 ✔ |
+| 28 | `get_active_session` | `RPC.getActiveSession(batchId)` | `instructor / admin` | إصلاح v100.1.0 ✔ |
+| 29 | `get_my_next_session` | `RPC.getMyNextSession()` | `authenticated` | إصلاح v100.1.0 ✔ |
 
 ---
 

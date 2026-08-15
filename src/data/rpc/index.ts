@@ -314,4 +314,44 @@ export const RPC = {
     });
     return unwrap(res);
   },
+
+  // 27. admin_award_points (admin only — added in v100.1.0, fixes P0-1)
+  // Requires the SQL function in docs/sql/2026-08-15-quality-fixes.sql
+  async adminAwardPoints(userId: string, points: number, reason?: string): Promise<{ success: boolean; new_balance?: number }> {
+    const res = await supabase.rpc('admin_award_points', {
+      p_user_id: userId,
+      p_points: points,
+      p_reason: reason || null,
+    });
+    return unwrap(res);
+  },
+
+  // 28. get_active_session (instructor/admin — added in v100.1.0, fixes P0-5)
+  // Returns the open session for a batch, or null. Requires the SQL
+  // function in docs/sql/2026-08-15-quality-fixes.sql — callers must
+  // catch the "function does not exist" error and fall back to local state.
+  async getActiveSession(batchId: string): Promise<{ id: string; checkin_code: string; title?: string } | null> {
+    const res = await supabase.rpc('get_active_session', {
+      p_batch_id: batchId,
+    });
+    return unwrap(res, null);
+  },
+
+  // 29. get_my_next_session (student — added in v100.1.0, fixes F-2)
+  // Returns the student's real upcoming session, or null. Requires the
+  // SQL function in docs/sql/2026-08-15-quality-fixes.sql — callers must
+  // catch the error and fall back to showing the latest enrollment.
+  async getMyNextSession(): Promise<{
+    session_id?: string;
+    title?: string;
+    course_title?: string;
+    batch_name?: string;
+    session_date?: string;
+    location?: string;
+    room?: string;
+    meeting_url?: string;
+  } | null> {
+    const res = await supabase.rpc('get_my_next_session');
+    return unwrap(res, null);
+  },
 };

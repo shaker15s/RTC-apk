@@ -19,6 +19,7 @@ import { TextInputField } from '../../components/common/TextInputField';
 import { CustomButton } from '../../components/common/CustomButton';
 import { QRScannerModal } from '../../components/qr/QRScannerModal';
 import { RTCHaptics } from '../../core/native/haptics';
+import { withTimeout } from '../../core/performance/withTimeout';
 import {
   QrCode,
   Camera,
@@ -53,10 +54,12 @@ export const StudentCheckInScreen: React.FC<{
     setSuccessInfo(null);
 
     try {
-      const res = await RPC.studentCheckIn(cleanCode);
+      // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
+      const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
-      showToast('تم تسجيل حضورك بنجاح وكسب نقاط المحاضرة 🎉', 'ok');
-      setSuccessInfo({ message: res?.message || 'تم تسجيل الحضور واحتساب النقاط' });
+      const msg = res?.message || 'تم تسجيل الحضور واحتساب نقاط المحاضرة';
+      showToast('تم تسجيل حضورك بنجاح 🎉', 'ok');
+      setSuccessInfo({ message: msg });
       await refreshProfile();
       setCode('');
     } catch (e: any) {
@@ -82,7 +85,10 @@ export const StudentCheckInScreen: React.FC<{
             <Text style={[styles.successMessage, { color: colors.txt }]}>{successInfo.message}</Text>
             <View style={[styles.pointsEarnedBadge, { backgroundColor: colors.teal + '14' }]}>
               <Sparkles color={colors.teal} size={16} />
-              <Text style={[styles.pointsEarnedText, { color: colors.teal }]}>+10 نقاط تضاف لسجلك</Text>
+              {/* Message comes from the backend RPC — no more hardcoded +10 (F-6) */}
+              <Text style={[styles.pointsEarnedText, { color: colors.teal }]} numberOfLines={2}>
+                {successInfo.message}
+              </Text>
             </View>
           </CustomCard>
         ) : null}

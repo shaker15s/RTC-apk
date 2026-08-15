@@ -4,18 +4,27 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuthStore } from '../../state/authStore';
 
 export interface SplashScreenProps {
   onFinish?: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+
   useEffect(() => {
+    // Finish as soon as auth init resolves — no fixed 1.8s wait (U-4).
+    if (isInitialized) {
+      onFinish?.();
+      return;
+    }
+    // Safety cap: never strand the user on the splash if auth hangs.
     const timer = setTimeout(() => {
       onFinish?.();
-    }, 1800);
+    }, 2500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isInitialized]);
 
   return (
     <LinearGradient colors={['#001A6B', '#00288E', '#003C36']} style={styles.container}>

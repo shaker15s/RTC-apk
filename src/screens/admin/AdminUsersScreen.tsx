@@ -43,6 +43,15 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  // Debounce search input (fixes F-15): one query per pause, not per keystroke.
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'volunteer' | 'admin'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,12 +115,21 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
     setAwarding(true);
     try {
+      // REAL backend call (fixes P0-1): the old button showed a success
+      // toast without persisting anything. Requires the SQL function
+      // admin_award_points (docs/sql/2026-08-15-quality-fixes.sql).
+      await RPC.adminAwardPoints(awardUser.id, pts, pointsReason.trim() || undefined);
+      RTCHaptics.success();
       showToast(`تمت إضافة ${pts} نقطة إلى رصيد المستخدم 🎉`, 'ok');
       setAwardModalVisible(false);
+      setPointsAmount('20');
       setPointsReason('');
       await loadUsers();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر منح النقاط', 'err');
+      RTCHaptics.error();
+      // Honest failure: no fake success. If the DB function is not
+      // deployed yet, the admin sees the real error instead of lies.
+      showToast(e?.message || 'تعذر منح النقاط — تأكد من اتصال الشبكة', 'err');
     } finally {
       setAwarding(false);
     }
@@ -136,8 +154,8 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
       {/* Search Input */}
       <View style={styles.searchWrap}>
         <TextInputField
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+          value={searchInput}
+          onChangeText={setSearchInput}
           placeholder="ابحث بالاسم أو رقم الهاتف..."
           icon={<Search color={colors.mut} size={18} />}
           style={{ marginBottom: 6 }}

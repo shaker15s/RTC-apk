@@ -73,7 +73,8 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
       if (shared) {
         await RPC.claimSocialBadge();
         RTCHaptics.success();
-        showToast('حصلت على شارة نجم سوشيال + 25 نقطة! 🎉', 'ok');
+        // Points amount comes from the backend — no hardcoded claim (F-6)
+        showToast('حصلت على شارة نجم سوشيال! 🎉', 'ok');
         await refreshProfile();
       }
     } catch (e) {

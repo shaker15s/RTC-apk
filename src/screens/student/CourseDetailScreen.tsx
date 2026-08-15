@@ -22,6 +22,8 @@ import { CustomButton } from '../../components/common/CustomButton';
 import { TextInputField } from '../../components/common/TextInputField';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { RTCHaptics } from '../../core/native/haptics';
+import { RTCNotifications } from '../../core/native/notifications';
+import { withTimeout } from '../../core/performance/withTimeout';
 import {
   Calendar,
   Clock,
@@ -89,12 +91,30 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
     RTCHaptics.light();
     setJoiningBatchId(batchId);
     try {
-      const res = await RPC.joinBatch(batchId);
+      // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
+      const res = await withTimeout(RPC.joinBatch(batchId), 15000);
       if (res?.status === 'waitlist') {
         showToast('المجموعة مكتملة — تمت إضافتك لقائمة الانتظار', 'warn');
       } else {
         RTCHaptics.success();
         showToast('تم الانضمام للمجموعة بنجاح 🎉', 'ok');
+
+        // Now is the RIGHT moment to ask for notification permission (U-1):
+        // the user just gained a reason to want lecture reminders.
+        RTCNotifications.requestPermissions().then((granted) => {
+          if (!granted) return;
+
+          // Schedule a lecture reminder if we know a future start time
+          const batch = batches.find((b) => b.id === batchId);
+          if (batch?.starts_at) {
+            RTCNotifications.scheduleCourseReminder(
+              batch.id,
+              course?.title || batch.name,
+              batch.starts_at,
+              batch.location || undefined
+            ).catch(() => {});
+          }
+        });
       }
       await loadData();
     } catch (e: any) {

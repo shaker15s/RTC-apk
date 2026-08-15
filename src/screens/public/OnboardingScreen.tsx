@@ -15,6 +15,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
@@ -24,6 +25,7 @@ import { TextInputField } from '../../components/common/TextInputField';
 import { CustomCard } from '../../components/common/CustomCard';
 import { validateFullName, validateEgyptianPhone } from '../../core/security/sanitizers';
 import { RTCHaptics } from '../../core/native/haptics';
+import { RTCNotifications } from '../../core/native/notifications';
 import { RTC_CONFIG } from '../../core/config';
 import {
   Gift,
@@ -47,8 +49,16 @@ export interface OnboardingScreenProps {
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSuccess, onOpenVerify }) => {
   const insets = useSafeAreaInsets();
   const { colors, isDark, showToast } = useAppStore();
-  const { session, profile, branches, signInWithGoogle, updateProfileData, resetAuthData, isLoading } =
-    useAuthStore();
+  const {
+    session,
+    profile,
+    branches,
+    signInWithGoogle,
+    updateProfileData,
+    resetAuthData,
+    initAuth,
+    isLoading,
+  } = useAuthStore();
 
   const [step, setStep] = useState<1 | 2>(session?.user && !profile?.phone ? 2 : 1);
   const [fullName, setFullName] = useState(profile?.full_name || session?.user?.user_metadata?.full_name || '');
@@ -119,9 +129,60 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
       });
       RTCHaptics.success();
       showToast('تم حفظ البيانات بنجاح', 'ok');
+
+      // Contextual notification permission (U-1): the user just became
+      // a real member — this is the moment lecture reminders matter.
+      RTCNotifications.requestPermissions()
+        .then((granted) => {
+          if (granted) {
+            RTCNotifications.syncPushRegistration().catch(() => {});
+          }
+        })
+        .catch(() => {});
     } catch (e: any) {
       showToast(e?.message || 'تعذر حفظ البيانات', 'err');
     }
+  };
+
+  const handleHelpPress = () => {
+    RTCHaptics.light();
+    // Real help menu (fixes F-14): the old button silently signed the
+    // user out — now every action is explicit and confirmed.
+    Alert.alert('مشكلة في الدخول؟', 'اختر الإجراء المناسب لحل المشكلة:', [
+      {
+        text: 'إعادة تحميل البيانات',
+        onPress: async () => {
+          await initAuth();
+          showToast('تمت إعادة تحميل بيانات الجلسة', 'info');
+        },
+      },
+      {
+        text: 'الاتصال بالدعم 19450',
+        onPress: () => Linking.openURL('tel:19450'),
+      },
+      {
+        text: 'إعادة تهيئة الحساب (تسجيل الخروج)',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'تأكيد إعادة التهيئة',
+            'سيتم تسجيل الخروج ومسح البيانات المحلية لهذا الجهاز. هل أنت متأكد؟',
+            [
+              { text: 'إلغاء', style: 'cancel' },
+              {
+                text: 'نعم، إعادة التهيئة',
+                style: 'destructive',
+                onPress: async () => {
+                  await resetAuthData();
+                  showToast('تمت إعادة تهيئة البيانات المحلية', 'info');
+                },
+              },
+            ]
+          );
+        },
+      },
+      { text: 'إلغاء', style: 'cancel' },
+    ]);
   };
 
   const selectedBranch = branches.find((b) => b.id === selectedBranchId);
@@ -156,11 +217,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         </View>
 
         <TouchableOpacity
-          onPress={() => {
-            RTCHaptics.light();
-            resetAuthData();
-            showToast('تمت إعادة تهيئة البيانات المحلية', 'info');
-          }}
+          onPress={handleHelpPress}
           style={[styles.helpBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
         >
           <LifeBuoy color={colors.mut} size={15} />
@@ -205,7 +262,10 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
               </View>
               <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.teal }]}>١٧ فرعاً</Text>
+                {/* Live branch count from the database (fixes U-6) */}
+                <Text style={[styles.trustNum, { color: colors.teal }]}>
+                  {branches.length > 0 ? `${branches.length} فرعاً` : 'فروعنا'}
+                </Text>
                 <Text style={[styles.trustLabel, { color: colors.mut }]}>بالمحافظات</Text>
               </View>
               <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />

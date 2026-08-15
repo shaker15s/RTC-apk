@@ -22,6 +22,7 @@ import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTCSharing } from '../../core/native/sharing';
 import { RTC_CONFIG } from '../../core/config';
+import QRCode from 'react-native-qrcode-svg';
 import {
   Award,
   Calendar,
@@ -195,8 +196,14 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
                   {selectedCert.courses?.title || 'شهادة RTC'}
                 </Text>
 
-                <View style={styles.qrPlaceholder}>
-                  <QrCode color={colors.txt} size={140} />
+                {/* REAL scannable QR pointing to the verification page (fixes P1-4) */}
+                <View style={styles.qrBox}>
+                  <QRCode
+                    value={`${RTC_CONFIG.officialUrl}verify.html?serial=${selectedCert.serial}`}
+                    size={180}
+                    color="#001A6B"
+                    backgroundColor="#FFFFFF"
+                  />
                 </View>
 
                 <Text style={[styles.qrSerial, { color: colors.mut }]}>
@@ -343,7 +350,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  qrPlaceholder: {
+  qrBox: {
     padding: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.xl,

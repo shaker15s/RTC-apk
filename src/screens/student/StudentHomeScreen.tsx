@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Repository, Enrollment } from '../../data/repositories';
+import { RPC } from '../../data/rpc';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
@@ -37,6 +38,7 @@ import {
   Clock,
   MapPin,
   ChevronLeft,
+  MonitorPlay,
 } from 'lucide-react-native';
 import { Radii, Shadows } from '../../core/theme/tokens';
 
@@ -45,11 +47,12 @@ export interface StudentHomeScreenProps {
 }
 
 export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate }) => {
-  const { colors, isDark } = useAppStore();
+  const { colors, isDark, showToast } = useAppStore();
   const { profile, refreshProfile } = useAuthStore();
   const { notifications } = useRealtimeNotifications();
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [nextSession, setNextSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -58,6 +61,17 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
       const list = await Repository.fetchMyEnrollments();
       setEnrollments(list);
     } catch (e) {
+      showToast('تعذر تحميل بياناتك — اسحب للتحديث', 'warn');
+    }
+
+    // Real upcoming session from the backend (fixes F-2). If the RPC is
+    // not deployed yet or fails, we gracefully fall back to showing the
+    // latest enrollment in the "next lecture" card.
+    try {
+      const upcoming = await RPC.getMyNextSession();
+      setNextSession(upcoming);
+    } catch (e) {
+      setNextSession(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -83,6 +97,27 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
   // Next session from active enrollments
   const activeEnrollments = enrollments.filter((e) => e.status === 'enrolled');
   const nextEnrollment = activeEnrollments[0];
+
+  // Prefer the backend's real "next session" (F-2), fall back to the
+  // latest enrollment when the RPC is unavailable.
+  const upcomingTitle =
+    nextSession?.course_title || nextSession?.title ||
+    nextEnrollment?.batches?.courses?.title || nextEnrollment?.batches?.name || '';
+  const upcomingSchedule = nextSession?.session_date
+    ? new Date(nextSession.session_date).toLocaleDateString('ar-EG', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : nextEnrollment?.batches?.schedule || '';
+  const upcomingLocation = nextSession?.location
+    ? `${nextSession.location}${nextSession.room ? ` (${nextSession.room})` : ''}`
+    : nextEnrollment?.batches?.location
+    ? `${nextEnrollment.batches.location}${nextEnrollment.batches.room ? ` (${nextEnrollment.batches.room})` : ''}`
+    : '';
+  const upcomingMeetingUrl = nextSession?.meeting_url || nextEnrollment?.batches?.meeting_url || '';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -127,14 +162,15 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             </Text>
 
             {/* Stat Pills */}
+            {/* The fake "attendance %" (streak*20) was removed — it showed
+                values >100% and lied to students (F-1). Real stats only. */}
             <View style={styles.statPillsRow}>
               <View style={styles.statPill}>
                 <AnimatedNumber
-                  value={enrollments.length ? Math.round((profile?.streak || 0) * 20) : 0}
-                  suffix="%"
+                  value={activeEnrollments.length}
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>الحضور</Text>
+                <Text style={styles.statPillLbl}>دورة جارية</Text>
               </View>
               <View style={styles.statPill}>
                 <AnimatedNumber
@@ -223,7 +259,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
         {/* Next Lecture Card */}
         {loading ? (
           <SkeletonLoader height={130} borderRadius={Radii.xl} />
-        ) : nextEnrollment ? (
+        ) : upcomingTitle ? (
           <Animated.View entering={FadeInUp.delay(300).duration(400)}>
             <CustomCard style={styles.nextLectureCard}>
               <View style={styles.nextHeader}>
@@ -241,28 +277,45 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
               </View>
 
               <Text style={[styles.nextCourseTitle, { color: colors.txt }]}>
-                {nextEnrollment.batches?.courses?.title || nextEnrollment.batches?.name}
+                {upcomingTitle}
               </Text>
 
               <View style={styles.nextDetails}>
-                {nextEnrollment.batches?.schedule ? (
+                {upcomingSchedule ? (
                   <View style={styles.nextDetailItem}>
                     <Clock color={colors.mut} size={15} />
                     <Text style={[styles.nextDetailText, { color: colors.mut }]}>
-                      {nextEnrollment.batches.schedule}
+                      {upcomingSchedule}
                     </Text>
                   </View>
                 ) : null}
 
-                {nextEnrollment.batches?.location ? (
+                {upcomingLocation ? (
                   <View style={styles.nextDetailItem}>
                     <MapPin color={colors.mut} size={15} />
                     <Text style={[styles.nextDetailText, { color: colors.mut }]}>
-                      {nextEnrollment.batches.location} {nextEnrollment.batches.room ? `(${nextEnrollment.batches.room})` : ''}
+                      {upcomingLocation}
                     </Text>
                   </View>
                 ) : null}
               </View>
+
+              {/* Online batches: show the real join link (fixes F-11) */}
+              {upcomingMeetingUrl ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    RTCHaptics.light();
+                    Linking.openURL(upcomingMeetingUrl);
+                  }}
+                  style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft }]}
+                >
+                  <MonitorPlay color={colors.primary} size={16} />
+                  <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
+                    انضم للمحاضرة أونلاين
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </CustomCard>
           </Animated.View>
         ) : (
@@ -479,6 +532,19 @@ const styles = StyleSheet.create({
   },
   nextDetailText: {
     fontSize: 12,
+  },
+  joinOnlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: Radii.md,
+    marginTop: 2,
+  },
+  joinOnlineText: {
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   noCoursesCard: {
     alignItems: 'center',

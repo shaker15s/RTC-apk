@@ -93,6 +93,9 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
               <TouchableOpacity
                 key={tab.id}
                 activeOpacity={0.75}
+                accessibilityRole="tab"
+                accessibilityLabel={tab.label}
+                accessibilityState={{ selected: isActive }}
                 onPress={() => {
                   RTCHaptics.selection();
                   onTabPress(tab.id);
@@ -109,7 +112,9 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
                   ]}
                 >
                   {tab.icon(color, 21)}
-                  {tab.id === 's-home' && unreadNotificationsCount > 0 ? (
+                  {/* Badge on the home tab of EVERY role (fixes F-3) */}
+                  {(tab.id === 's-home' || tab.id === 'v-home' || tab.id === 'a-home') &&
+                  unreadNotificationsCount > 0 ? (
                     <View style={styles.badgeWrap}>
                       <BadgeCounter count={unreadNotificationsCount} size="sm" />
                     </View>

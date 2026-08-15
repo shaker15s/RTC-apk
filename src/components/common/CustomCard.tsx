@@ -10,10 +10,11 @@ import { Radii, Shadows } from '../../core/theme/tokens';
 export interface CustomCardProps {
   children: React.ReactNode;
   style?: ViewStyle | ViewStyle[];
+  innerStyle?: ViewStyle | ViewStyle[];
   variant?: 'elevated' | 'flat' | 'glass';
 }
 
-export const CustomCard: React.FC<CustomCardProps> = ({ children, style, variant = 'elevated' }) => {
+export const CustomCard: React.FC<CustomCardProps> = ({ children, style, innerStyle, variant = 'elevated' }) => {
   const { colors, isDark } = useAppStore();
 
   return (
@@ -35,6 +36,7 @@ export const CustomCard: React.FC<CustomCardProps> = ({ children, style, variant
             backgroundColor: isDark ? colors.card : colors.card,
             borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.9)',
           },
+          innerStyle,
         ]}
       >
         {/* Subtle Top Specular Glass Highlight */}

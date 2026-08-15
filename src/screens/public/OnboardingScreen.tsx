@@ -149,67 +149,87 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { minHeight: '90%' }]}
+        showsVerticalScrollIndicator={false}
+      >
         {step === 1 ? (
           /* Step 1: Welcome & Google Sign-In */
           <View style={styles.step1Wrap}>
-            {/* Free badge */}
+            {/* Top Brand Pill */}
             <View style={styles.badgeRow}>
               <View style={[styles.freePill, { backgroundColor: colors.teal + '18', borderColor: colors.teal + '40' }]}>
-                <Gift color={colors.teal} size={15} />
-                <Text style={[styles.freeText, { color: colors.teal }]}>تعلّم مجاني ١٠٠٪</Text>
+                <Gift color={colors.teal} size={16} />
+                <Text style={[styles.freeText, { color: colors.teal }]}>منظومة التعلّم المجاني — جمعية رسالة</Text>
               </View>
             </View>
 
-            {/* Main Headline */}
+            {/* Main Hero Headline */}
             <View style={styles.headlineWrap}>
               <View style={styles.eyebrowRow}>
-                <Sparkles color={colors.gold} size={16} />
-                <Text style={[styles.eyebrow, { color: colors.gold }]}>رحلتك من التعلّم إلى الأثر</Text>
+                <Sparkles color={colors.gold} size={18} />
+                <Text style={[styles.eyebrow, { color: colors.gold }]}>رحلتك من التعلّم إلى صناعة الأثر</Text>
               </View>
-              <Text style={[styles.title, { color: colors.txt }]}>ابدأ مسارك مع RTC</Text>
+              <Text style={[styles.title, { color: colors.txt }]}>مرحباً بك في مسار RTC</Text>
               <Text style={[styles.subtitle, { color: colors.mut }]}>
-                كورسات مجانية يقودها متطوعون، حضور ونقاط وشهادات موثّقة—كل رحلتك في مكان واحد.
+                كورسات تدريبية معتمدة يقودها نخبة من المتطوعين، حضور بالباركود، نقاط تحفيزية، وشهادات موثقة رسمياً.
               </Text>
             </View>
 
-            {/* Trust Row */}
+            {/* Trust Metrics Bar */}
             <View style={[styles.trustRow, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.primary }]}>منذ ٢٠٠٠</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>خبرة مجتمعية</Text>
+                <Text style={[styles.trustNum, { color: colors.primary }]}>+٢٤ عاماً</Text>
+                <Text style={[styles.trustLabel, { color: colors.mut }]}>عطاء مستمر</Text>
               </View>
               <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.teal }]}>١٧ فرعًا</Text>
+                <Text style={[styles.trustNum, { color: colors.teal }]}>١٧ فرعاً</Text>
                 <Text style={[styles.trustLabel, { color: colors.mut }]}>بالمحافظات</Text>
               </View>
               <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.gold }]}>متطوعون</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>يصنعون أثرًا</Text>
+                <Text style={[styles.trustNum, { color: colors.gold }]}>١٠٠٪ مجاناً</Text>
+                <Text style={[styles.trustLabel, { color: colors.mut }]}>لوجه الله</Text>
               </View>
             </View>
 
-            {/* Google Gate */}
-            <CustomCard style={styles.googleGate}>
+            {/* Google Sign-In Card */}
+            <CustomCard style={styles.googleGate} innerStyle={{ padding: 22, gap: 16 }}>
               <CustomButton
                 title="تسجيل الدخول باستخدام Google"
                 onPress={handleGoogleSignIn}
                 variant="primary"
                 size="big"
                 loading={isLoading}
-                icon={<ShieldCheck color="#FFFFFF" size={20} />}
+                icon={<ShieldCheck color="#FFFFFF" size={22} />}
                 style={{ width: '100%' }}
               />
 
               <View style={styles.privacyNote}>
-                <Lock color={colors.mut} size={14} />
+                <Lock color={colors.mut} size={15} />
                 <Text style={[styles.privacyText, { color: colors.mut }]}>
-                  دخول مشفّر عبر Google. لا نخزّن كلمة مرورك أبداً.
+                  مصادقة آمنة ومشفّرة عبر Google — لا نخزّن كلمة مرورك أبداً
                 </Text>
               </View>
             </CustomCard>
+
+            {/* Quick Actions & Verification */}
+            <View style={styles.quickAccessRow}>
+              {onOpenVerify ? (
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    RTCHaptics.selection();
+                    onOpenVerify();
+                  }}
+                  style={[styles.verifyCertBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
+                >
+                  <ShieldCheck color={colors.primary} size={18} />
+                  <Text style={[styles.verifyCertText, { color: colors.txt }]}>التحقق من صحة شهادة صادرة</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
             {/* Footer Links */}
             <View style={styles.linksRow}>
@@ -488,7 +508,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    marginTop: 8,
+    marginTop: 14,
+  },
+  quickAccessRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginTop: 4,
+  },
+  verifyCertBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    width: '100%',
+  },
+  verifyCertText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   footerLink: {
     fontSize: 12,

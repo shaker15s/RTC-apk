@@ -23,6 +23,8 @@
         "NSPhotoLibraryAddUsageDescription": "لحفظ الشهادات الرقمية ومشاركتها.",
         "UIBackgroundModes": [
           "remote-notification",
+          "remote-notification",
+          "remote-notification",
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -36,6 +38,13 @@
       "package": "org.resala.rtc.masar",
       "versionCode": 10000,
       "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -76,6 +85,12 @@
         "projectId": "f48915ef-3b07-4855-9cf8-c2796e5c9c9e"
       }
     },
-    "owner": "shaker18ss-team"
+    "owner": "shaker18ss-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f48915ef-3b07-4855-9cf8-c2796e5c9c9e"
+    }
   }
 }

@@ -101,15 +101,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (result.type === 'success' && result.url) {
-        // Exchange code for session using PKCE
-        const parsed = Linking.parse(result.url);
-        const code = parsed.queryParams?.code as string;
-        if (code) {
+        const returnUrl = result.url;
+        const parsed = Linking.parse(returnUrl);
+
+        // 1. Check PKCE Authorization Code in queryParams
+        if (parsed.queryParams?.code) {
+          const code = parsed.queryParams.code as string;
           const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
 
           set({ session: sessionData.session });
           await get().refreshProfile();
+        } 
+        // 2. Check Implicit / Hash tokens in URL fragment
+        else if (returnUrl.includes('#') || returnUrl.includes('access_token')) {
+          const hashPart = returnUrl.split('#')[1] || returnUrl.split('?')[1] || '';
+          const params = new URLSearchParams(hashPart);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            const { data: sessionData, error: setSessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (setSessionError) throw setSessionError;
+
+            set({ session: sessionData.session });
+            await get().refreshProfile();
+          }
         }
       }
       set({ isLoading: false });

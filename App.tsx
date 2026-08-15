@@ -102,7 +102,20 @@ export default function App() {
           const parsed = Linking.parse(url);
           if (parsed.queryParams?.code) {
             await supabase.auth.exchangeCodeForSession(parsed.queryParams.code as string);
-            refreshProfile();
+            await refreshProfile();
+          } else if (url.includes('access_token')) {
+            const hashPart = url.split('#')[1] || url.split('?')[1] || '';
+            const params = new URLSearchParams(hashPart);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              await refreshProfile();
+            }
           }
         } catch (e) {}
       }

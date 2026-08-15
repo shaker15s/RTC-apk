@@ -756,6 +756,44 @@ export const STRINGS = {
     authSessionError: 'تعذر تحميل بيانات الجلسة',
     authLinkError: 'تعذر توليد رابط المصادقة',
     authLoginError: 'فشل تسجيل الدخول باستخدام Google',
+  // ---------- v100.4.0c: changelog content ----------
+    relAug2026: 'أغسطس 2026',
+    relJul2026: 'يوليو 2026',
+    relV1004: 'v100.4.0 (الاكتمال — الترجمة الكاملة والحضور الذكي والـ PDF)',
+    relV1004B1: '🌐 ترجمة إنجليزية كاملة: كل شاشات الطالب والمتطوع والمشرف والمكونات (719 مفتاحاً)',
+    relV1004B2: '📅 سجل حضور ذكي: نسبة التزام حقيقية لكل دورة، أهلية الشهادة (75%)، فلاتر بالحالة، ونقاط الحضور',
+    relV1004B3: '📄 مشاركة الشهادة كملف PDF رسمي مع صورة الشهادة ورمز التحقق',
+    relV1004B4: '🧮 منطق حساب واضح: «تحتاج X محاضرات إضافية للشهادة» بدل النسب التخمينية',
+    relV1004B5: '🛡️ التزام كامل بمبدأ الصدق: إزالة ادعاءات النقاط الثابتة في الواجهات',
+    relV1003: 'v100.3.0 (دعم اللغة الإنجليزية)',
+    relV1003B1: '🌐 دعم كامل للغة الإنجليزية في واجهات الطالب والعامة',
+    relV1002: 'v100.2.0 (تجربة النيتف الكاملة)',
+    relV1002B1: '🧭 تنقل نيتف حقيقي: انتقالات أصلية ورجوع بالسحب ودعم الروابط العميقة',
+    relV1002B2: '📅 سجل حضور تفصيلي لكل محاضرة بحالتها ونقاطها وتاريخها',
+    relV1002B3: '🏆 مشاركة الشهادة كصورة معتمدة بتصميم رسمي ورمز QR موثّق',
+    relV1002B4: '♿ تحسينات إمكانية الوصول: أسماء وأدوار لكل الأزرار والحقول والمفاتيح',
+    relV1002B5: '🔗 فتح صفحة التحقق تلقائياً عند الدخول من رابط شهادة',
+    relV1001: 'v100.1.0 (تحديث الجودة الشامل)',
+    relV1001B1: '🔧 زر منح النقاط للمشرفين أصبح حقيقياً ومتصلاً بقاعدة البيانات',
+    relV1001B2: '🔔 إشعارات وتذكيرات المحاضرات متصلة الآن وتسجيل جهازك للتنبيهات',
+    relV1001B3: '📶 وضع الأوفلاين الحقيقي: كشف الشبكة وشريط التنبيه يعملان فعلياً',
+    relV1001B4: '📷 رمز QR حقيقي قابل للمسح في جلسات المدرب وشهاداتك الموثقة',
+    relV1001B5: '🛡️ إخفاء أرقام هواتف الطلاب افتراضياً مع نسخ بضغطة واحدة',
+    relV1001B6: '📎 فحص نوع وحجم الملفات المرفوعة + حفظ الامتداد الصحيح',
+    relV1001B7: '🌐 رابط الانضمام للمحاضرات الأونلاين يظهر مباشرة في دوراتك',
+    relV1001B8: '🚀 بدء أسرع للتطبيق، خروج مزدوج آمن، وبحث أذكى للمشرفين',
+    relV1000: 'v100.0.0 (النسخة الاحترافية الشاملة)',
+    relV1000B1: '✨ واجهة نيتف فائقة السرعة مع رسوم متحركة 60fps باستخدام Reanimated',
+    relV1000B2: '⚡ تحديثات فورية حية Realtime عبر Supabase للحضور والإشعارات',
+    relV1000B3: '📊 لوحة تحليلات تنفيذية مزودة بمخططات SVG تفاعلية',
+    relV1000B4: '⭐ نظام تقييم الكورسات والمدربين بعد إتمام المحاضرات',
+    relV1000B5: '📝 تقارير المحاضرات الذكية للمدربين والمتطوعين',
+    relV1000B6: '🔒 تشفير محلي آمن للجلسات عبر Keychain و Android Keystore',
+    relV1000B7: '📱 دعم كامل للغة العربية RTL',
+    relV100: 'v1.0.0',
+    relV100B1: '🚀 إطلاق منصة مسار RTC لمراكز رسالة للتدريب',
+    relV100B2: '🎓 إدارة المجموعات، الحضور بالباركود، الشهادات، والنقاط',
+    freeNotice: 'تعلّم مجاني ١٠٠٪',
   },
 
   en: {
@@ -1124,6 +1162,45 @@ export const STRINGS = {
     // ---------- Leaderboard ----------
     leaderboardTitle: 'Leaderboard',
     leaderboardSubtitle: 'Top students this week',
+    freeNotice: '100% Free Learning',
+
+  // ---------- v100.4.0c: changelog content ----------
+    relAug2026: 'August 2026',
+    relJul2026: 'July 2026',
+    relV1004: 'v100.4.0 (Completion — full translation, smart attendance & PDF)',
+    relV1004B1: '🌐 Full English translation: every student, volunteer and admin screen plus components (719 keys)',
+    relV1004B2: '📅 Smart attendance: real per-course commitment rate, certificate eligibility (75%), status filters and attendance points',
+    relV1004B3: '📄 Share the certificate as an official PDF with the card image and verification code',
+    relV1004B4: '🧮 Clear math: "you need X more lectures for the certificate" instead of guessed percentages',
+    relV1004B5: '🛡️ Honesty policy: removed hardcoded points claims from the UI',
+    relV1003: 'v100.3.0 (English language support)',
+    relV1003B1: '🌐 Full English support across student & public screens',
+    relV1002: 'v100.2.0 (Full native experience)',
+    relV1002B1: '🧭 Real native navigation: native transitions, swipe-back and deep linking',
+    relV1002B2: '📅 Detailed attendance log for every lecture with status, points and date',
+    relV1002B3: '🏆 Share the certificate as a verified image with an official design and QR code',
+    relV1002B4: '♿ Accessibility: names and roles for buttons, inputs and switches',
+    relV1002B5: '🔗 Auto-open the verification screen when entering from a certificate link',
+    relV1001: 'v100.1.0 (Comprehensive quality update)',
+    relV1001B1: '🔧 Admin points award is now real and connected to the database',
+    relV1001B2: '🔔 Lecture notifications & reminders are wired up with device registration',
+    relV1001B3: '📶 Real offline mode: network detection and the alert banner actually work',
+    relV1001B4: '📷 Real scannable QR codes in coach sessions and on your certificates',
+    relV1001B5: '🛡️ Student phone numbers masked by default with one-tap copy',
+    relV1001B6: '📎 Uploaded file type/size checks plus correct extension preservation',
+    relV1001B7: '🌐 Online lecture join links appear right inside your courses',
+    relV1001B8: '🚀 Faster app start, safe double-press exit and smarter admin search',
+    relV1000: 'v100.0.0 (Comprehensive professional release)',
+    relV1000B1: '✨ Blazing native UI with 60fps animations via Reanimated',
+    relV1000B2: '⚡ Live realtime updates via Supabase for attendance & notifications',
+    relV1000B3: '📊 Executive analytics dashboard with interactive SVG charts',
+    relV1000B4: '⭐ Course & instructor rating system after lectures',
+    relV1000B5: '📝 Smart lecture reports for coaches and volunteers',
+    relV1000B6: '🔒 Secure local session encryption via Keychain & Android Keystore',
+    relV1000B7: '📱 Full Arabic RTL support',
+    relV100: 'v1.0.0',
+    relV100B1: '🚀 Masar RTC platform launch for Resala Training Centers',
+    relV100B2: '🎓 Groups, barcode attendance, certificates and points',
 
   // ---------- v100.4.0b: remaining student screens & core ----------
     cdInstructor: 'Instructor:',
@@ -1549,6 +1626,21 @@ export function getCurrentLanguage(): LanguageKey {
 
 export function isRTL(): boolean {
   return currentLanguage === 'ar';
+}
+
+/**
+ * Locale for date formatting — follows the active language.
+ */
+export function dateLocale(): string {
+  return currentLanguage === 'ar' ? 'ar-EG' : 'en-GB';
+}
+
+/**
+ * Locale for number formatting — Arabic-Indic digits in Arabic,
+ * western digits in English.
+ */
+export function numberLocale(): string {
+  return currentLanguage === 'ar' ? 'ar-EG' : 'en-US';
 }
 
 /**

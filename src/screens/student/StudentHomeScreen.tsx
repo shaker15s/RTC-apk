@@ -21,7 +21,7 @@ import { AnimatedNumber } from '../../components/common/AnimatedNumber';
 import { EmptyState } from '../../components/common/EmptyState';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
-import { useT } from '../../core/i18n';
+import { useT, dateLocale } from '../../core/i18n';
 import { useRealtimeNotifications } from '../../data/realtime/useRealtimeNotifications';
 import Animated, {
   FadeInDown,
@@ -106,7 +106,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
     nextSession?.course_title || nextSession?.title ||
     nextEnrollment?.batches?.courses?.title || nextEnrollment?.batches?.name || '';
   const upcomingSchedule = nextSession?.session_date
-    ? new Date(nextSession.session_date).toLocaleDateString('ar-EG', {
+    ? new Date(nextSession.session_date).toLocaleDateString(dateLocale(), {
         weekday: 'long',
         month: 'short',
         day: 'numeric',

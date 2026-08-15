@@ -33,7 +33,7 @@ import {
   ExternalLink,
   X,
 } from 'lucide-react-native';
-import { useT } from '../../core/i18n';
+import { useT, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -114,7 +114,7 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
           excuses.map((item) => {
             const isPending = item.status === 'pending' || !item.status;
             const dateStr = item.created_at
-              ? new Date(item.created_at).toLocaleDateString('ar-EG', {
+              ? new Date(item.created_at).toLocaleDateString(dateLocale(), {
                   month: 'short',
                   day: 'numeric',
                 })

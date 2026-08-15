@@ -1,6 +1,8 @@
 /**
  * Changelog & What's New Screen (changelog)
  * Documents application releases, upgrades, and feature announcements.
+ * Fully bilingual: release content is built inside the component so it
+ * re-evaluates on every language change (v100.4.0c).
  */
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
@@ -19,76 +21,49 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
   const { colors } = useAppStore();
   const { t } = useT();
 
+  // Built on every render so language switching translates it live.
   const releases = [
     {
-      version: 'v100.4.0 (الاكتمال — الترجمة الكاملة والحضور الذكي والـ PDF)',
-      date: 'أغسطس 2026',
+      version: t('relV1004'),
+      date: t('relAug2026'),
       badge: t('releaseMajor'),
-      items: [
-        '🌐 ترجمة إنجليزية كاملة: كل شاشات الطالب والمتطوع والمشرف والمكونات (719 مفتاحاً)',
-        '📅 سجل حضور ذكي: نسبة التزام حقيقية لكل دورة، أهلية الشهادة (75%)، فلاتر بالحالة، ونقاط الحضور',
-        '📄 مشاركة الشهادة كملف PDF رسمي مع صورة الشهادة ورمز التحقق',
-        '🧮 منطق حساب واضح: «تحتاج X محاضرات إضافية للشهادة» بدل النسب التخمينية',
-        '🛡️ التزام كامل بمبدأ الصدق: إزالة ادعاءات النقاط الثابتة في الواجهات',
-      ],
+      items: [t('relV1004B1'), t('relV1004B2'), t('relV1004B3'), t('relV1004B4'), t('relV1004B5')],
     },
     {
-      version: 'v100.3.0 (دعم اللغة الإنجليزية)',
-      date: 'أغسطس 2026',
+      version: t('relV1003'),
+      date: t('relAug2026'),
       badge: t('releaseI18n'),
-      items: [
-        '🌐 دعم كامل للغة الإنجليزية في واجهات الطالب والعامة — Full English support for student & public screens',
-      ],
+      items: [t('relV1003B1')],
     },
     {
-      version: 'v100.2.0 (تجربة النيتف الكاملة)',
-      date: 'أغسطس 2026',
+      version: t('relV1002'),
+      date: t('relAug2026'),
       badge: t('releaseNative'),
-      items: [
-        '🧭 تنقل نيتف حقيقي: انتقالات أصلية ورجوع بالسحب ودعم الروابط العميقة',
-        '📅 سجل حضور تفصيلي لكل محاضرة بحالتها ونقاطها وتاريخها',
-        '🏆 مشاركة الشهادة كصورة معتمدة بتصميم رسمي ورمز QR موثّق',
-        '♿ تحسينات إمكانية الوصول: أسماء وأدوار لكل الأزرار والحقول والمفاتيح',
-        '🔗 فتح صفحة التحقق تلقائياً عند الدخول من رابط شهادة',
-      ],
+      items: [t('relV1002B1'), t('relV1002B2'), t('relV1002B3'), t('relV1002B4'), t('relV1002B5')],
     },
     {
-      version: 'v100.1.0 (تحديث الجودة الشامل)',
-      date: 'أغسطس 2026',
+      version: t('relV1001'),
+      date: t('relAug2026'),
       badge: t('releaseQuality'),
       items: [
-        '🔧 زر منح النقاط للمشرفين أصبح حقيقياً ومتصلاً بقاعدة البيانات',
-        '🔔 إشعارات وتذكيرات المحاضرات متصلة الآن وتسجيل جهازك للتنبيهات',
-        '📶 وضع الأوفلاين الحقيقي: كشف الشبكة وشريط التنبيه يعملان فعلياً',
-        '📷 رمز QR حقيقي قابل للمسح في جلسات المدرب وشهاداتك الموثقة',
-        '🛡️ إخفاء أرقام هواتف الطلاب افتراضياً مع نسخ بضغطة واحدة',
-        '📎 فحص نوع وحجم الملفات المرفوعة + حفظ الامتداد الصحيح',
-        '🌐 رابط الانضمام للمحاضرات الأونلاين يظهر مباشرة في دوراتك',
-        '🚀 بدء أسرع للتطبيق، خروج مزدوج آمن، وبحث أذكى للمشرفين',
+        t('relV1001B1'), t('relV1001B2'), t('relV1001B3'), t('relV1001B4'),
+        t('relV1001B5'), t('relV1001B6'), t('relV1001B7'), t('relV1001B8'),
       ],
     },
     {
-      version: 'v100.0.0 (النسخة الاحترافية الشاملة)',
-      date: 'أغسطس 2026',
+      version: t('relV1000'),
+      date: t('relAug2026'),
       badge: t('releaseMajor'),
       items: [
-        '✨ واجهة نيتف فائقة السرعة مع رسوم متحركة 60fps باستخدام Reanimated',
-        '⚡ تحديثات فورية حية Realtime عبر Supabase للحضور والإشعارات',
-        '📊 لوحة تحليلات تنفيذية مزودة بمخططات SVG تفاعلية',
-        '⭐ نظام تقييم الكورسات والمدربين بعد إتمام المحاضرات',
-        '📝 تقارير المحاضرات الذكية للمدربين والمتطوعين',
-        '🔒 تشفير محلي آمن للجلسات عبر Keychain و Android Keystore',
-        '📱 دعم كامل للغة العربية RTL',
+        t('relV1000B1'), t('relV1000B2'), t('relV1000B3'), t('relV1000B4'),
+        t('relV1000B5'), t('relV1000B6'), t('relV1000B7'),
       ],
     },
     {
-      version: 'v1.0.0',
-      date: 'يوليو 2026',
+      version: t('relV100'),
+      date: t('relJul2026'),
       badge: t('releaseLaunch'),
-      items: [
-        '🚀 إطلاق منصة مسار RTC لمراكز رسالة للتدريب',
-        '🎓 إدارة المجموعات، الحضور بالباركود، الشهادات، والنقاط',
-      ],
+      items: [t('relV100B1'), t('relV100B2')],
     },
   ];
 
@@ -107,24 +82,36 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
         {releases.map((rel) => (
           <CustomCard key={rel.version} style={styles.card}>
             <View style={styles.cardHeader}>
-              <View style={[styles.badge, { backgroundColor: colors.primarySoft }]}>
-                <Sparkles color={colors.primary} size={14} />
+              <View style={styles.versionWrap}>
+                <Text style={[styles.versionText, { color: colors.primary }]}>{rel.version}</Text>
+                <Text style={[styles.dateText, { color: colors.mut }]}>{rel.date}</Text>
+              </View>
+              <View style={[styles.badgePill, { backgroundColor: colors.primarySoft }]}>
+                <Sparkles color={colors.primary} size={12} />
                 <Text style={[styles.badgeText, { color: colors.primary }]}>{rel.badge}</Text>
               </View>
-              <Text style={[styles.dateText, { color: colors.mut }]}>{rel.date}</Text>
             </View>
 
-            <Text style={[styles.versionTitle, { color: colors.txt }]}>{rel.version}</Text>
+            <View style={[styles.divider, { backgroundColor: colors.line }]} />
 
-            <View style={styles.itemsList}>
-              {rel.items.map((item, idx) => (
-                <View key={idx} style={styles.itemRow}>
-                  <Text style={[styles.itemText, { color: colors.txt }]}>{item}</Text>
+            {rel.items.map((item, i) => (
+              <View key={`${rel.version}-${i}`} style={styles.bulletRow}>
+                <View style={[styles.checkCircle, { backgroundColor: colors.teal + '18' }]}>
+                  <Check color={colors.teal} size={13} />
                 </View>
-              ))}
-            </View>
+                <Text style={[styles.bulletText, { color: colors.txt }]}>{item}</Text>
+              </View>
+            ))}
           </CustomCard>
         ))}
+
+        <View style={styles.footerNote}>
+          <ShieldCheck color={colors.mut} size={14} />
+          <Text style={[styles.footerText, { color: colors.mut }]}>
+            {t('org')} — {t('freeNotice')}
+          </Text>
+          <Zap color={colors.gold} size={14} />
+        </View>
       </ScrollView>
     </View>
   );
@@ -135,48 +122,76 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 40,
     gap: 14,
   },
   card: {
-    padding: 20,
-    borderRadius: Radii.xxl,
+    padding: 18,
     gap: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
-  badge: {
+  versionWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  versionText: {
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
+  dateText: {
+    fontSize: 11.5,
+  },
+  badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: Radii.full,
   },
   badgeText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-  },
-  dateText: {
-    fontSize: 12,
-  },
-  versionTitle: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: '800',
   },
-  itemsList: {
-    gap: 8,
-    marginTop: 4,
+  divider: {
+    height: 1,
   },
-  itemRow: {
+  bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 10,
   },
-  itemText: {
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  bulletText: {
+    flex: 1,
     fontSize: 13,
     lineHeight: 20,
+    fontWeight: '600',
+  },
+  footerNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+  },
+  footerText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

@@ -17,7 +17,7 @@ import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { PlusCircle, MinusCircle, Award, Calendar } from 'lucide-react-native';
-import { useT, t } from '../../core/i18n';
+import { useT, t, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -68,7 +68,7 @@ export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack })
           ledger.map((item) => {
             const isPositive = item.points >= 0;
             const dateStr = item.created_at
-              ? new Date(item.created_at).toLocaleDateString('ar-EG', {
+              ? new Date(item.created_at).toLocaleDateString(dateLocale(), {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',

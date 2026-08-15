@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Text, TextStyle, StyleProp } from 'react-native';
+import { numberLocale } from '../../core/i18n';
 
 export interface AnimatedNumberProps {
   value: number;
@@ -17,7 +18,7 @@ export interface AnimatedNumberProps {
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
   duration = 800,
-  formatter = (v) => Math.round(v).toLocaleString('ar-EG'),
+  formatter = (v) => Math.round(v).toLocaleString(numberLocale()),
   style,
   prefix = '',
   suffix = '',

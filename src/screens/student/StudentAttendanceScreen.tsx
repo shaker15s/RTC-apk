@@ -22,7 +22,7 @@ import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
 import { ProgressRing } from '../../components/common/ProgressRing';
 import { RTCHaptics } from '../../core/native/haptics';
-import { useT } from '../../core/i18n';
+import { useT, dateLocale } from '../../core/i18n';
 import {
   CheckCircle2,
   Clock,
@@ -324,7 +324,7 @@ export const StudentAttendanceScreen: React.FC<{
                   {g.records.map((rec) => {
                     const color = colors[STATUS_COLORS[rec.status] || 'red'];
                     const dateStr = rec.session_date
-                      ? new Date(rec.session_date).toLocaleDateString('ar-EG', {
+                      ? new Date(rec.session_date).toLocaleDateString(dateLocale(), {
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
@@ -371,7 +371,7 @@ export const StudentAttendanceScreen: React.FC<{
                 {filtered.map((rec) => {
                   const color = colors[STATUS_COLORS[rec.status] || 'red'];
                   const dateStr = rec.session_date
-                    ? new Date(rec.session_date).toLocaleDateString('ar-EG', {
+                    ? new Date(rec.session_date).toLocaleDateString(dateLocale(), {
                         weekday: 'long',
                         month: 'short',
                         day: 'numeric',

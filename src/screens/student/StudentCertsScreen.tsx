@@ -24,7 +24,7 @@ import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTCSharing } from '../../core/native/sharing';
 import { RTC_CONFIG } from '../../core/config';
-import { useT } from '../../core/i18n';
+import { useT, dateLocale } from '../../core/i18n';
 import { buildCertificateHtml } from '../../core/pdf/certificatePdf';
 import QRCode from 'react-native-qrcode-svg';
 import ViewShot from 'react-native-view-shot';
@@ -193,7 +193,7 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
         ) : certs.length ? (
           certs.map((cert) => {
             const dateStr = cert.issued_at
-              ? new Date(cert.issued_at).toLocaleDateString('ar-EG', {
+              ? new Date(cert.issued_at).toLocaleDateString(dateLocale(), {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',

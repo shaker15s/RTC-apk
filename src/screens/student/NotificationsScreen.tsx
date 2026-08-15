@@ -26,7 +26,7 @@ import {
   CheckCheck,
   Megaphone,
 } from 'lucide-react-native';
-import { useT, t } from '../../core/i18n';
+import { useT, t, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const NotificationsScreen: React.FC<{
@@ -104,7 +104,7 @@ export const NotificationsScreen: React.FC<{
           notifications.map((item) => {
             const isUnread = !item.read_at;
             const dateStr = item.created_at
-              ? new Date(item.created_at).toLocaleDateString('ar-EG', {
+              ? new Date(item.created_at).toLocaleDateString(dateLocale(), {
                   month: 'short',
                   day: 'numeric',
                   hour: '2-digit',

@@ -88,7 +88,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     <Text style={[styles.podiumName, { color: colors.txt }]} numberOfLines={1}>
                       {top3[1].full_name}
                     </Text>
-                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[1].points} ن</Text>
+                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[1].points} {t('ptShort')}</Text>
                   </View>
                 ) : null}
 
@@ -133,7 +133,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     <Text style={[styles.podiumName, { color: colors.txt }]} numberOfLines={1}>
                       {top3[2].full_name}
                     </Text>
-                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[2].points} ن</Text>
+                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[2].points} {t('ptShort')}</Text>
                   </View>
                 ) : null}
               </View>

@@ -32,7 +32,7 @@ import {
   X,
   User,
 } from 'lucide-react-native';
-import { useT } from '../../core/i18n';
+import { useT, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminCertsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -185,7 +185,7 @@ export const AdminCertsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                   </Text>
                 </View>
                 <Text style={[styles.certDate, { color: colors.mut }]}>
-                  {cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('ar-EG') : ''}
+                  {cert.issued_at ? new Date(cert.issued_at).toLocaleDateString(dateLocale()) : ''}
                 </Text>
               </View>
             </CustomCard>

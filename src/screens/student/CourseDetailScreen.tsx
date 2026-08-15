@@ -36,7 +36,7 @@ import {
   Award,
   X,
 } from 'lucide-react-native';
-import { useT, t } from '../../core/i18n';
+import { useT, t, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export interface CourseDetailScreenProps {
@@ -299,7 +299,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                       ))}
                     </View>
                     <Text style={[styles.ratingDate, { color: colors.mut }]}>
-                      {r.created_at ? new Date(r.created_at).toLocaleDateString('ar-EG') : ''}
+                      {r.created_at ? new Date(r.created_at).toLocaleDateString(dateLocale()) : ''}
                     </Text>
                   </View>
                   {r.comment ? (

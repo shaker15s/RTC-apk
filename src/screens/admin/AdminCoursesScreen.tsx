@@ -36,7 +36,7 @@ import {
   X,
   CheckCircle2,
 } from 'lucide-react-native';
-import { useT } from '../../core/i18n';
+import { useT, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -213,7 +213,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
                   onPress={() => {
                     RTCHaptics.light();
                     setSelectedCourseForBatch(course);
-                    setBatchName(t('acBatchPrefix', { d: new Date().toLocaleDateString('ar-EG', { month: 'short', year: 'numeric' }) }));
+                    setBatchName(t('acBatchPrefix', { d: new Date().toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' }) }));
                     setBatchModalVisible(true);
                   }}
                   variant="primary"

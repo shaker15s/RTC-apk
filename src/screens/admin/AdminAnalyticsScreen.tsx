@@ -20,6 +20,7 @@ import { StatCard } from '../../components/common/StatCard';
 import { ProgressRing } from '../../components/common/ProgressRing';
 import { Repository } from '../../data/repositories';
 import { Users, BookOpen, Award, CheckCircle2, TrendingUp, BarChart2 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export interface AdminAnalyticsScreenProps {
@@ -28,6 +29,7 @@ export interface AdminAnalyticsScreenProps {
 
 export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBack }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
   const { profile } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
@@ -76,20 +78,20 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
 
   // Mock bar chart heights based on actual counts
   const chartData = [
-    { label: 'السبت', val: 78 },
-    { label: 'الأحد', val: 92 },
-    { label: 'الإثنين', val: 85 },
-    { label: 'الثلاثاء', val: 95 },
-    { label: 'الأربعاء', val: 88 },
-    { label: 'الخميس', val: 65 },
-    { label: 'الجمعة', val: 40 },
+    { label: t('aaSat'), val: 78 },
+    { label: t('aaSun'), val: 92 },
+    { label: t('aaMon'), val: 85 },
+    { label: t('aaTue'), val: 95 },
+    { label: t('aaWed'), val: 88 },
+    { label: t('aaThu'), val: 65 },
+    { label: t('aaFri'), val: 40 },
   ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="لوحة التحليلات التنفيذية"
-        subtitle="مؤشرات أداء مراكز رسالة"
+        title={t('aaTitle')}
+        subtitle={t('aaSubtitle')}
         showBack
         onBack={onBack}
         showNotif={false}
@@ -106,12 +108,12 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
           <StatCard
             icon={<Users color={colors.primary} size={22} />}
             value={stats.totalUsers}
-            label="إجمالي الحسابات"
+            label={t('aaTotalAccounts')}
           />
           <StatCard
             icon={<BookOpen color={colors.teal} size={22} />}
             value={stats.totalCourses}
-            label="الدورات المعتمدة"
+            label={t('aaCourses')}
             iconBgColor={colors.teal + '18'}
           />
         </View>
@@ -120,13 +122,13 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
           <StatCard
             icon={<Award color={colors.gold} size={22} />}
             value={stats.totalCerts}
-            label="الشهادات الصادرة"
+            label={t('aaCerts')}
             iconBgColor={colors.gold + '20'}
           />
           <StatCard
             icon={<CheckCircle2 color="#22C55E" size={22} />}
             value={stats.totalBatches}
-            label="المجموعات التدريبية"
+            label={t('aaBatches')}
             iconBgColor="rgba(34, 197, 94, 0.15)"
           />
         </View>
@@ -135,8 +137,8 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
         <CustomCard style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <View>
-              <Text style={[styles.chartTitle, { color: colors.txt }]}>معدل الحضور والانضباط العام</Text>
-              <Text style={[styles.chartSub, { color: colors.mut }]}>متوسط حضور الطلاب بالمحاضرات</Text>
+              <Text style={[styles.chartTitle, { color: colors.txt }]}>{t('aaAttendanceRate')}</Text>
+              <Text style={[styles.chartSub, { color: colors.mut }]}>{t('aaAttendanceSub')}</Text>
             </View>
             <ProgressRing progress={stats.avgAttendance} size={58} strokeWidth={5} />
           </View>
@@ -147,7 +149,7 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
           <View style={styles.chartHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <BarChart2 color={colors.primary} size={18} />
-              <Text style={[styles.chartTitle, { color: colors.txt }]}>نشاط الحضور الأسبوعي (%)</Text>
+              <Text style={[styles.chartTitle, { color: colors.txt }]}>{t('aaWeekly')}</Text>
             </View>
           </View>
 
@@ -191,16 +193,16 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
 
         {/* Role Distribution */}
         <CustomCard style={styles.roleCard}>
-          <Text style={[styles.chartTitle, { color: colors.txt }]}>توزيع الأعضاء حسب الدور</Text>
+          <Text style={[styles.chartTitle, { color: colors.txt }]}>{t('aaRolesDist')}</Text>
           <View style={styles.roleRow}>
             <View style={styles.roleItem}>
               <Text style={[styles.roleVal, { color: colors.primary }]}>{stats.totalStudents}</Text>
-              <Text style={[styles.roleLbl, { color: colors.mut }]}>طالب مسجل</Text>
+              <Text style={[styles.roleLbl, { color: colors.mut }]}>{t('aaStudents')}</Text>
             </View>
             <View style={[styles.roleDivider, { backgroundColor: colors.line }]} />
             <View style={styles.roleItem}>
               <Text style={[styles.roleVal, { color: colors.teal }]}>{stats.totalVolunteers}</Text>
-              <Text style={[styles.roleLbl, { color: colors.mut }]}>متطوع ومدرب</Text>
+              <Text style={[styles.roleLbl, { color: colors.mut }]}>{t('aaVolunteers')}</Text>
             </View>
           </View>
         </CustomCard>

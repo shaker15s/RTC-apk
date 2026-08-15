@@ -19,12 +19,14 @@ import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import { GraduationCap, Calendar, Users, MapPin, ChevronLeft } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerCoursesScreen: React.FC<{
   onNavigate: (screenId: string, params?: any) => void;
 }> = ({ onNavigate }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export const VolunteerCoursesScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="دوراتي التدريبية" subtitle="المقررات المسندة لتدريسها" />
+      <GlassHeader title={t('myCoursesTitle')} subtitle={t('vcSubtitle')} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -81,7 +83,7 @@ export const VolunteerCoursesScreen: React.FC<{
                   <View style={styles.titleWrap}>
                     <View style={[styles.catBadge, { backgroundColor: colors.teal + '18' }]}>
                       <Text style={[styles.catText, { color: colors.teal }]}>
-                        {batch.courses?.category || 'تدريب معتمد'}
+                        {batch.courses?.category || t('vcCertified')}
                       </Text>
                     </View>
                     <Text style={[styles.courseTitle, { color: colors.txt }]}>
@@ -96,7 +98,7 @@ export const VolunteerCoursesScreen: React.FC<{
                     <View style={styles.footerItem}>
                       <Calendar color={colors.mut} size={14} />
                       <Text style={[styles.footerItemText, { color: colors.mut }]}>
-                        {batch.courses?.sessions_count || 8} محاضرات
+                        {batch.courses?.sessions_count || 8} {t('lecturesSuffix')}
                       </Text>
                     </View>
                     {batch.branches?.name_ar ? (
@@ -114,8 +116,8 @@ export const VolunteerCoursesScreen: React.FC<{
           ))
         ) : (
           <EmptyStateView
-            title="لا توجد مقررات تدريبية مسندة"
-            description="عندما يسند إليك المشرف دورات تدريبية ستظهر تفاصيلها والمقرر التدريبي هنا."
+            title={t('vcEmptyTitle')}
+            description={t('vcEmptyDesc')}
             icon={<GraduationCap color={colors.teal} size={32} />}
           />
         )}

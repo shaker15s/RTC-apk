@@ -29,28 +29,29 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const FAQ_LIST = [
   {
-    q: 'هل الكورسات مجانية فعلاً؟',
-    a: 'نعم، جميع الدورات والمقررات التدريبية في مراكز رسالة (RTC) مجانية بالكامل ١٠٠٪ من التسجيل وحتى استلام الشهادة المعتمدة.',
+    q: t('suQ1'),
+    a: t('suA1'),
   },
   {
-    q: 'كيف أسجّل حضوري في المحاضرة؟',
-    a: 'يقوم المتطوع أو المدرب ببدء الجلسة وعرض رمز QR ورمز نصي. يمكنك مسح الرمز بكاميرا التطبيق أو كتابته يدوياً من تبويب «تسجيل حضوري».',
+    q: t('suQ2'),
+    a: t('suA2'),
   },
   {
-    q: 'فاتتني محاضرة بسبب ظرف طارئ، ماذا أفعل؟',
-    a: 'يمكنك تقديم طلب عذر غياب من قائمة الإجراءات السريعة مع كتابة السبب وإرفاق مستند، وسيقوم المدرب بمراجعته وقبوله واحتساب المحاضرة معذورة.',
+    q: t('suQ3'),
+    a: t('suA3'),
   },
   {
-    q: 'كيف أحصل على شهادة إتمام الدورة؟',
-    a: 'يشترط حضور ٧٥٪ على الأقل من محاضرات الدورة لتأهيلك تلقائياً لاستلام الشهادة الموثقة فور قيام المدرب بإغلاق الدفعة.',
+    q: t('suQ4'),
+    a: t('suA4'),
   },
   {
-    q: 'كيف أنضم كمتطوع أو مدرب في RTC؟',
-    a: 'تبدأ جميع الحسابات في النظام كطلاب، ويمكنك التواصل مع إدارة الفرع أو مسؤول التدريب لترقية حسابك لمدرب من لوحة الإدارة.',
+    q: t('suQ5'),
+    a: t('suA5'),
   },
 ];
 
@@ -59,6 +60,7 @@ export const SupportScreen: React.FC<{
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
   const { branches } = useAuthStore();
 
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
@@ -70,7 +72,7 @@ export const SupportScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="مركز المساعدة والدعم" subtitle="دليل الفروع والأسئلة الشائعة" showBack={!!onBack} onBack={onBack} />
+      <GlassHeader title={t('supportTitle')} subtitle={t('suSubtitle')} showBack={!!onBack} onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hotline Hero Card */}
@@ -78,13 +80,13 @@ export const SupportScreen: React.FC<{
           <View style={[styles.hotlineIconCircle, { backgroundColor: colors.teal + '18' }]}>
             <PhoneCall color={colors.teal} size={30} />
           </View>
-          <Text style={[styles.hotlineTitle, { color: colors.txt }]}>الخط الساخن لجمعية رسالة</Text>
+          <Text style={[styles.hotlineTitle, { color: colors.txt }]}>{t('hotlineTitle')}</Text>
           <Text style={[styles.hotlineSub, { color: colors.mut }]}>
-            للاستفسارات العامة عن مواعيد ومقار الدورات التدريبية المتاحة
+            {t('suHotlineSub')}
           </Text>
 
           <CustomButton
-            title="اتصال مباشر: 19450"
+            title={t('hotlineCallCta')}
             onPress={() => {
               RTCHaptics.light();
               Linking.openURL('tel:19450');
@@ -107,7 +109,7 @@ export const SupportScreen: React.FC<{
               <View style={[styles.linkIcon, { backgroundColor: colors.primarySoft }]}>
                 <ExternalLink color={colors.primary} size={18} />
               </View>
-              <Text style={[styles.linkText, { color: colors.txt }]}>الموقع الرسمي لمنصة مسار RTC</Text>
+              <Text style={[styles.linkText, { color: colors.txt }]}>{t('suOfficialSite')}</Text>
             </View>
             <ExternalLink color={colors.mut} size={16} />
           </TouchableOpacity>
@@ -123,7 +125,7 @@ export const SupportScreen: React.FC<{
               <View style={[styles.linkIcon, { backgroundColor: colors.teal + '18' }]}>
                 <Building2 color={colors.teal} size={18} />
               </View>
-              <Text style={[styles.linkText, { color: colors.txt }]}>صفحة نشاط RTC على موقع جمعية رسالة</Text>
+              <Text style={[styles.linkText, { color: colors.txt }]}>{t('suActivityPage')}</Text>
             </View>
             <ExternalLink color={colors.mut} size={16} />
           </TouchableOpacity>
@@ -131,8 +133,8 @@ export const SupportScreen: React.FC<{
 
         {/* Dynamic Branch Directory */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>دليل فروع مراكز التدريب</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.mut }]}>عناوين وصفحات فروع رسالة الرسمية</Text>
+          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('suBranchesTitle')}</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.mut }]}>{t('suBranchesSub')}</Text>
         </View>
 
         {branches.map((branch) => (
@@ -154,7 +156,7 @@ export const SupportScreen: React.FC<{
             <View style={styles.branchActions}>
               {branch.whatsapp ? (
                 <CustomButton
-                  title="واتساب"
+                  title={t('suWhatsapp')}
                   onPress={() => Linking.openURL(`https://wa.me/${branch.whatsapp?.replace(/[^0-9]/g, '')}`)}
                   variant="soft"
                   size="sm"
@@ -164,7 +166,7 @@ export const SupportScreen: React.FC<{
 
               {branch.facebook_url ? (
                 <CustomButton
-                  title="صفحة الفيسبوك"
+                  title={t('suFacebook')}
                   onPress={() => Linking.openURL(branch.facebook_url!)}
                   variant="soft"
                   size="sm"
@@ -178,7 +180,7 @@ export const SupportScreen: React.FC<{
 
         {/* FAQ Accordion */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>الأسئلة الشائعة</Text>
+          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('suFaq')}</Text>
         </View>
 
         {FAQ_LIST.map((faq, index) => {

@@ -33,10 +33,12 @@ import {
   ExternalLink,
   X,
 } from 'lucide-react-native';
+import { useT, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
 
   const [excuses, setExcuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,13 +84,13 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
       await RPC.reviewExcuse(activeExcuse.id, reviewStatus, reviewNote.trim());
       RTCHaptics.success();
       showToast(
-        reviewStatus === 'approved' ? 'تم قبول العذر واحتساب المحاضرة معذورة' : 'تم رفض طلب العذر',
+        reviewStatus === 'approved' ? t('veApprovedToast') : t('veRejectedToast'),
         'ok'
       );
       setActiveExcuse(null);
       await loadExcuses();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر مراجعة العذر', 'err');
+      showToast(e?.message || t('veReviewError'), 'err');
     } finally {
       setSubmitting(false);
     }
@@ -96,7 +98,7 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="مراجعة أعذار الطلاب" subtitle="الطلبات الواردة من المجموعات" showBack onBack={onBack} />
+      <GlassHeader title={t('veTitle')} subtitle={t('veSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -112,7 +114,7 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
           excuses.map((item) => {
             const isPending = item.status === 'pending' || !item.status;
             const dateStr = item.created_at
-              ? new Date(item.created_at).toLocaleDateString('ar-EG', {
+              ? new Date(item.created_at).toLocaleDateString(dateLocale(), {
                   month: 'short',
                   day: 'numeric',
                 })
@@ -123,10 +125,10 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
                 <View style={styles.cardTop}>
                   <View style={styles.studentInfo}>
                     <Text style={[styles.studentName, { color: colors.txt }]}>
-                      {item.profiles?.full_name || 'طالب مسار'}
+                      {item.profiles?.full_name || t('veStudent')}
                     </Text>
                     <Text style={[styles.batchName, { color: colors.mut }]}>
-                      {item.batches?.name || 'المجموعة التدريبية'}
+                      {item.batches?.name || t('veGroup')}
                     </Text>
                   </View>
 
@@ -157,17 +159,17 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
                       ]}
                     >
                       {item.status === 'approved'
-                        ? 'مقبول ✓'
+                        ? t('veApproved')
                         : item.status === 'rejected'
-                        ? 'مرفوض ✗'
-                        : 'قيد المراجعة'}
+                        ? t('veRejected')
+                        : t('vePending')}
                     </Text>
                   </View>
                 </View>
 
                 {/* Reason Text */}
                 <View style={[styles.reasonBox, { backgroundColor: colors.card2 }]}>
-                  <Text style={[styles.reasonLabel, { color: colors.mut }]}>السبب:</Text>
+                  <Text style={[styles.reasonLabel, { color: colors.mut }]}>{t('veReason')}</Text>
                   <Text style={[styles.reasonText, { color: colors.txt }]}>{item.reason}</Text>
                 </View>
 
@@ -178,7 +180,7 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
                     style={[styles.fileBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
                   >
                     <Paperclip color={colors.primary} size={16} />
-                    <Text style={[styles.fileBtnText, { color: colors.primary }]}>عرض المستند المرفق</Text>
+                    <Text style={[styles.fileBtnText, { color: colors.primary }]}>{t('veViewDoc')}</Text>
                     <ExternalLink color={colors.mut} size={14} />
                   </TouchableOpacity>
                 ) : null}
@@ -187,14 +189,14 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
                 {isPending ? (
                   <View style={styles.actionsRow}>
                     <CustomButton
-                      title="رفض"
+                      title={t('veReject')}
                       onPress={() => handleReviewAction(item, 'rejected')}
                       variant="danger"
                       size="sm"
                       style={{ flex: 1 }}
                     />
                     <CustomButton
-                      title="قبول العذر"
+                      title={t('veAccept')}
                       onPress={() => handleReviewAction(item, 'approved')}
                       variant="teal"
                       size="sm"
@@ -207,8 +209,8 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
           })
         ) : (
           <EmptyStateView
-            title="لا توجد طلبات أعذار معلقة"
-            description="عندما يقدم الطلاب في مجموعاتك طلبات أعذار للغياب ستظهر هنا لمراجعتها."
+            title={t('veEmptyTitle')}
+            description={t('veEmptyDesc')}
             icon={<FileText color={colors.teal} size={32} />}
           />
         )}
@@ -220,7 +222,7 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.txt }]}>
-                {reviewStatus === 'approved' ? 'تأكيد قبول طلب العذر' : 'تأكيد رفض طلب العذر'}
+                {reviewStatus === 'approved' ? t('veConfirmAcceptTitle') : t('veConfirmRejectTitle')}
               </Text>
               <TouchableOpacity onPress={() => setActiveExcuse(null)}>
                 <X color={colors.mut} size={22} />
@@ -228,18 +230,18 @@ export const VolunteerExcusesScreen: React.FC<{ onBack: () => void }> = ({ onBac
             </View>
 
             <Text style={[styles.modalPrompt, { color: colors.txt }]}>
-              الطالب: <Text style={{ fontWeight: '700' }}>{activeExcuse?.profiles?.full_name}</Text>
+              {t('veStudentLabel')} <Text style={{ fontWeight: '700' }}>{activeExcuse?.profiles?.full_name}</Text>
             </Text>
 
             <TextInputField
-              label="ملاحظات للمتدرب (اختياري)"
+              label={t('veNoteLabel')}
               value={reviewNote}
               onChangeText={setReviewNote}
-              placeholder="اكتب ملاحظة توضيحية تظهر للطالب..."
+              placeholder={t('veNotePlaceholder')}
             />
 
             <CustomButton
-              title={reviewStatus === 'approved' ? 'تأكيد القبول' : 'تأكيد الرفض'}
+              title={reviewStatus === 'approved' ? t('veConfirmAccept') : t('veConfirmReject')}
               onPress={handleConfirmReview}
               variant={reviewStatus === 'approved' ? 'teal' : 'danger'}
               size="big"

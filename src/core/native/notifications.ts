@@ -4,6 +4,7 @@
  * Gracefully adapts when running in Expo Go or standalone APK build.
  */
 import * as Notifications from 'expo-notifications';
+import { t } from '../i18n';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
@@ -21,6 +22,18 @@ try {
     }),
   });
 } catch (e) {}
+
+// Android local notifications are delivered through the "default"
+// channel — pre-configure it with HIGH importance so lecture reminders
+// show heads-up with sound (fixes silent/quiet reminders on Android 8+).
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'تذكيرات المحاضرات — Lecture reminders',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'default',
+    vibrationPattern: [0, 250, 250, 250],
+  }).catch(() => {});
+}
 
 export const RTCNotifications = {
   /**
@@ -42,20 +55,44 @@ export const RTCNotifications = {
   },
 
   /**
-   * Get device push token (only in standalone APK / production builds).
+   * Get device push token WITHOUT prompting (only if permission is
+   * already granted). Permission is requested contextually elsewhere
+   * (after profile completion — see OnboardingScreen).
    */
   async getPushToken(): Promise<string | null> {
     if (Platform.OS === 'web' || isExpoGo) {
       return null;
     }
     try {
-      const hasPermission = await this.requestPermissions();
-      if (!hasPermission) return null;
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') return null;
 
       const tokenData = await Notifications.getExpoPushTokenAsync();
       return tokenData.data || null;
     } catch (e) {
       return null;
+    }
+  },
+
+  /**
+   * Silently sync this device's push token with the backend.
+   * Never prompts — call requestPermissions() first where a prompt
+   * makes sense (e.g. after profile completion).
+   */
+  async syncPushRegistration(): Promise<void> {
+    if (Platform.OS === 'web' || isExpoGo) return;
+    try {
+      const token = await this.getPushToken();
+      if (!token) return;
+
+      // Import lazily to avoid a module cycle (notifications ↔ rpc).
+      const { RPC } = require('../../data/rpc');
+      await RPC.registerPushDevice(
+        token,
+        Platform.OS === 'ios' ? 'ios' : 'android'
+      ).catch(() => {});
+    } catch (e) {
+      // non-fatal — registration will be retried on next app foreground
     }
   },
 
@@ -76,7 +113,7 @@ export const RTCNotifications = {
 
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'محاضرتك بعد ساعة ⏰',
+          title: t('notifReminderTitle'),
           body: `${title} ${location ? '— ' + location : ''}`,
           data: { screen: 's-courses', batchId },
           sound: true,

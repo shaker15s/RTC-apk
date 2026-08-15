@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { Search, X } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 import { RTCHaptics } from '../../core/native/haptics';
 
@@ -28,7 +29,7 @@ export interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({
   value,
   onChangeText,
-  placeholder = 'بحث...',
+  placeholder = t('search'),
   debounceMs = 250,
   onClear,
   style,
@@ -75,6 +76,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onChangeText={setInternalVal}
         placeholder={placeholder}
         placeholderTextColor={colors.mut}
+        accessibilityLabel={placeholder}
         style={[styles.input, { color: colors.txt }]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

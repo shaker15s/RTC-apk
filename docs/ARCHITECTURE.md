@@ -3,8 +3,8 @@
 **التطبيق:** مسار RTC — منصة مراكز رسالة للتدريب (Resala Training Centers)  
 **معرف التطبيق (App ID):** `org.resala.rtc.masar`  
 **مخطط الروابط العميقة (Deep Link Scheme):** `org.resala.rtc.masar://auth`  
-**الإصدار:** `1.0.0` (Build 10000)  
-**التقنية:** React Native + Expo SDK 52 + TypeScript + Zustand + TanStack Query + Supabase JS  
+**الإصدار:** `100.4.0` (Build 10040)  
+**التقنية:** React Native + Expo SDK 54 + TypeScript + Zustand + Supabase JS + NetInfo  
 
 ---
 

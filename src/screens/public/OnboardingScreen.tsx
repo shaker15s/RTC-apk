@@ -15,6 +15,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
@@ -24,7 +25,9 @@ import { TextInputField } from '../../components/common/TextInputField';
 import { CustomCard } from '../../components/common/CustomCard';
 import { validateFullName, validateEgyptianPhone } from '../../core/security/sanitizers';
 import { RTCHaptics } from '../../core/native/haptics';
+import { RTCNotifications } from '../../core/native/notifications';
 import { RTC_CONFIG } from '../../core/config';
+import { useT } from '../../core/i18n';
 import {
   Gift,
   Sparkles,
@@ -47,8 +50,17 @@ export interface OnboardingScreenProps {
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSuccess, onOpenVerify }) => {
   const insets = useSafeAreaInsets();
   const { colors, isDark, showToast } = useAppStore();
-  const { session, profile, branches, signInWithGoogle, updateProfileData, resetAuthData, isLoading } =
-    useAuthStore();
+  const {
+    session,
+    profile,
+    branches,
+    signInWithGoogle,
+    updateProfileData,
+    resetAuthData,
+    initAuth,
+    isLoading,
+  } = useAuthStore();
+  const { t } = useT();
 
   const [step, setStep] = useState<1 | 2>(session?.user && !profile?.phone ? 2 : 1);
   const [fullName, setFullName] = useState(profile?.full_name || session?.user?.user_metadata?.full_name || '');
@@ -86,21 +98,21 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
     let hasError = false;
 
     if (!validateFullName(fullName)) {
-      setNameError('الاسم يجب أن يكون ثلاثياً على الأقل وبدون رموز خاصة');
+      setNameError(t('nameErrorMsg'));
       hasError = true;
     } else {
       setNameError(null);
     }
 
     if (!validateEgyptianPhone(phone)) {
-      setPhoneError('رقم غير صحيح — يجب أن يبدأ بـ 010/011/012/015 ومكون من 11 رقماً');
+      setPhoneError(t('phoneErrorMsg'));
       hasError = true;
     } else {
       setPhoneError(null);
     }
 
     if (!selectedBranchId) {
-      setBranchError('يرجى اختيار الفرع الأقرب لك');
+      setBranchError(t('branchErrorMsg'));
       hasError = true;
     } else {
       setBranchError(null);
@@ -118,10 +130,61 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         branch_id: selectedBranchId,
       });
       RTCHaptics.success();
-      showToast('تم حفظ البيانات بنجاح', 'ok');
+      showToast(t('profileSaved'), 'ok');
+
+      // Contextual notification permission (U-1): the user just became
+      // a real member — this is the moment lecture reminders matter.
+      RTCNotifications.requestPermissions()
+        .then((granted) => {
+          if (granted) {
+            RTCNotifications.syncPushRegistration().catch(() => {});
+          }
+        })
+        .catch(() => {});
     } catch (e: any) {
-      showToast(e?.message || 'تعذر حفظ البيانات', 'err');
+      showToast(e?.message || t('profileSaveError'), 'err');
     }
+  };
+
+  const handleHelpPress = () => {
+    RTCHaptics.light();
+    // Real help menu (fixes F-14): the old button silently signed the
+    // user out — now every action is explicit and confirmed.
+    Alert.alert(t('helpTitle'), t('helpMessage'), [
+      {
+        text: t('helpReload'),
+        onPress: async () => {
+          await initAuth();
+          showToast(t('helpReloadDone'), 'info');
+        },
+      },
+      {
+        text: t('helpCall'),
+        onPress: () => Linking.openURL('tel:19450'),
+      },
+      {
+        text: t('helpReset'),
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            t('helpResetConfirmTitle'),
+            t('helpResetConfirmMsg'),
+            [
+              { text: t('cancel'), style: 'cancel' },
+              {
+                text: t('helpResetYes'),
+                style: 'destructive',
+                onPress: async () => {
+                  await resetAuthData();
+                  showToast(t('helpResetDone'), 'info');
+                },
+              },
+            ]
+          );
+        },
+      },
+      { text: t('cancel'), style: 'cancel' },
+    ]);
   };
 
   const selectedBranch = branches.find((b) => b.id === selectedBranchId);
@@ -156,15 +219,11 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         </View>
 
         <TouchableOpacity
-          onPress={() => {
-            RTCHaptics.light();
-            resetAuthData();
-            showToast('تمت إعادة تهيئة البيانات المحلية', 'info');
-          }}
+          onPress={handleHelpPress}
           style={[styles.helpBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
         >
           <LifeBuoy color={colors.mut} size={15} />
-          <Text style={[styles.helpText, { color: colors.mut }]}>مشكلة في الدخول؟</Text>
+          <Text style={[styles.helpText, { color: colors.mut }]}>{t('helpBtn')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -181,7 +240,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
             <View style={styles.badgeRow}>
               <View style={[styles.freePill, { backgroundColor: colors.teal + '18', borderColor: colors.teal + '40' }]}>
                 <Gift color={colors.teal} size={16} />
-                <Text style={[styles.freeText, { color: colors.teal }]}>منظومة التعلّم المجاني — جمعية رسالة</Text>
+                <Text style={[styles.freeText, { color: colors.teal }]}>{t('freePill')}</Text>
               </View>
             </View>
 
@@ -189,36 +248,39 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
             <View style={styles.headlineWrap}>
               <View style={styles.eyebrowRow}>
                 <Sparkles color={colors.gold} size={18} />
-                <Text style={[styles.eyebrow, { color: colors.gold }]}>رحلتك من التعلّم إلى صناعة الأثر</Text>
+                <Text style={[styles.eyebrow, { color: colors.gold }]}>{t('eyebrow')}</Text>
               </View>
-              <Text style={[styles.title, { color: colors.txt }]}>مرحباً بك في مسار RTC</Text>
+              <Text style={[styles.title, { color: colors.txt }]}>{t('welcomeTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.mut }]}>
-                كورسات تدريبية معتمدة يقودها نخبة من المتطوعين، حضور بالباركود، نقاط تحفيزية، وشهادات موثقة رسمياً.
+                {t('welcomeSubtitle')}
               </Text>
             </View>
 
             {/* Trust Metrics Bar */}
             <View style={[styles.trustRow, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.primary }]}>+٢٤ عاماً</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>عطاء مستمر</Text>
+                <Text style={[styles.trustNum, { color: colors.primary }]}>{t('trustYears')}</Text>
+                <Text style={[styles.trustLabel, { color: colors.mut }]}>{t('trustYearsLabel')}</Text>
               </View>
               <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.teal }]}>١٧ فرعاً</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>بالمحافظات</Text>
+                {/* Live branch count from the database (fixes U-6) */}
+                <Text style={[styles.trustNum, { color: colors.teal }]}>
+                  {branches.length > 0 ? t('branchesCount', { n: branches.length }) : t('branchesDefault')}
+                </Text>
+                <Text style={[styles.trustLabel, { color: colors.mut }]}>{t('trustBranchesLabel')}</Text>
               </View>
               <View style={[styles.trustDivider, { backgroundColor: colors.line }]} />
               <View style={styles.trustItem}>
-                <Text style={[styles.trustNum, { color: colors.gold }]}>١٠٠٪ مجاناً</Text>
-                <Text style={[styles.trustLabel, { color: colors.mut }]}>لوجه الله</Text>
+                <Text style={[styles.trustNum, { color: colors.gold }]}>{t('trustFree')}</Text>
+                <Text style={[styles.trustLabel, { color: colors.mut }]}>{t('trustFreeLabel')}</Text>
               </View>
             </View>
 
             {/* Google Sign-In Card */}
             <CustomCard style={styles.googleGate} innerStyle={{ padding: 22, gap: 16 }}>
               <CustomButton
-                title="تسجيل الدخول باستخدام Google"
+                title={t('googleCta')}
                 onPress={handleGoogleSignIn}
                 variant="primary"
                 size="big"
@@ -230,7 +292,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
               <View style={styles.privacyNote}>
                 <Lock color={colors.mut} size={15} />
                 <Text style={[styles.privacyText, { color: colors.mut }]}>
-                  مصادقة آمنة ومشفّرة عبر Google — لا نخزّن كلمة مرورك أبداً
+                  {t('privacyNote')}
                 </Text>
               </View>
             </CustomCard>
@@ -247,7 +309,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
                   style={[styles.verifyCertBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
                 >
                   <ShieldCheck color={colors.primary} size={18} />
-                  <Text style={[styles.verifyCertText, { color: colors.txt }]}>التحقق من صحة شهادة صادرة</Text>
+                  <Text style={[styles.verifyCertText, { color: colors.txt }]}>{t('verifyCertBtn')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -255,15 +317,15 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
             {/* Footer Links */}
             <View style={styles.linksRow}>
               <TouchableOpacity onPress={() => Linking.openURL(RTC_CONFIG.officialUrl)}>
-                <Text style={[styles.footerLink, { color: colors.primary }]}>موقع RTC الرسمي</Text>
+                <Text style={[styles.footerLink, { color: colors.primary }]}>{t('officialSite')}</Text>
               </TouchableOpacity>
               <Text style={{ color: colors.mut }}>•</Text>
               <TouchableOpacity onPress={() => Linking.openURL(RTC_CONFIG.officialUrl + 'privacy.html')}>
-                <Text style={[styles.footerLink, { color: colors.mut }]}>الخصوصية</Text>
+                <Text style={[styles.footerLink, { color: colors.mut }]}>{t('privacyLink')}</Text>
               </TouchableOpacity>
               <Text style={{ color: colors.mut }}>•</Text>
               <TouchableOpacity onPress={() => Linking.openURL(RTC_CONFIG.officialUrl + 'terms.html')}>
-                <Text style={[styles.footerLink, { color: colors.mut }]}>الشروط</Text>
+                <Text style={[styles.footerLink, { color: colors.mut }]}>{t('termsLink')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -271,27 +333,27 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
           /* Step 2: Complete Profile */
           <View style={styles.step2Wrap}>
             <View style={styles.step2Header}>
-              <Text style={[styles.step2Title, { color: colors.txt }]}>أكمل بياناتك للتواصل</Text>
+              <Text style={[styles.step2Title, { color: colors.txt }]}>{t('completeProfile')}</Text>
               <Text style={[styles.step2Subtitle, { color: colors.mut }]}>
-                أدخل رقم الهاتف والفرع لتأكيد حضورك وإصدار الشهادة باسمك الصحيح
+                {t('completeProfileSubtitle')}
               </Text>
             </View>
 
             <CustomCard style={styles.formCard}>
               <TextInputField
-                label="الاسم الثلاثي / الرباعي"
+                label={t('fullName')}
                 value={fullName}
                 onChangeText={(v) => {
                   setFullName(v);
                   if (nameError) setNameError(null);
                 }}
-                placeholder="اسمك الكامل كما يظهر بالشهادة"
+                placeholder={t('fullNamePlaceholder')}
                 error={nameError}
                 required
               />
 
               <TextInputField
-                label="البريد الإلكتروني"
+                label={t('email')}
                 value={session?.user?.email || ''}
                 onChangeText={() => {}}
                 editable={false}
@@ -299,13 +361,13 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
               />
 
               <TextInputField
-                label="رقم الموبايل"
+                label={t('phone')}
                 value={phone}
                 onChangeText={(v) => {
                   setPhone(v);
                   if (phoneError) setPhoneError(null);
                 }}
-                placeholder="01XXXXXXXXX"
+                placeholder={t('phonePlaceholder')}
                 keyboardType="phone-pad"
                 maxLength={11}
                 error={phoneError}
@@ -314,7 +376,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
 
               <View style={{ marginBottom: 14 }}>
                 <Text style={[styles.branchLabel, { color: colors.txt }]}>
-                  الفرع الأقرب لك <Text style={{ color: colors.red }}>*</Text>
+                  {t('branch')} <Text style={{ color: colors.red }}>*</Text>
                 </Text>
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -337,7 +399,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
                         { color: selectedBranch ? colors.txt : colors.mut },
                       ]}
                     >
-                      {selectedBranch?.name_ar || 'اضغط لاختيار الفرع الأقرب'}
+                      {selectedBranch?.name_ar || t('branchPlaceholder')}
                     </Text>
                   </View>
                   <ChevronDown color={colors.mut} size={18} />
@@ -346,7 +408,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
               </View>
 
               <CustomButton
-                title="حفظ وبدء الاستخدام"
+                title={t('saveStart')}
                 onPress={handleSaveProfile}
                 variant="primary"
                 size="big"
@@ -364,7 +426,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>اختر الفرع الأقرب لك</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('pickBranch')}</Text>
               <TouchableOpacity onPress={() => setBranchModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>

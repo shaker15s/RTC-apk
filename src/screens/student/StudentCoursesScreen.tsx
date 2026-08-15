@@ -10,9 +10,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { Repository, Enrollment } from '../../data/repositories';
+import { useT } from '../../core/i18n';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SelectChips } from '../../components/common/SelectChips';
@@ -20,7 +22,7 @@ import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
-import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3 } from 'lucide-react-native';
+import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay, CalendarCheck } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export interface StudentCoursesScreenProps {
@@ -28,7 +30,8 @@ export interface StudentCoursesScreenProps {
 }
 
 export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNavigate }) => {
-  const { colors } = useAppStore();
+  const { colors, showToast } = useAppStore();
+  const { t } = useT();
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [filter, setFilter] = useState<'all' | 'enrolled' | 'waitlist' | 'completed'>('all');
@@ -40,6 +43,7 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
       const data = await Repository.fetchMyEnrollments();
       setEnrollments(data);
     } catch (e) {
+      showToast(t('coursesLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -61,15 +65,31 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
   });
 
   const filterChips = [
-    { id: 'all', label: 'الكل', count: enrollments.length },
-    { id: 'enrolled', label: 'الجارية', count: enrollments.filter((e) => e.status === 'enrolled').length },
-    { id: 'waitlist', label: 'قائمة الانتظار', count: enrollments.filter((e) => e.status === 'waitlist').length },
-    { id: 'completed', label: 'المكتملة', count: enrollments.filter((e) => e.status === 'completed').length },
+    { id: 'all', label: t('filterAll'), count: enrollments.length },
+    { id: 'enrolled', label: t('filterOngoing'), count: enrollments.filter((e) => e.status === 'enrolled').length },
+    { id: 'waitlist', label: t('filterWaitlist'), count: enrollments.filter((e) => e.status === 'waitlist').length },
+    { id: 'completed', label: t('filterCompleted'), count: enrollments.filter((e) => e.status === 'completed').length },
   ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="دوراتي التدريبية" subtitle="متابعة المقررات والحضور" />
+      <GlassHeader
+        title={t('myCoursesTitle')}
+        subtitle={t('myCoursesSubtitle')}
+        rightAction={
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              RTCHaptics.light();
+              onNavigate('s-attendance');
+            }}
+            style={[styles.attendanceBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
+          >
+            <CalendarCheck color={colors.primary} size={15} />
+            <Text style={[styles.attendanceBtnText, { color: colors.primary }]}>{t('attendanceLog')}</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.filterWrap}>
         <SelectChips items={filterChips} selectedId={filter} onSelect={(id) => setFilter(id as any)} />
@@ -110,7 +130,7 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
                     <View style={styles.titleWrap}>
                       <View style={[styles.categoryPill, { backgroundColor: colors.primarySoft }]}>
                         <Text style={[styles.categoryText, { color: colors.primary }]}>
-                          {course?.category || 'تدريب عام'}
+                          {course?.category || t('trainingGeneral')}
                         </Text>
                       </View>
                       <Text style={[styles.courseTitle, { color: colors.txt }]}>
@@ -121,16 +141,16 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
                     {item.status === 'enrolled' ? (
                       <View style={[styles.statusBadge, { backgroundColor: colors.teal + '18' }]}>
                         <CheckCircle2 color={colors.teal} size={13} />
-                        <Text style={[styles.statusText, { color: colors.teal }]}>نشط</Text>
+                        <Text style={[styles.statusText, { color: colors.teal }]}>{t('statusActive')}</Text>
                       </View>
                     ) : item.status === 'waitlist' ? (
                       <View style={[styles.statusBadge, { backgroundColor: colors.amber + '18' }]}>
                         <Clock3 color={colors.amber} size={13} />
-                        <Text style={[styles.statusText, { color: colors.amber }]}>انتظار</Text>
+                        <Text style={[styles.statusText, { color: colors.amber }]}>{t('statusWaiting')}</Text>
                       </View>
                     ) : (
                       <View style={[styles.statusBadge, { backgroundColor: colors.mut + '18' }]}>
-                        <Text style={[styles.statusText, { color: colors.mut }]}>مكتمل</Text>
+                        <Text style={[styles.statusText, { color: colors.mut }]}>{t('statusDone')}</Text>
                       </View>
                     )}
                   </View>
@@ -139,7 +159,7 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
                   <View style={styles.progressSection}>
                     <View style={styles.progressHeader}>
                       <Text style={[styles.progressLabel, { color: colors.mut }]}>
-                        المحاضرات: {sessionsDone} من {totalSessions}
+                        {t('lecturesProgress', { done: sessionsDone, total: totalSessions })}
                       </Text>
                       <Text style={[styles.progressPercent, { color: colors.primary }]}>{progress}%</Text>
                     </View>
@@ -166,18 +186,35 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
                       </View>
                     ) : null}
                   </View>
+
+                  {/* Online batch join link (fixes F-11) */}
+                  {batch?.meeting_url ? (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        RTCHaptics.light();
+                        Linking.openURL(batch.meeting_url as string);
+                      }}
+                      style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft }]}
+                    >
+                      <MonitorPlay color={colors.primary} size={15} />
+                      <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
+                        {t('joinOnlineCta')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </CustomCard>
               </TouchableOpacity>
             );
           })
         ) : (
           <EmptyStateView
-            title="لا توجد دورات مسجلة في هذا التبويب"
-            description="يمكنك استكشاف الدورات التدريبية المتاحة والانضمام للمجموعات الجديدة مجاناً."
+            title={t('emptyTabTitle')}
+            description={t('emptyTabDesc')}
             icon={<BookOpen color={colors.primary} size={32} />}
             action={
               <CustomButton
-                title="استكشاف الدورات"
+                title={t('exploreCoursesCta')}
                 onPress={() => onNavigate('s-explore')}
                 variant="primary"
                 size="mid"
@@ -197,6 +234,19 @@ const styles = StyleSheet.create({
   filterWrap: {
     paddingHorizontal: 16,
     paddingVertical: 4,
+  },
+  attendanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+  },
+  attendanceBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -280,5 +330,17 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 11.5,
+  },
+  joinOnlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 9,
+    borderRadius: Radii.md,
+  },
+  joinOnlineText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

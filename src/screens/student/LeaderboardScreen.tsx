@@ -18,10 +18,12 @@ import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { Trophy, Medal, Award, User, Flame } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark } = useAppStore();
+  const { t } = useT();
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="لوحة الصدارة" subtitle="أوائل المتدربين" showBack onBack={onBack} />
+      <GlassHeader title={t('leaderboardTitle')} subtitle={t('lbTopStudents')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -86,7 +88,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     <Text style={[styles.podiumName, { color: colors.txt }]} numberOfLines={1}>
                       {top3[1].full_name}
                     </Text>
-                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[1].points} ن</Text>
+                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[1].points} {t('ptShort')}</Text>
                   </View>
                 ) : null}
 
@@ -110,7 +112,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                       {top3[0].full_name}
                     </Text>
                     <Text style={[styles.podiumPoints, { color: colors.gold, fontWeight: '700' }]}>
-                      {top3[0].points} نقطة
+                      {top3[0].points} {t('pointsStat')}
                     </Text>
                   </View>
                 ) : null}
@@ -131,7 +133,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     <Text style={[styles.podiumName, { color: colors.txt }]} numberOfLines={1}>
                       {top3[2].full_name}
                     </Text>
-                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[2].points} ن</Text>
+                    <Text style={[styles.podiumPoints, { color: colors.mut }]}>{top3[2].points} {t('ptShort')}</Text>
                   </View>
                 ) : null}
               </View>
@@ -162,7 +164,7 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     </View>
 
                     <View style={[styles.pointsPill, { backgroundColor: colors.primarySoft }]}>
-                      <Text style={[styles.pointsPillText, { color: colors.primary }]}>{entry.points} نقطة</Text>
+                      <Text style={[styles.pointsPillText, { color: colors.primary }]}>{entry.points} {t('pointsStat')}</Text>
                     </View>
                   </CustomCard>
                 );
@@ -171,8 +173,8 @@ export const LeaderboardScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
           </>
         ) : (
           <EmptyStateView
-            title="لا توجد بيانات متوفرة حالياً"
-            description="احرص على حضور المحاضرات والتفاعل لتصدر قائمة الأوائل."
+            title={t('lbEmpty')}
+            description={t('lbEmptyDesc')}
             icon={<Trophy color={colors.gold} size={36} />}
           />
         )}

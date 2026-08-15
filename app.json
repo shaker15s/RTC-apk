@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "مسار RTC",
-    "slug": "shaker",
-    "version": "100.0.0",
+    "slug": "masar-rtc",
+    "version": "100.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "org.resala.rtc.masar",
@@ -37,15 +37,11 @@
         "backgroundColor": "#00288E"
       },
       "package": "org.resala.rtc.masar",
-      "versionCode": 10000,
+      "versionCode": 10040,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.VIBRATE",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.VIBRATE"
       ]
     },
     "plugins": [
@@ -76,7 +72,6 @@
         "projectId": "f48915ef-3b07-4855-9cf8-c2796e5c9c9e"
       }
     },
-    "owner": "shaker18ss-team",
     "runtimeVersion": {
       "policy": "appVersion"
     },

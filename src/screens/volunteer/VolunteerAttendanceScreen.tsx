@@ -2,7 +2,7 @@
  * Volunteer Attendance Marking Screen (v-attendance)
  * Bulk attendance recording with Present, Late, Absent, Excused statuses.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   Save,
   Users,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
@@ -31,27 +32,60 @@ export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
 export interface VolunteerAttendanceScreenProps {
   sessionId: string;
   batchId: string;
-  students: BatchRosterStudent[];
+  /** Roster may be passed by the caller; if omitted the screen loads it
+   *  itself from batch_roster (keeps navigation params serializable). */
+  students?: BatchRosterStudent[];
   onBack: () => void;
 }
 
 export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps> = ({
   sessionId,
   batchId,
-  students,
+  students: initialStudents,
   onBack,
 }) => {
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
+
+  const [students, setStudents] = useState<BatchRosterStudent[]>(initialStudents || []);
+  const [loadingRoster, setLoadingRoster] = useState(!initialStudents?.length);
 
   const [attendanceState, setAttendanceState] = useState<Record<string, AttendanceStatus>>(() => {
     const init: Record<string, AttendanceStatus> = {};
-    students.forEach((s) => {
+    (initialStudents || []).forEach((s) => {
       init[s.student_id] = 'present';
     });
     return init;
   });
 
   const [saving, setSaving] = useState(false);
+
+  // Self-load the roster when it wasn't passed through navigation
+  // (fixes non-serializable params with React Navigation).
+  useEffect(() => {
+    if (initialStudents?.length) return;
+    let cancelled = false;
+    RPC.batchRoster(batchId)
+      .then((roster) => {
+        if (cancelled) return;
+        setStudents(roster);
+        const init: Record<string, AttendanceStatus> = {};
+        roster.forEach((s) => {
+          init[s.student_id] = 'present';
+        });
+        setAttendanceState(init);
+      })
+      .catch((e: any) => {
+        if (!cancelled) showToast(t('rosterLoadError'), 'err');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRoster(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchId]);
 
   const setStudentStatus = (studentId: string, status: AttendanceStatus) => {
     RTCHaptics.selection();
@@ -68,10 +102,10 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
 
       await RPC.recordSessionAttendance(sessionId, records);
       RTCHaptics.success();
-      showToast('تم تسجيل كشف الحضور وتحديث درجات الطلاب بنجاح', 'ok');
+      showToast(t('attendanceSavedToast'), 'ok');
       onBack();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر حفظ كشف الحضور', 'err');
+      showToast(e?.message || t('attendanceSaveError'), 'err');
     } finally {
       setSaving(false);
     }
@@ -88,29 +122,37 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="تسجيل كشف الحضور" subtitle="تحديد حالة كل طالب" showBack onBack={onBack} />
+      <GlassHeader title={t('attendanceMarkTitle')} subtitle={t('attendanceMarkSubtitle')} showBack onBack={onBack} />
 
       {/* Quick Mark All Bar */}
       <View style={styles.quickBar}>
-        <Text style={[styles.quickBarLabel, { color: colors.mut }]}>تحديد سريع للكل:</Text>
+        <Text style={[styles.quickBarLabel, { color: colors.mut }]}>{t('quickMarkLabel')}</Text>
         <View style={styles.quickButtons}>
           <TouchableOpacity
             onPress={() => markAll('present')}
             style={[styles.quickBtn, { backgroundColor: colors.teal + '18' }]}
           >
-            <Text style={[styles.quickBtnText, { color: colors.teal }]}>الكل حاضر</Text>
+            <Text style={[styles.quickBtnText, { color: colors.teal }]}>{t('markAllPresent')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => markAll('absent')}
             style={[styles.quickBtn, { backgroundColor: colors.red + '18' }]}
           >
-            <Text style={[styles.quickBtnText, { color: colors.red }]}>الكل غائب</Text>
+            <Text style={[styles.quickBtnText, { color: colors.red }]}>{t('markAllAbsent')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {students.map((student) => {
+        {loadingRoster ? (
+          <View style={styles.loadingWrap}>
+            <Text style={[styles.loadingText, { color: colors.mut }]}>{t('loadingRoster')}</Text>
+          </View>
+        ) : students.length === 0 ? (
+          <View style={styles.loadingWrap}>
+            <Text style={[styles.loadingText, { color: colors.mut }]}>{t('emptyRoster')}</Text>
+          </View>
+        ) : students.map((student) => {
           const currentStatus = attendanceState[student.student_id] || 'present';
 
           return (
@@ -118,7 +160,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
               <View style={styles.studentInfo}>
                 <Text style={[styles.studentName, { color: colors.txt }]}>{student.full_name}</Text>
                 <Text style={[styles.studentAttSummary, { color: colors.mut }]}>
-                  نسبة الحضور السابقة: {student.attendance_pct || 0}%
+                  {t('prevAttendancePct', { p: student.attendance_pct || 0 })}
                 </Text>
               </View>
 
@@ -141,7 +183,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
                       { color: currentStatus === 'present' ? '#FFFFFF' : colors.mut },
                     ]}
                   >
-                    حاضر
+                    {t('present')}
                   </Text>
                 </TouchableOpacity>
 
@@ -162,7 +204,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
                       { color: currentStatus === 'late' ? '#FFFFFF' : colors.mut },
                     ]}
                   >
-                    متأخر
+                    {t('late')}
                   </Text>
                 </TouchableOpacity>
 
@@ -183,7 +225,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
                       { color: currentStatus === 'excused' ? '#FFFFFF' : colors.mut },
                     ]}
                   >
-                    معذور
+                    {t('excused')}
                   </Text>
                 </TouchableOpacity>
 
@@ -204,7 +246,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
                       { color: currentStatus === 'absent' ? '#FFFFFF' : colors.mut },
                     ]}
                   >
-                    غائب
+                    {t('absent')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -212,11 +254,10 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
           );
         })}
       </ScrollView>
-
       {/* Fixed Save Button at bottom */}
       <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.line }]}>
         <CustomButton
-          title="حفظ كشف الحضور النهائي"
+          title={t('saveAttendanceCta')}
           onPress={handleSaveAttendance}
           variant="primary"
           size="big"
@@ -262,6 +303,15 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 100,
     gap: 10,
+  },
+  loadingWrap: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   studentRowCard: {
     padding: 14,

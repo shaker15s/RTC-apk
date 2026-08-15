@@ -1,8 +1,10 @@
 /**
- * Student Certificates Screen (s-certs)
- * Displays earned accredited certificates with serial numbers, QR preview, and system sharing.
+ * Student Certificates Screen (s-certs) — v100.4.0
+ * Displays earned accredited certificates with serial numbers, QR
+ * preview, image sharing (PNG card), and PDF export (new).
+ * Fully bilingual via the reactive i18n engine.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,31 +24,44 @@ import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTCSharing } from '../../core/native/sharing';
 import { RTC_CONFIG } from '../../core/config';
+import { useT, dateLocale } from '../../core/i18n';
+import { buildCertificateHtml } from '../../core/pdf/certificatePdf';
+import QRCode from 'react-native-qrcode-svg';
+import ViewShot from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
+import * as FileSystem from 'expo-file-system/legacy';
+import { CertificateCard } from '../../components/cert/CertificateCard';
 import {
   Award,
-  Calendar,
   Share2,
   QrCode,
   ShieldCheck,
   CheckCircle2,
   GraduationCap,
   X,
+  FileText,
 } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
 
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCert, setSelectedCert] = useState<CertItem | null>(null);
+  const [sharingImage, setSharingImage] = useState(false);
+  const [sharingPdf, setSharingPdf] = useState(false);
+  const certCardRef = useRef<ViewShot>(null);
 
   const loadData = async () => {
     try {
       const data = await Repository.fetchCerts(true);
       setCerts(data);
     } catch (e) {
+      showToast(t('errorGeneric'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,24 +81,101 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
     RTCHaptics.light();
     const url = `${RTC_CONFIG.officialUrl}verify.html?serial=${cert.serial}`;
     await RTCSharing.shareText(
-      `شهادة مسار RTC المعتمدة — ${cert.courses?.title || 'دورة تدريبية'}`,
-      `أتممت دورة ${cert.courses?.title || ''} بنجاح لدى مراكز رسالة للتدريب!\nالرقم التسلسلي للشهادة: ${cert.serial}\nرابط التحقق:`,
+      t('shareCertTitle', { course: cert.courses?.title || '' }),
+      t('shareCertMessage', { course: cert.courses?.title || '', serial: cert.serial }),
       url
     );
+  };
+
+  // Capture the certificate card and share it as a real PNG (fixes F-13)
+  const handleShareImage = async () => {
+    if (!selectedCert) return;
+    RTCHaptics.light();
+    setSharingImage(true);
+    try {
+      const uri = await certCardRef.current?.capture?.();
+      if (!uri) throw new Error('capture-failed');
+
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        showToast(t('shareUnavailable'), 'warn');
+        return;
+      }
+
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        dialogTitle: t('shareImageCta'),
+      });
+      RTCHaptics.success();
+    } catch (e: any) {
+      showToast(e?.message || t('captureError'), 'err');
+    } finally {
+      setSharingImage(false);
+    }
+  };
+
+  // Build an official PDF certificate and share it (v100.4.0)
+  const handleSharePdf = async () => {
+    if (!selectedCert) return;
+    RTCHaptics.light();
+    setSharingPdf(true);
+    showToast(t('pdfGenerating'), 'info');
+    try {
+      // Reuse the captured card image (contains the QR) inside the PDF.
+      const cardUri = await certCardRef.current?.capture?.();
+      let imageBase64: string | undefined;
+      if (cardUri) {
+        try {
+          imageBase64 = await FileSystem.readAsStringAsync(cardUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        } catch (e) {
+          imageBase64 = undefined; // PDF still works without the image
+        }
+      }
+
+      const html = buildCertificateHtml({
+        imageBase64,
+        studentName: selectedCert.profiles?.full_name || '',
+        courseTitle: selectedCert.courses?.title || t('certCourseFallback'),
+        serial: selectedCert.serial,
+        issuedDate: selectedCert.issued_at,
+        verifyUrl: `${RTC_CONFIG.officialUrl}verify.html?serial=${selectedCert.serial}`,
+      });
+
+      const { uri: pdfUri } = await Print.printToFileAsync({ html });
+
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        showToast(t('shareUnavailable'), 'warn');
+        return;
+      }
+
+      await Sharing.shareAsync(pdfUri, {
+        mimeType: 'application/pdf',
+        dialogTitle: t('pdfShareTitle'),
+        UTI: 'com.adobe.pdf',
+      });
+      RTCHaptics.success();
+    } catch (e: any) {
+      showToast(e?.message || t('pdfError'), 'err');
+    } finally {
+      setSharingPdf(false);
+    }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="شهاداتي المعتمدة"
-        subtitle="توثيق الإنجازات"
+        title={t('certsTitle')}
+        subtitle={t('certsSubtitle')}
         rightAction={
           <TouchableOpacity
             onPress={() => onNavigate('verify')}
             style={[styles.verifyHeaderBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
           >
             <ShieldCheck color={colors.primary} size={16} />
-            <Text style={[styles.verifyHeaderText, { color: colors.primary }]}>تحقق</Text>
+            <Text style={[styles.verifyHeaderText, { color: colors.primary }]}>{t('verifyHeaderCta')}</Text>
           </TouchableOpacity>
         }
       />
@@ -101,7 +193,7 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
         ) : certs.length ? (
           certs.map((cert) => {
             const dateStr = cert.issued_at
-              ? new Date(cert.issued_at).toLocaleDateString('ar-EG', {
+              ? new Date(cert.issued_at).toLocaleDateString(dateLocale(), {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -116,19 +208,19 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
                   </View>
                   <View style={styles.certTitleWrap}>
                     <Text style={[styles.certCourseTitle, { color: colors.txt }]}>
-                      {cert.courses?.title || 'شهادة إتمام دورة'}
+                      {cert.courses?.title || t('certCardTitle')}
                     </Text>
-                    <Text style={[styles.certDate, { color: colors.mut }]}>تاريخ الإصدار: {dateStr}</Text>
+                    <Text style={[styles.certDate, { color: colors.mut }]}>{t('issuedAt', { d: dateStr })}</Text>
                   </View>
                   <View style={[styles.validBadge, { backgroundColor: colors.teal + '18' }]}>
                     <CheckCircle2 color={colors.teal} size={14} />
-                    <Text style={[styles.validBadgeText, { color: colors.teal }]}>معتمدة</Text>
+                    <Text style={[styles.validBadgeText, { color: colors.teal }]}>{t('certifiedBadge')}</Text>
                   </View>
                 </View>
 
                 {/* Serial Box */}
                 <View style={[styles.serialBox, { backgroundColor: colors.card2, borderColor: colors.line }]}>
-                  <Text style={[styles.serialLabel, { color: colors.mut }]}>الرقم التسلسلي الموثّق</Text>
+                  <Text style={[styles.serialLabel, { color: colors.mut }]}>{t('serialLabel')}</Text>
                   <Text style={[styles.serialCode, { color: colors.txt }]}>
                     {cert.serial}
                   </Text>
@@ -137,7 +229,7 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
                 {/* Action Buttons */}
                 <View style={styles.certActions}>
                   <CustomButton
-                    title="مشاركة الشهادة"
+                    title={t('shareCertCta')}
                     onPress={() => handleShareCert(cert)}
                     variant="soft"
                     size="mid"
@@ -146,7 +238,7 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
                   />
 
                   <CustomButton
-                    title="رمز التحقق (QR)"
+                    title={t('qrVerifyCta')}
                     onPress={() => {
                       RTCHaptics.light();
                       setSelectedCert(cert);
@@ -162,12 +254,12 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
           })
         ) : (
           <EmptyStateView
-            title="لا توجد شهادات صادرة حتى الآن"
-            description="احرص على حضور ٧٥٪ على الأقل من محاضرات الدورة لتأهيلك لاستلام الشهادة الموثقة فور انتهاء الدفعة."
+            title={t('certsEmptyTitle')}
+            description={t('certsEmptyDesc')}
             icon={<Award color={colors.gold} size={36} />}
             action={
               <CustomButton
-                title="استكشاف الدورات"
+                title={t('exploreCoursesCta')}
                 onPress={() => onNavigate('s-explore')}
                 variant="primary"
                 size="mid"
@@ -177,7 +269,7 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
         )}
       </ScrollView>
 
-      {/* QR Modal */}
+      {/* Certificate Modal: card + QR + share as image / PDF */}
       <Modal visible={!!selectedCert} transparent animationType="fade" onRequestClose={() => setSelectedCert(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.qrCard, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
@@ -187,36 +279,81 @@ export const StudentCertsScreen: React.FC<{ onNavigate: (screenId: string) => vo
                   <X color={colors.mut} size={22} />
                 </TouchableOpacity>
 
-                <View style={[styles.qrIconCircle, { backgroundColor: colors.primarySoft }]}>
-                  <ShieldCheck color={colors.primary} size={28} />
-                </View>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.modalScrollContent}
+                >
+                  <View style={[styles.qrIconCircle, { backgroundColor: colors.primarySoft }]}>
+                    <ShieldCheck color={colors.primary} size={28} />
+                  </View>
 
-                <Text style={[styles.qrCourseTitle, { color: colors.txt }]}>
-                  {selectedCert.courses?.title || 'شهادة RTC'}
-                </Text>
+                  <Text style={[styles.qrCourseTitle, { color: colors.txt }]}>
+                    {selectedCert.courses?.title || t('certCourseFallback')}
+                  </Text>
 
-                <View style={styles.qrPlaceholder}>
-                  <QrCode color={colors.txt} size={140} />
-                </View>
+                  {/* Capture-ready certificate card (fixes F-13) */}
+                  <ViewShot
+                    ref={certCardRef}
+                    options={{ format: 'png', quality: 0.95 }}
+                    style={styles.certCardWrap}
+                  >
+                    <CertificateCard
+                      studentName={selectedCert.profiles?.full_name || ''}
+                      courseTitle={selectedCert.courses?.title || t('certCourseFallback')}
+                      serial={selectedCert.serial}
+                      issuedDate={selectedCert.issued_at}
+                    />
+                  </ViewShot>
 
-                <Text style={[styles.qrSerial, { color: colors.mut }]}>
-                  {selectedCert.serial}
-                </Text>
+                  {/* REAL scannable QR pointing to the verification page (fixes P1-4) */}
+                  <View style={styles.qrBox}>
+                    <QRCode
+                      value={`${RTC_CONFIG.officialUrl}verify.html?serial=${selectedCert.serial}`}
+                      size={120}
+                      color="#001A6B"
+                      backgroundColor="#FFFFFF"
+                    />
+                  </View>
 
-                <Text style={[styles.qrNotice, { color: colors.mut }]}>
-                  امسح الرمز أو افتح صفحة التحقق للتأكد من صحة الشهادة من قاعدة بيانات جمعية رسالة.
-                </Text>
+                  <Text style={[styles.qrSerial, { color: colors.mut }]}>
+                    {selectedCert.serial}
+                  </Text>
 
-                <CustomButton
-                  title="مشاركة رابط التحقق"
-                  onPress={() => {
-                    handleShareCert(selectedCert);
-                    setSelectedCert(null);
-                  }}
-                  variant="primary"
-                  size="big"
-                  style={{ width: '100%', marginTop: 8 }}
-                />
+                  <Text style={[styles.qrNotice, { color: colors.mut }]}>
+                    {t('scanCertNotice')}
+                  </Text>
+
+                  <CustomButton
+                    title={t('shareImageCta')}
+                    onPress={handleShareImage}
+                    variant="primary"
+                    size="big"
+                    loading={sharingImage}
+                    icon={<Share2 color="#FFFFFF" size={18} />}
+                    style={{ width: '100%', marginTop: 8 }}
+                  />
+
+                  <CustomButton
+                    title={t('sharePdfCta')}
+                    onPress={handleSharePdf}
+                    variant="teal"
+                    size="mid"
+                    loading={sharingPdf}
+                    icon={<FileText color="#FFFFFF" size={16} />}
+                    style={{ width: '100%', marginTop: 8 }}
+                  />
+
+                  <CustomButton
+                    title={t('shareLinkCta')}
+                    onPress={() => {
+                      handleShareCert(selectedCert);
+                      setSelectedCert(null);
+                    }}
+                    variant="soft"
+                    size="mid"
+                    style={{ width: '100%', marginTop: 8 }}
+                  />
+                </ScrollView>
               </>
             ) : null}
           </View>
@@ -343,8 +480,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  qrPlaceholder: {
-    padding: 16,
+  qrBox: {
+    padding: 12,
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.xl,
     marginVertical: 6,
@@ -353,6 +490,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  modalScrollContent: {
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: 12,
+  },
+  certCardWrap: {
+    marginVertical: 6,
   },
   qrSerial: {
     fontSize: 13,

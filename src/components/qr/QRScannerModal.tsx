@@ -7,6 +7,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAppStore } from '../../state/appStore';
 import { CustomButton } from '../common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
+import { useT } from '../../core/i18n';
 import { X, QrCode, Camera } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
@@ -20,6 +21,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ visible, onScan,
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const { colors } = useAppStore();
+  const { t } = useT();
 
   useEffect(() => {
     if (visible) {
@@ -42,16 +44,16 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ visible, onScan,
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <X color="#FFFFFF" size={24} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>مسح رمز الحضور</Text>
+          <Text style={styles.headerTitle}>{t('scanModalTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {!permission?.granted ? (
           <View style={styles.permissionContainer}>
             <Camera color={colors.primary} size={48} />
-            <Text style={styles.permTitle}>يلزم إذن استخدام الكاميرا</Text>
-            <Text style={styles.permDesc}>نحتاج إذن الكاميرا لمسح رمز QR الخاص بحضور المحاضرة مباشرة من هاتف المدرب.</Text>
-            <CustomButton title="منح الإذن" onPress={requestPermission} variant="primary" size="big" />
+            <Text style={styles.permTitle}>{t('camPermTitle')}</Text>
+            <Text style={styles.permDesc}>{t('camPermDesc')}</Text>
+            <CustomButton title={t('grantPermission')} onPress={requestPermission} variant="primary" size="big" />
           </View>
         ) : (
           <View style={styles.cameraWrap}>
@@ -76,7 +78,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ visible, onScan,
                 <View style={styles.unfocusedContainer} />
               </View>
               <View style={styles.unfocusedContainer}>
-                <Text style={styles.guideText}>وجّه الكاميرا نحو رمز QR للمحاضرة</Text>
+                <Text style={styles.guideText}>{t('scanGuide')}</Text>
               </View>
             </View>
           </View>

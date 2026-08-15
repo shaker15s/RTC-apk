@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Repository, Enrollment } from '../../data/repositories';
+import { RPC } from '../../data/rpc';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
@@ -20,6 +21,7 @@ import { AnimatedNumber } from '../../components/common/AnimatedNumber';
 import { EmptyState } from '../../components/common/EmptyState';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
+import { useT, dateLocale } from '../../core/i18n';
 import { useRealtimeNotifications } from '../../data/realtime/useRealtimeNotifications';
 import Animated, {
   FadeInDown,
@@ -37,6 +39,7 @@ import {
   Clock,
   MapPin,
   ChevronLeft,
+  MonitorPlay,
 } from 'lucide-react-native';
 import { Radii, Shadows } from '../../core/theme/tokens';
 
@@ -45,11 +48,13 @@ export interface StudentHomeScreenProps {
 }
 
 export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate }) => {
-  const { colors, isDark } = useAppStore();
+  const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { profile, refreshProfile } = useAuthStore();
   const { notifications } = useRealtimeNotifications();
 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [nextSession, setNextSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -58,6 +63,17 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
       const list = await Repository.fetchMyEnrollments();
       setEnrollments(list);
     } catch (e) {
+      showToast(t('homeLoadError'), 'warn');
+    }
+
+    // Real upcoming session from the backend (fixes F-2). If the RPC is
+    // not deployed yet or fails, we gracefully fall back to showing the
+    // latest enrollment in the "next lecture" card.
+    try {
+      const upcoming = await RPC.getMyNextSession();
+      setNextSession(upcoming);
+    } catch (e) {
+      setNextSession(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -84,11 +100,32 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
   const activeEnrollments = enrollments.filter((e) => e.status === 'enrolled');
   const nextEnrollment = activeEnrollments[0];
 
+  // Prefer the backend's real "next session" (F-2), fall back to the
+  // latest enrollment when the RPC is unavailable.
+  const upcomingTitle =
+    nextSession?.course_title || nextSession?.title ||
+    nextEnrollment?.batches?.courses?.title || nextEnrollment?.batches?.name || '';
+  const upcomingSchedule = nextSession?.session_date
+    ? new Date(nextSession.session_date).toLocaleDateString(dateLocale(), {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : nextEnrollment?.batches?.schedule || '';
+  const upcomingLocation = nextSession?.location
+    ? `${nextSession.location}${nextSession.room ? ` (${nextSession.room})` : ''}`
+    : nextEnrollment?.batches?.location
+    ? `${nextEnrollment.batches.location}${nextEnrollment.batches.room ? ` (${nextEnrollment.batches.room})` : ''}`
+    : '';
+  const upcomingMeetingUrl = nextSession?.meeting_url || nextEnrollment?.batches?.meeting_url || '';
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="الرئيسية"
-        subtitle="مسار RTC"
+        title={t('home')}
+        subtitle={t('appName')}
         showNotif
         onNotifPress={() => onNavigate('s-notifications')}
         showAvatar
@@ -105,15 +142,15 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
           <LinearGradient colors={['#00288E', '#1E40AF', '#00554E']} style={[styles.gradHero, Shadows.soft]}>
             <View style={styles.heroTop}>
               <View style={styles.heroGreeting}>
-                <Text style={styles.greetingSub}>مرحباً بك يا</Text>
+                <Text style={styles.greetingSub}>{t('greetingSub')}</Text>
                 <Text style={styles.greetingName} numberOfLines={1}>
-                  {profile?.full_name || 'طالب RTC'} 👋
+                  {profile?.full_name || t('studentFallback')} 👋
                 </Text>
-                <Text style={styles.greetingBranch}>{profile?.branch_name || 'مركز رسالة التدريبي'}</Text>
+                <Text style={styles.greetingBranch}>{profile?.branch_name || t('branchFallback')}</Text>
               </View>
 
               <View style={styles.levelBadge}>
-                <Text style={styles.levelBadgeSub}>المستوى</Text>
+                <Text style={styles.levelBadgeSub}>{t('levelLabel')}</Text>
                 <Text style={styles.levelBadgeNum}>{level} ⭐</Text>
               </View>
             </View>
@@ -123,25 +160,26 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
               <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
             </View>
             <Text style={styles.progressText}>
-              {points} / {nextLevelPoints} نقطة للمستوى التالي
+              {t('pointsToNext', { p: points, n: nextLevelPoints })}
             </Text>
 
             {/* Stat Pills */}
+            {/* The fake "attendance %" (streak*20) was removed — it showed
+                values >100% and lied to students (F-1). Real stats only. */}
             <View style={styles.statPillsRow}>
               <View style={styles.statPill}>
                 <AnimatedNumber
-                  value={enrollments.length ? Math.round((profile?.streak || 0) * 20) : 0}
-                  suffix="%"
+                  value={activeEnrollments.length}
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>الحضور</Text>
+                <Text style={styles.statPillLbl}>{t('activeCoursesStat')}</Text>
               </View>
               <View style={styles.statPill}>
                 <AnimatedNumber
                   value={points}
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>نقطة</Text>
+                <Text style={styles.statPillLbl}>{t('pointsStat')}</Text>
               </View>
               <View style={styles.statPill}>
                 <AnimatedNumber
@@ -149,7 +187,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
                   prefix="🔥 "
                   style={styles.statPillVal}
                 />
-                <Text style={styles.statPillLbl}>سلسلة</Text>
+                <Text style={styles.statPillLbl}>{t('streakStat')}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -164,7 +202,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: colors.primary + '18' }]}>
               <Compass color={colors.primary} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>استكشف</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('explore')}</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -174,7 +212,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: colors.teal + '18' }]}>
               <QrCode color={colors.teal} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>سجّل حضورك</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('checkinHome')}</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -184,7 +222,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: colors.gold + '22' }]}>
               <Bell color={colors.gold} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>التنبيهات</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('notifShort')}</Text>
           </AnimatedPressable>
 
           <AnimatedPressable
@@ -194,7 +232,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             <View style={[styles.quickIcon, { backgroundColor: '#7A30D818' }]}>
               <LifeBuoy color="#7A30D8" size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>المساعدة</Text>
+            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('supportShort')}</Text>
           </AnimatedPressable>
         </Animated.View>
 
@@ -212,8 +250,8 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
                 <Facebook color="#FFFFFF" size={20} />
               </View>
               <View>
-                <Text style={[styles.fbTitle, { color: colors.txt }]}>صفحة فرعك الرسمية</Text>
-                <Text style={[styles.fbSub, { color: colors.mut }]}>تابع أحدث الجداول ومواعيد المقابلات</Text>
+                <Text style={[styles.fbTitle, { color: colors.txt }]}>{t('facebookTitle')}</Text>
+                <Text style={[styles.fbSub, { color: colors.mut }]}>{t('facebookSubtitle')}</Text>
               </View>
             </View>
             <ExternalLink color="#1877F2" size={18} />
@@ -223,54 +261,71 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
         {/* Next Lecture Card */}
         {loading ? (
           <SkeletonLoader height={130} borderRadius={Radii.xl} />
-        ) : nextEnrollment ? (
+        ) : upcomingTitle ? (
           <Animated.View entering={FadeInUp.delay(300).duration(400)}>
             <CustomCard style={styles.nextLectureCard}>
               <View style={styles.nextHeader}>
                 <View style={[styles.tagPill, { backgroundColor: colors.teal + '18' }]}>
                   <Calendar color={colors.teal} size={14} />
-                  <Text style={[styles.tagText, { color: colors.teal }]}>المحاضرة القادمة</Text>
+                  <Text style={[styles.tagText, { color: colors.teal }]}>{t('nextLecture')}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => onNavigate('s-courses')}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                 >
-                  <Text style={[styles.viewAllText, { color: colors.primary }]}>كورساتي</Text>
+                  <Text style={[styles.viewAllText, { color: colors.primary }]}>{t('myCourses')}</Text>
                   <ChevronLeft color={colors.primary} size={16} />
                 </TouchableOpacity>
               </View>
 
               <Text style={[styles.nextCourseTitle, { color: colors.txt }]}>
-                {nextEnrollment.batches?.courses?.title || nextEnrollment.batches?.name}
+                {upcomingTitle}
               </Text>
 
               <View style={styles.nextDetails}>
-                {nextEnrollment.batches?.schedule ? (
+                {upcomingSchedule ? (
                   <View style={styles.nextDetailItem}>
                     <Clock color={colors.mut} size={15} />
                     <Text style={[styles.nextDetailText, { color: colors.mut }]}>
-                      {nextEnrollment.batches.schedule}
+                      {upcomingSchedule}
                     </Text>
                   </View>
                 ) : null}
 
-                {nextEnrollment.batches?.location ? (
+                {upcomingLocation ? (
                   <View style={styles.nextDetailItem}>
                     <MapPin color={colors.mut} size={15} />
                     <Text style={[styles.nextDetailText, { color: colors.mut }]}>
-                      {nextEnrollment.batches.location} {nextEnrollment.batches.room ? `(${nextEnrollment.batches.room})` : ''}
+                      {upcomingLocation}
                     </Text>
                   </View>
                 ) : null}
               </View>
+
+              {/* Online batches: show the real join link (fixes F-11) */}
+              {upcomingMeetingUrl ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    RTCHaptics.light();
+                    Linking.openURL(upcomingMeetingUrl);
+                  }}
+                  style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft }]}
+                >
+                  <MonitorPlay color={colors.primary} size={16} />
+                  <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
+                    {t('joinOnlineCta')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </CustomCard>
           </Animated.View>
         ) : (
           <EmptyState
             icon={<Compass color={colors.primary} size={32} />}
-            title="لست منضماً لأي دورة تدريبية حالياً"
-            subtitle="استكشف الدورات المتاحة في فرعك وسجّل مجاناً لتطوير مهاراتك"
-            actionLabel="استكشاف الكورسات"
+            title={t('noCoursesTitle')}
+            subtitle={t('noCoursesSubtitle')}
+            actionLabel={t('exploreCoursesCta')}
             onAction={() => onNavigate('s-explore')}
           />
         )}
@@ -479,6 +534,19 @@ const styles = StyleSheet.create({
   },
   nextDetailText: {
     fontSize: 12,
+  },
+  joinOnlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: Radii.md,
+    marginTop: 2,
+  },
+  joinOnlineText: {
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   noCoursesCard: {
     alignItems: 'center',

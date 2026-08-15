@@ -32,12 +32,14 @@ import {
   Layers,
   ChevronLeft,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?: any) => void }> = ({
   onNavigate,
 }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
   const { profile, refreshProfile } = useAuthStore();
 
   const [kpis, setKpis] = useState<any>({
@@ -80,8 +82,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
-        title="لوحة الإدارة العامة"
-        subtitle="التحكم وإدارة منظومة RTC"
+        title={t('ahTitle')}
+        subtitle={t('ahSubtitle')}
         showNotif
         onNotifPress={() => onNavigate('s-notifications')}
         showAvatar
@@ -98,34 +100,34 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
           <View style={styles.heroHeader}>
             <View style={styles.adminBadge}>
               <ShieldCheck color="#FFD700" size={16} />
-              <Text style={styles.adminBadgeText}>مشرف عام المنصة</Text>
+              <Text style={styles.adminBadgeText}>{t('ahRole')}</Text>
             </View>
-            <Text style={styles.heroName}>{profile?.full_name || 'مشرف مسار'}</Text>
-            <Text style={styles.heroBranch}>{profile?.branch_name || 'الإدارة المركزية - رسالة'}</Text>
+            <Text style={styles.heroName}>{profile?.full_name || t('ahRoleAlt')}</Text>
+            <Text style={styles.heroBranch}>{profile?.branch_name || t('ahBranch')}</Text>
           </View>
 
           {/* KPI Mini Bar */}
           <View style={styles.kpiMiniRow}>
             <View style={styles.kpiMiniItem}>
               <Text style={styles.kpiMiniVal}>{kpis?.active_students || 0}</Text>
-              <Text style={styles.kpiMiniLbl}>الطلاب</Text>
+              <Text style={styles.kpiMiniLbl}>{t('students')}</Text>
             </View>
             <View style={styles.kpiMiniDivider} />
             <View style={styles.kpiMiniItem}>
               <Text style={styles.kpiMiniVal}>{kpis?.active_batches || 0}</Text>
-              <Text style={styles.kpiMiniLbl}>المجموعات</Text>
+              <Text style={styles.kpiMiniLbl}>{t('groups')}</Text>
             </View>
             <View style={styles.kpiMiniDivider} />
             <View style={styles.kpiMiniItem}>
               <Text style={styles.kpiMiniVal}>{kpis?.issued_certs || 0}</Text>
-              <Text style={styles.kpiMiniLbl}>الشهادات</Text>
+              <Text style={styles.kpiMiniLbl}>{t('certs')}</Text>
             </View>
           </View>
         </LinearGradient>
 
         {/* Management Actions Grid */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>أقسام ولوحات الإدارة</Text>
+          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('ahSections')}</Text>
         </View>
 
         <View style={styles.adminGrid}>
@@ -138,8 +140,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
             <View style={[styles.gridIcon, { backgroundColor: colors.primarySoft }]}>
               <Users color={colors.primary} size={24} />
             </View>
-            <Text style={[styles.gridTitle, { color: colors.txt }]}>المستخدمين</Text>
-            <Text style={[styles.gridSub, { color: colors.mut }]}>ترقية الأدوار والبحث</Text>
+            <Text style={[styles.gridTitle, { color: colors.txt }]}>{t('users')}</Text>
+            <Text style={[styles.gridSub, { color: colors.mut }]}>{t('ahRolesSearch')}</Text>
           </TouchableOpacity>
 
           {/* Courses Management */}
@@ -151,8 +153,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
             <View style={[styles.gridIcon, { backgroundColor: colors.teal + '18' }]}>
               <BookOpen color={colors.teal} size={24} />
             </View>
-            <Text style={[styles.gridTitle, { color: colors.txt }]}>الدورات والمقررات</Text>
-            <Text style={[styles.gridSub, { color: colors.mut }]}>إنشاء وإدارة المحتوى</Text>
+            <Text style={[styles.gridTitle, { color: colors.txt }]}>{t('ahCourses')}</Text>
+            <Text style={[styles.gridSub, { color: colors.mut }]}>{t('ahContent')}</Text>
           </TouchableOpacity>
 
           {/* Certificates Management */}
@@ -164,8 +166,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
             <View style={[styles.gridIcon, { backgroundColor: colors.gold + '18' }]}>
               <Award color={colors.gold} size={24} />
             </View>
-            <Text style={[styles.gridTitle, { color: colors.txt }]}>الشهادات</Text>
-            <Text style={[styles.gridSub, { color: colors.mut }]}>الإصدار والاعتماد</Text>
+            <Text style={[styles.gridTitle, { color: colors.txt }]}>{t('certs')}</Text>
+            <Text style={[styles.gridSub, { color: colors.mut }]}>{t('ahIssue')}</Text>
           </TouchableOpacity>
 
           {/* Broadcast Alerts */}
@@ -177,8 +179,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
             <View style={[styles.gridIcon, { backgroundColor: colors.red + '18' }]}>
               <Send color={colors.red} size={24} />
             </View>
-            <Text style={[styles.gridTitle, { color: colors.txt }]}>الإشعارات العامة</Text>
-            <Text style={[styles.gridSub, { color: colors.mut }]}>بث تنبيه لجميع المستخدمين</Text>
+            <Text style={[styles.gridTitle, { color: colors.txt }]}>{t('ahNotif')}</Text>
+            <Text style={[styles.gridSub, { color: colors.mut }]}>{t('ahBroadcastSub')}</Text>
           </TouchableOpacity>
 
           {/* Branches */}
@@ -190,8 +192,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
             <View style={[styles.gridIcon, { backgroundColor: '#7A30D818' }]}>
               <Building2 color="#7A30D8" size={24} />
             </View>
-            <Text style={[styles.gridTitle, { color: colors.txt }]}>الفروع</Text>
-            <Text style={[styles.gridSub, { color: colors.mut }]}>إدارة مقرات التدريب</Text>
+            <Text style={[styles.gridTitle, { color: colors.txt }]}>{t('branches')}</Text>
+            <Text style={[styles.gridSub, { color: colors.mut }]}>{t('ahBranchesManage')}</Text>
           </TouchableOpacity>
 
           {/* Committees */}
@@ -203,8 +205,8 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
             <View style={[styles.gridIcon, { backgroundColor: colors.teal + '18' }]}>
               <Layers color={colors.teal} size={24} />
             </View>
-            <Text style={[styles.gridTitle, { color: colors.txt }]}>اللجان التنظيمية</Text>
-            <Text style={[styles.gridSub, { color: colors.mut }]}>إدارة فرق العمل</Text>
+            <Text style={[styles.gridTitle, { color: colors.txt }]}>{t('ahCommittees')}</Text>
+            <Text style={[styles.gridSub, { color: colors.mut }]}>{t('ahTeams')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -217,10 +219,10 @@ export const AdminHomeScreen: React.FC<{ onNavigate: (screenId: string, params?:
               </View>
               <View>
                 <Text style={[styles.analyticsBannerTitle, { color: colors.txt }]}>
-                  تقرير التحليلات والمؤشرات الشاملة
+                  {t('ahReportTitle')}
                 </Text>
                 <Text style={[styles.analyticsBannerSub, { color: colors.mut }]}>
-                  معدلات الحضور ونسب إتمام المقررات
+                  {t('ahReportSub')}
                 </Text>
               </View>
             </View>

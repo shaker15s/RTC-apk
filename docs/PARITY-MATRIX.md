@@ -1,4 +1,4 @@
-# Masar RTC Mobile — مصفوفة التطابق الكامل (1:1 Parity Matrix) v100.0
+# Masar RTC Mobile — مصفوفة التطابق الكامل (1:1 Parity Matrix) v100.4.0
 
 توثق هذه المصفوفة التطابق بنسبة 100% بين تطبيق الويب المرجعي (`RTC-app-main`) وتطبيق الموبايل النيتف المطور (`rtc_mobile`) مع كافة التحسينات والرسوم المتحركة والمكونات الإضافية.
 
@@ -25,6 +25,7 @@
 | 15 | `s-notifications`| `#notifications-center` | `NotificationsScreen.tsx` | مشترك / Shared | 100% ✔ |
 | 16 | `s-checkin` | `#qr-checkin-view` | `StudentCheckInScreen.tsx` | طالب / Student | 100% ✔ |
 | 17 | `s-excuse` | `#submit-excuse-modal` | `StudentExcuseScreen.tsx` | طالب / Student | 100% ✔ |
+| 17ب | `s-attendance` | جديد v100.2.0 | `StudentAttendanceScreen.tsx` | طالب / Student | 100% ✔ |
 | 18 | `s-leaderboard` | `#leaderboard-view` | `LeaderboardScreen.tsx` | طالب / Student | 100% ✔ |
 | 19 | `support` | `#support-branches-view` | `SupportScreen.tsx` | مشترك / Shared | 100% ✔ |
 | 20 | `v-home` | `#volunteer-dashboard` | `VolunteerHomeScreen.tsx` | متطوع / Volunteer | 100% ✔ |
@@ -77,6 +78,10 @@
 | 24 | `claim_social_badge` | `RPC.claimSocialBadge()` | `authenticated` | مطابقة تامة ✔ |
 | 25 | `disable_my_push_devices`| `RPC.disableMyPushDevices()` | `authenticated` | مطابقة تامة ✔ |
 | 26 | `register_push_device` | `RPC.registerPushDevice(token, platform, version)` | `authenticated` | مطابقة تامة ✔ |
+| 27 | `admin_award_points` | `RPC.adminAwardPoints(userId, points, reason)` | `admin` | إصلاح v100.1.0 ✔ |
+| 28 | `get_active_session` | `RPC.getActiveSession(batchId)` | `instructor / admin` | إصلاح v100.1.0 ✔ |
+| 29 | `get_my_next_session` | `RPC.getMyNextSession()` | `authenticated` | إصلاح v100.1.0 ✔ |
+| 30 | `get_my_attendance` | `RPC.getMyAttendance()` | `authenticated` | إصلاح v100.2.0 ✔ |
 
 ---
 

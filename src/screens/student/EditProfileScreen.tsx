@@ -34,10 +34,12 @@ import {
   ChevronDown,
   X,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
+  const { t } = useT();
   const { profile, branches, updateProfileData, refreshProfile } = useAuthStore();
 
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -56,7 +58,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showToast('نحتاج إذن الوصول للصور لاختيار صورة الأفاتار', 'warn');
+        showToast(t('photosPermWarn'), 'warn');
         return;
       }
 
@@ -69,13 +71,18 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
 
       if (!result.canceled && result.assets[0]?.uri) {
         setUploadingAvatar(true);
-        const uploadedUrl = await Repository.uploadAvatar(result.assets[0].uri);
+        showToast(t('avatarUploading'), 'info');
+        // Pass the real MIME type — no more labelling everything as webp
+        const uploadedUrl = await Repository.uploadAvatar(
+          result.assets[0].uri,
+          result.assets[0].mimeType || 'image/jpeg'
+        );
         setAvatarUrl(uploadedUrl);
         RTCHaptics.success();
-        showToast('تم رفع وتحديث صورة الحساب', 'ok');
+        showToast(t('avatarUploaded'), 'ok');
       }
     } catch (e: any) {
-      showToast(e?.message || 'تعذر رفع الصورة', 'err');
+      showToast(e?.message || t('avatarUploadError'), 'err');
     } finally {
       setUploadingAvatar(false);
     }
@@ -85,14 +92,14 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
     let hasError = false;
 
     if (!validateFullName(fullName)) {
-      setNameError('الاسم يجب أن يكون ثلاثياً على الأقل');
+      setNameError(t('editNameError'));
       hasError = true;
     } else {
       setNameError(null);
     }
 
     if (!validateEgyptianPhone(phone)) {
-      setPhoneError('رقم غير صحيح — يجب أن يبدأ بـ 010/011/012/015');
+      setPhoneError(t('editPhoneError'));
       hasError = true;
     } else {
       setPhoneError(null);
@@ -113,10 +120,10 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
       });
       await refreshProfile();
       RTCHaptics.success();
-      showToast('تم حفظ التعديلات بنجاح', 'ok');
+      showToast(t('savedChangesToast'), 'ok');
       onBack();
     } catch (e: any) {
-      showToast(e?.message || 'تعذر حفظ البيانات', 'err');
+      showToast(e?.message || t('saveChangesError'), 'err');
     } finally {
       setSaving(false);
     }
@@ -130,7 +137,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
       style={[styles.container, { backgroundColor: colors.bg }]}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
-      <GlassHeader title="تعديل الملف الشخصي" subtitle="تحديث البيانات الشخصية" showBack onBack={onBack} />
+      <GlassHeader title={t('editProfileTitle')} subtitle={t('epSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -158,26 +165,26 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
           </View>
 
           <Text style={[styles.avatarHint, { color: colors.mut }]}>
-            {uploadingAvatar ? 'جارٍ رفع الصورة...' : 'اضغط على الكاميرا لتغيير الصورة الشخصية'}
+            {uploadingAvatar ? t('epUploadingShort') : t('epCameraHint')}
           </Text>
         </View>
 
         {/* Inputs Form */}
         <CustomCard style={styles.formCard}>
           <TextInputField
-            label="الاسم الثلاثي / الرباعي"
+            label={t('fullName')}
             value={fullName}
             onChangeText={(v) => {
               setFullName(v);
               if (nameError) setNameError(null);
             }}
-            placeholder="اسمك الكامل كما يظهر بالشهادة"
+            placeholder={t('fullNamePlaceholder')}
             error={nameError}
             required
           />
 
           <TextInputField
-            label="رقم الموبايل"
+            label={t('phone')}
             value={phone}
             onChangeText={(v) => {
               setPhone(v);
@@ -192,7 +199,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
 
           {/* Branch Picker */}
           <View style={{ marginBottom: 14 }}>
-            <Text style={[styles.branchLabel, { color: colors.txt }]}>الفرع الأقرب لك</Text>
+            <Text style={[styles.branchLabel, { color: colors.txt }]}>{t('branch')}</Text>
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setBranchModalVisible(true)}
@@ -214,7 +221,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     { color: selectedBranch ? colors.txt : colors.mut },
                   ]}
                 >
-                  {selectedBranch?.name_ar || 'اختر الفرع الأقرب'}
+                  {selectedBranch?.name_ar || t('epPickBranch')}
                 </Text>
               </View>
               <ChevronDown color={colors.mut} size={18} />
@@ -222,7 +229,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
           </View>
 
           <CustomButton
-            title="حفظ التعديلات"
+            title={t('saveChanges')}
             onPress={handleSave}
             variant="primary"
             size="big"
@@ -238,7 +245,7 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.txt }]}>اختر الفرع الأقرب لك</Text>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('epPickBranchCta')}</Text>
               <TouchableOpacity onPress={() => setBranchModalVisible(false)}>
                 <X color={colors.mut} size={22} />
               </TouchableOpacity>

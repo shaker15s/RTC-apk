@@ -26,13 +26,15 @@ import {
   CheckCheck,
   Megaphone,
 } from 'lucide-react-native';
+import { useT, t, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const NotificationsScreen: React.FC<{
   onBack: () => void;
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
-  const { colors } = useAppStore();
+  const { colors, resetUnread } = useAppStore();
+  const { t } = useT();
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,8 @@ export const NotificationsScreen: React.FC<{
     try {
       const data = await Repository.fetchNotifications();
       setNotifications(data);
+      // Opening the notifications screen clears the unread badge (fixes F-3)
+      resetUnread();
     } catch (e) {
     } finally {
       setLoading(false);
@@ -83,7 +87,7 @@ export const NotificationsScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="التنبيهات والإشعارات" subtitle="آخر المستجدات" showBack onBack={onBack} />
+      <GlassHeader title={t('notifTitle')} subtitle={t('notifSubtitle')} showBack onBack={onBack} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -100,7 +104,7 @@ export const NotificationsScreen: React.FC<{
           notifications.map((item) => {
             const isUnread = !item.read_at;
             const dateStr = item.created_at
-              ? new Date(item.created_at).toLocaleDateString('ar-EG', {
+              ? new Date(item.created_at).toLocaleDateString(dateLocale(), {
                   month: 'short',
                   day: 'numeric',
                   hour: '2-digit',
@@ -156,8 +160,8 @@ export const NotificationsScreen: React.FC<{
           })
         ) : (
           <EmptyStateView
-            title="صندوق التنبيهات فارغ"
-            description="ستصلك هنا إشعارات المحاضرات ومواعيد المقابلات وتحديثات الشهادات فور صدورها."
+            title={t('nfEmptyTitle')}
+            description={t('nfEmptyDesc')}
             icon={<Bell color={colors.primary} size={32} />}
           />
         )}

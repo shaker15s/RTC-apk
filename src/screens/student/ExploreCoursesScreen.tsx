@@ -29,6 +29,7 @@ import {
   ChevronLeft,
   BookOpen,
 } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export interface ExploreCoursesScreenProps {
@@ -38,6 +39,7 @@ export interface ExploreCoursesScreenProps {
 
 export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNavigate, onBack }) => {
   const { colors } = useAppStore();
+  const { t } = useT();
   const { branches } = useAuthStore();
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -72,14 +74,14 @@ export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNa
 
   // Branch filter chips
   const branchChips = [
-    { id: 'all', label: 'كل الفروع' },
+    { id: 'all', label: t('acAllBranches') },
     ...branches.map((b) => ({ id: b.id, label: b.name_ar })),
   ];
 
   // Category list derived from courses
   const categories = Array.from(new Set(courses.map((c) => c.category).filter(Boolean)));
   const categoryChips = [
-    { id: 'all', label: 'كل التخصصات' },
+    { id: 'all', label: t('exAllCats') },
     ...categories.map((c) => ({ id: c, label: c })),
   ];
 
@@ -97,14 +99,14 @@ export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNa
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="استكشاف الدورات" subtitle="الكورسات المتاحة للتسجيل" showBack={!!onBack} onBack={onBack} />
+      <GlassHeader title={t('exTitle')} subtitle={t('exSubtitle')} showBack={!!onBack} onBack={onBack} />
 
       {/* Search Input */}
       <View style={styles.searchSection}>
         <TextInputField
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="ابحث عن دورة أو تخصص (برمجة، لغات، جرافيك...)"
+          placeholder={t('exSearchPlaceholder')}
           icon={<Search color={colors.mut} size={18} />}
           style={{ marginBottom: 4 }}
         />
@@ -154,7 +156,7 @@ export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNa
                   <View style={styles.titleWrap}>
                     <View style={styles.tagsRow}>
                       <View style={[styles.catBadge, { backgroundColor: colors.primarySoft }]}>
-                        <Text style={[styles.catText, { color: colors.primary }]}>{item.category || 'تدريب عام'}</Text>
+                        <Text style={[styles.catText, { color: colors.primary }]}>{item.category || t('trainingGeneral')}</Text>
                       </View>
                       {item.level ? (
                         <View style={[styles.levelBadge, { backgroundColor: colors.teal + '18' }]}>
@@ -177,13 +179,13 @@ export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNa
                     <View style={styles.footerItem}>
                       <Calendar color={colors.mut} size={14} />
                       <Text style={[styles.footerItemText, { color: colors.mut }]}>
-                        {item.sessions_count} محاضرات
+                        {item.sessions_count} {t('lecturesSuffix')}
                       </Text>
                     </View>
                     <View style={styles.footerItem}>
                       <MapPin color={colors.mut} size={14} />
                       <Text style={[styles.footerItemText, { color: colors.mut }]}>
-                        {item.branches?.name_ar || 'فرع رسالة'}
+                        {item.branches?.name_ar || t('resalaBranch')}
                       </Text>
                     </View>
                   </View>
@@ -197,8 +199,8 @@ export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNa
           ))
         ) : (
           <EmptyStateView
-            title="لم نجد دورات مطابقة للبحث"
-            description="جرّب تغيير كلمات البحث أو اختيار فرع تدريبي آخر للاطلاع على جميع المجموعات."
+            title={t('exNoResults')}
+            description={t('exNoResultsDesc')}
             icon={<Compass color={colors.primary} size={32} />}
           />
         )}

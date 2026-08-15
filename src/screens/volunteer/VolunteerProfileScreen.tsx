@@ -33,10 +33,12 @@ import {
   Sparkles,
   LifeBuoy,
 } from 'lucide-react-native';
+import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage } = useAppStore();
+  const { t } = useT();
   const { profile, signOut } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -49,7 +51,7 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="الملف الشخصي" subtitle="حساب المتطوع والمدرب" showAvatar={false} />
+      <GlassHeader title={t('profileTitle')} subtitle={t('vpTitle')} showAvatar={false} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
@@ -66,17 +68,17 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
             <View style={styles.profileInfo}>
               <View style={styles.nameRoleRow}>
                 <Text style={[styles.fullName, { color: colors.txt }]} numberOfLines={1}>
-                  {profile?.full_name || 'مدرب مسار'}
+                  {profile?.full_name || t('coachRole')}
                 </Text>
                 <View style={[styles.roleBadge, { backgroundColor: colors.teal + '18' }]}>
-                  <Text style={[styles.roleBadgeText, { color: colors.teal }]}>متطوع / مدرب</Text>
+                  <Text style={[styles.roleBadgeText, { color: colors.teal }]}>{t('vpRoleBadge')}</Text>
                 </View>
               </View>
 
               <View style={styles.infoRow}>
                 <MapPin color={colors.mut} size={14} />
                 <Text style={[styles.infoText, { color: colors.mut }]}>
-                  {profile?.branch_name || 'فرع رسالة التدريبي'}
+                  {profile?.branch_name || t('vpBranchFallback')}
                 </Text>
               </View>
 
@@ -99,7 +101,7 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
             style={[styles.editProfileBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
           >
             <Edit3 color={colors.teal} size={16} />
-            <Text style={[styles.editProfileText, { color: colors.teal }]}>تعديل البيانات والصورة</Text>
+            <Text style={[styles.editProfileText, { color: colors.teal }]}>{t('editProfileCta')}</Text>
           </TouchableOpacity>
         </CustomCard>
 
@@ -111,8 +113,8 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
                 <Moon color={colors.primary} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>الوضع الليلي (OLED Dark)</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مريح للعين وموفر للبطارية</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('darkTitle')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('darkSubtitle')}</Text>
               </View>
             </View>
             <SwitchToggle value={isDark} onValueChange={toggleDarkMode} />
@@ -133,9 +135,9 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
                 <Globe color={colors.teal} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>اللغة (Language)</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('langTitle')}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>
-                  {language === 'ar' ? 'العربية (Arabic)' : 'English (الإنجليزية)'}
+                  {language === 'ar' ? t('langArabic') : t('langEnglish')}
                 </Text>
               </View>
             </View>
@@ -154,7 +156,7 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
               <View style={[styles.menuIcon, { backgroundColor: '#7A30D818' }]}>
                 <LifeBuoy color="#7A30D8" size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>مركز المساعدة والدعم</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('vpSupport')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>
@@ -167,21 +169,21 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
           style={[styles.logoutBtn, { backgroundColor: colors.red + '14', borderColor: colors.red + '30' }]}
         >
           <LogOut color={colors.red} size={18} />
-          <Text style={[styles.logoutText, { color: colors.red }]}>تسجيل الخروج من الحساب</Text>
+          <Text style={[styles.logoutText, { color: colors.red }]}>{t('logoutCta')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.versionText, { color: colors.mut }]}>
-          مسار RTC — الإصدار {RTC_CONFIG.version} (Native Build 10000)
+          {t('versionLine', { v: RTC_CONFIG.version })}
         </Text>
       </ScrollView>
 
       {/* Logout Confirm Modal */}
       <ConfirmModal
         visible={logoutModalVisible}
-        title="تسجيل الخروج"
-        message="هل أنت متأكد من رغبتك في تسجيل الخروج من التطبيق؟"
-        confirmLabel="تسجيل الخروج"
-        cancelLabel="البقاء"
+        title={t('logout')}
+        message={t('vpLogoutConfirm')}
+        confirmLabel={t('logout')}
+        cancelLabel={t('stay')}
         isDestructive
         onConfirm={handleLogout}
         onCancel={() => setLogoutModalVisible(false)}

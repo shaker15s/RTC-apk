@@ -4,18 +4,29 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useT } from '../../core/i18n';
+import { useAuthStore } from '../../state/authStore';
 
 export interface SplashScreenProps {
   onFinish?: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const { t } = useT();
+
   useEffect(() => {
+    // Finish as soon as auth init resolves — no fixed 1.8s wait (U-4).
+    if (isInitialized) {
+      onFinish?.();
+      return;
+    }
+    // Safety cap: never strand the user on the splash if auth hangs.
     const timer = setTimeout(() => {
       onFinish?.();
-    }, 1800);
+    }, 2500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isInitialized]);
 
   return (
     <LinearGradient colors={['#001A6B', '#00288E', '#003C36']} style={styles.container}>
@@ -25,9 +36,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           style={styles.logo}
         />
       </View>
-      <Text style={styles.appName}>مسار RTC</Text>
-      <Text style={styles.tagline}>نتابع رحلتك خطوة بخطوة</Text>
-      <Text style={styles.org}>جمعية رسالة — مركز التدريب والتطوير</Text>
+      <Text style={styles.appName}>{t('appName')}</Text>
+      <Text style={styles.tagline}>{t('tagline')}</Text>
+      <Text style={styles.org}>{t('org')}</Text>
 
       <View style={styles.loaderWrap}>
         <ActivityIndicator color="#89F5E7" size="small" />

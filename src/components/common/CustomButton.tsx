@@ -95,6 +95,9 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
       onPress={handlePress}
       disabled={disabled || loading}
       scaleTarget={0.97}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={[
         styles.base,
         {

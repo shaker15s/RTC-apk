@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
+import { useT } from '../../core/i18n';
 import { RTCHaptics } from '../../core/native/haptics';
 import { BadgeCounter } from '../common/BadgeCounter';
 import { Radii, Shadows } from '../../core/theme/tokens';
@@ -36,31 +37,32 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
   const insets = useSafeAreaInsets();
   const { colors, isDark, unreadNotificationsCount } = useAppStore();
   const { profile } = useAuthStore();
+  const { t } = useT();
 
   const role = profile?.role || 'student';
 
   const studentTabs: NavItem[] = [
-    { id: 's-home', label: 'الرئيسية', icon: (c, s) => <Home color={c} size={s} /> },
-    { id: 's-courses', label: 'كورساتي', icon: (c, s) => <BookOpen color={c} size={s} /> },
-    { id: 's-points', label: 'النقاط', icon: (c, s) => <Award color={c} size={s} /> },
-    { id: 's-certs', label: 'شهاداتي', icon: (c, s) => <FileCheck color={c} size={s} /> },
-    { id: 's-profile', label: 'حسابي', icon: (c, s) => <User color={c} size={s} /> },
+    { id: 's-home', label: t('home'), icon: (c, s) => <Home color={c} size={s} /> },
+    { id: 's-courses', label: t('myCourses'), icon: (c, s) => <BookOpen color={c} size={s} /> },
+    { id: 's-points', label: t('points'), icon: (c, s) => <Award color={c} size={s} /> },
+    { id: 's-certs', label: t('certs'), icon: (c, s) => <FileCheck color={c} size={s} /> },
+    { id: 's-profile', label: t('account'), icon: (c, s) => <User color={c} size={s} /> },
   ];
 
   const volunteerTabs: NavItem[] = [
-    { id: 'v-home', label: 'الرئيسية', icon: (c, s) => <Home color={c} size={s} /> },
-    { id: 'v-batches', label: 'المجموعات', icon: (c, s) => <Users color={c} size={s} /> },
-    { id: 'v-courses', label: 'الدورات', icon: (c, s) => <GraduationCap color={c} size={s} /> },
-    { id: 's-analytics', label: 'التحليلات', icon: (c, s) => <BarChart3 color={c} size={s} /> },
-    { id: 'v-profile', label: 'حسابي', icon: (c, s) => <User color={c} size={s} /> },
+    { id: 'v-home', label: t('home'), icon: (c, s) => <Home color={c} size={s} /> },
+    { id: 'v-batches', label: t('groups'), icon: (c, s) => <Users color={c} size={s} /> },
+    { id: 'v-courses', label: t('courses'), icon: (c, s) => <GraduationCap color={c} size={s} /> },
+    { id: 's-analytics', label: t('analytics'), icon: (c, s) => <BarChart3 color={c} size={s} /> },
+    { id: 'v-profile', label: t('account'), icon: (c, s) => <User color={c} size={s} /> },
   ];
 
   const adminTabs: NavItem[] = [
-    { id: 'a-home', label: 'الإدارة', icon: (c, s) => <Home color={c} size={s} /> },
-    { id: 'a-users', label: 'المستخدمين', icon: (c, s) => <Users color={c} size={s} /> },
-    { id: 'a-courses', label: 'الكورسات', icon: (c, s) => <Layers color={c} size={s} /> },
-    { id: 's-analytics', label: 'التحليلات', icon: (c, s) => <BarChart3 color={c} size={s} /> },
-    { id: 'a-settings', label: 'الإعدادات', icon: (c, s) => <User color={c} size={s} /> },
+    { id: 'a-home', label: t('adminHome'), icon: (c, s) => <Home color={c} size={s} /> },
+    { id: 'a-users', label: t('users'), icon: (c, s) => <Users color={c} size={s} /> },
+    { id: 'a-courses', label: t('courses'), icon: (c, s) => <Layers color={c} size={s} /> },
+    { id: 's-analytics', label: t('analytics'), icon: (c, s) => <BarChart3 color={c} size={s} /> },
+    { id: 'a-settings', label: t('settings'), icon: (c, s) => <User color={c} size={s} /> },
   ];
 
   const tabs = role === 'admin' ? adminTabs : role === 'volunteer' ? volunteerTabs : studentTabs;
@@ -93,6 +95,9 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
               <TouchableOpacity
                 key={tab.id}
                 activeOpacity={0.75}
+                accessibilityRole="tab"
+                accessibilityLabel={tab.label}
+                accessibilityState={{ selected: isActive }}
                 onPress={() => {
                   RTCHaptics.selection();
                   onTabPress(tab.id);
@@ -109,7 +114,9 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
                   ]}
                 >
                   {tab.icon(color, 21)}
-                  {tab.id === 's-home' && unreadNotificationsCount > 0 ? (
+                  {/* Badge on the home tab of EVERY role (fixes F-3) */}
+                  {(tab.id === 's-home' || tab.id === 'v-home' || tab.id === 'a-home') &&
+                  unreadNotificationsCount > 0 ? (
                     <View style={styles.badgeWrap}>
                       <BadgeCounter count={unreadNotificationsCount} size="sm" />
                     </View>

@@ -7,6 +7,7 @@ import { useAppStore } from '../../state/appStore';
 import { CustomButton } from '../common/CustomButton';
 import { Radii } from '../../core/theme/tokens';
 import { AlertCircle } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 
 export interface ConfirmModalProps {
   visible: boolean;
@@ -24,13 +25,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   visible,
   title,
   message,
-  confirmLabel = 'تأكيد',
-  cancelLabel = 'إلغاء',
+  confirmLabel = t('confirm'),
+  cancelLabel = t('cancel'),
   isDestructive = false,
   onConfirm,
   onCancel,
   loading = false,
 }) => {
+  const { t } = useT();
   const { colors, isDark } = useAppStore();
 
   return (

@@ -2,6 +2,7 @@
  * Application global UI state (Theme, Language, Network, Toasts).
  */
 import { create } from 'zustand';
+import NetInfo from '@react-native-community/netinfo';
 import { LightColors, DarkColors, ThemeColors } from '../core/theme/tokens';
 import { LanguageKey, setLanguage as setI18nLanguage } from '../core/i18n';
 import { RTCSecureStorage } from '../core/storage/secureStorage';
@@ -20,6 +21,7 @@ interface AppState {
   isOnline: boolean;
   toasts: ToastItem[];
   unreadNotificationsCount: number;
+  prefsReady: boolean;
 
   setDarkMode: (isDark: boolean) => void;
   toggleDarkMode: () => void;
@@ -40,6 +42,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isOnline: true,
   toasts: [],
   unreadNotificationsCount: 0,
+  prefsReady: false,
 
   setDarkMode: (isDark: boolean) => {
     set({ isDark, colors: isDark ? DarkColors : LightColors });
@@ -84,12 +87,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   initNetworkListener: () => {
-    // Basic connectivity polling / fallback watcher
-    const interval = setInterval(() => {
-      // Keep online by default or integrate NetInfo if installed
-    }, 30000);
+    // REAL connectivity watcher (fixes P0-3): NetInfo events drive
+    // isOnline, which drives the OfflineBanner.
+    const applyState = (state: { isConnected: boolean | null; isInternetReachable: boolean | null }) => {
+      set({
+        isOnline: state.isConnected !== false && state.isInternetReachable !== false,
+      });
+    };
 
-    return () => clearInterval(interval);
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      applyState({ isConnected: state.isConnected, isInternetReachable: state.isInternetReachable });
+    });
+
+    NetInfo.fetch()
+      .then((state) => {
+        applyState({ isConnected: state.isConnected, isInternetReachable: state.isInternetReachable });
+      })
+      .catch(() => {});
+
+    return () => {
+      unsubscribe();
+    };
   },
 
   initPreferences: async () => {
@@ -106,7 +124,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         setI18nLanguage(lang);
         set({ language: lang });
       }
-    } catch (e) {}
+    } catch (e) {
+      // fall through — defaults are safe
+    } finally {
+      // Preferences are loaded: safe to render the real UI
+      // (prevents the light-mode flash for dark-mode users — F-16).
+      set({ prefsReady: true });
+    }
   },
 }));
 

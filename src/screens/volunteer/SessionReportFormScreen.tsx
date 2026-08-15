@@ -18,6 +18,7 @@ import { RTCHaptics } from '../../core/native/haptics';
 import { RPC } from '../../data/rpc';
 import { Radii } from '../../core/theme/tokens';
 import { FileText, Sparkles, Smile, MessageSquare } from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
 
 export interface SessionReportFormScreenProps {
   sessionId: string;
@@ -27,10 +28,11 @@ export interface SessionReportFormScreenProps {
 
 export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = ({
   sessionId,
-  sessionTitle = 'المحاضرة',
+  sessionTitle = t('lectureWord'),
   onBack,
 }) => {
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
   const [understandingRate, setUnderstandingRate] = useState<number>(85);
   const [engagementRate, setEngagementRate] = useState<number>(90);
   const [summary, setSummary] = useState<string>('');
@@ -39,7 +41,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
 
   const handleSubmit = async () => {
     if (summary.trim().length < 5) {
-      showToast('يرجى كتابة ملخص المحاضرة (5 أحرف على الأقل)', 'warn');
+      showToast(t('srMinWarn'), 'warn');
       return;
     }
 
@@ -48,7 +50,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
       await RPC.submitSessionReport(sessionId, summary.trim(), understandingRate, engagementRate);
       setShowSuccess(true);
     } catch (e: any) {
-      showToast(e?.message || 'فشل حفظ تقرير المحاضرة', 'err');
+      showToast(e?.message || t('srError'), 'err');
     } finally {
       setSubmitting(false);
     }
@@ -61,7 +63,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <GlassHeader
-        title="تقرير المحاضرة"
+        title={t('srTitle')}
         subtitle={sessionTitle}
         showBack
         onBack={onBack}
@@ -76,9 +78,9 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
         keyboardDismissMode="interactive"
       >
         <CustomCard style={styles.card}>
-          <Text style={[styles.heading, { color: colors.txt }]}>توثيق إنجاز المحاضرة</Text>
+          <Text style={[styles.heading, { color: colors.txt }]}>{t('srSubtitle')}</Text>
           <Text style={[styles.subheading, { color: colors.mut }]}>
-            سجّل انطباعك عن استيعاب الطلاب وتفاعلهم لتوثيق الجودة والمتابعة
+            {t('srIntro')}
           </Text>
 
           {/* Understanding Rate Selector */}
@@ -86,7 +88,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
             <View style={styles.sectionHeader}>
               <View style={styles.labelRow}>
                 <Sparkles size={16} color={colors.primary} />
-                <Text style={[styles.sectionTitle, { color: colors.txt }]}>معدل استيعاب الطلاب</Text>
+                <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('srUnderstanding')}</Text>
               </View>
               <Text style={[styles.rateValue, { color: colors.primary }]}>{understandingRate}%</Text>
             </View>
@@ -124,7 +126,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
             <View style={styles.sectionHeader}>
               <View style={styles.labelRow}>
                 <Smile size={16} color={colors.teal} />
-                <Text style={[styles.sectionTitle, { color: colors.txt }]}>معدل الحماس والتفاعل</Text>
+                <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('srEngagement')}</Text>
               </View>
               <Text style={[styles.rateValue, { color: colors.teal }]}>{engagementRate}%</Text>
             </View>
@@ -161,12 +163,12 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
           <View style={styles.inputWrap}>
             <View style={styles.labelRow}>
               <MessageSquare size={16} color={colors.mut} />
-              <Text style={[styles.inputLabel, { color: colors.txt }]}>ملخص ما تم شرحه والنقاط البارزة</Text>
+              <Text style={[styles.inputLabel, { color: colors.txt }]}>{t('srSummaryLabel')}</Text>
             </View>
             <TextInput
               value={summary}
               onChangeText={setSummary}
-              placeholder="اكتب المحاور والموضوعات التي تم تغطيتها في الجلسة والواجبات المطلوبة..."
+              placeholder={t('srSummaryPlaceholder')}
               placeholderTextColor={colors.mut}
               multiline
               numberOfLines={5}
@@ -183,7 +185,7 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
           </View>
 
           <CustomButton
-            title="حفظ وإرسال التقرير"
+            title={t('srSubmit')}
             onPress={handleSubmit}
             loading={submitting}
             variant="primary"
@@ -195,8 +197,8 @@ export const SessionReportFormScreen: React.FC<SessionReportFormScreenProps> = (
 
       <SuccessAnimation
         visible={showSuccess}
-        title="تم حفظ التقرير!"
-        subtitle="شكراً لجهودك وإخلاصك في تدريب وتطوير الطلاب"
+        title={t('srSavedTitle')}
+        subtitle={t('srThanks')}
         onFinish={() => {
           setShowSuccess(false);
           onBack();

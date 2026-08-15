@@ -1,47 +1,28 @@
 /**
- * Student Profile & Settings Screen (s-profile)
- * Profile card, settings switches (Dark Mode, Language), and navigation shortcuts.
+ * Student Profile Screen (s-profile)
+ * Profile card, preferences (dark mode + language), shortcuts and logout.
+ * Fully bilingual via the reactive i18n engine.
  */
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Linking,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Modal, Linking, Alert } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SwitchToggle } from '../../components/common/SwitchToggle';
 import { ConfirmModal } from '../../components/feedback/ConfirmModal';
-import { maskPhone } from '../../core/security/sanitizers';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
-import {
-  User,
-  MapPin,
-  Phone,
-  Moon,
-  Globe,
-  Edit3,
-  ShieldCheck,
-  LifeBuoy,
-  LogOut,
-  ChevronLeft,
-  Flame,
-  Award,
-  Sparkles,
-  ExternalLink,
-} from 'lucide-react-native';
+import { useT, t } from '../../core/i18n';
+import { layoutNeedsReload, applyLayoutDirection, reloadApp } from '../../core/i18n/direction';
+import { maskPhone } from '../../core/security/sanitizers';
+import { Moon, Globe, ChevronLeft, Edit3, ShieldCheck, User, LifeBuoy, LogOut, MapPin, Phone, ExternalLink } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage } = useAppStore();
-  const { profile, signOut } = useAuthStore();
+  const { t } = useT();
+    const { profile, signOut } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
@@ -54,17 +35,17 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
   const getRoleLabel = () => {
     switch (profile?.role) {
       case 'admin':
-        return 'مشرف نظام';
+        return t('roleSysAdmin');
       case 'volunteer':
-        return 'متطوع / مدرب';
+        return t('auVolunteerRole');
       default:
-        return 'طالب متدرب';
+        return t('spfStudentRole');
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="الملف الشخصي" subtitle="الإعدادات والحساب" showAvatar={false} />
+      <GlassHeader title={t('profileTitle')} subtitle={t('spfSubtitle')} showAvatar={false} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
@@ -81,7 +62,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
             <View style={styles.profileInfo}>
               <View style={styles.nameRoleRow}>
                 <Text style={[styles.fullName, { color: colors.txt }]} numberOfLines={1}>
-                  {profile?.full_name || 'مستخدم مسار'}
+                  {profile?.full_name || t('spfUserFallback')}
                 </Text>
                 <View style={[styles.roleBadge, { backgroundColor: colors.primarySoft }]}>
                   <Text style={[styles.roleBadgeText, { color: colors.primary }]}>{getRoleLabel()}</Text>
@@ -91,7 +72,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
               <View style={styles.infoRow}>
                 <MapPin color={colors.mut} size={14} />
                 <Text style={[styles.infoText, { color: colors.mut }]}>
-                  {profile?.branch_name || 'فرع رسالة التدريبي'}
+                  {profile?.branch_name || t('vpBranchFallback')}
                 </Text>
               </View>
 
@@ -108,19 +89,19 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
           <View style={[styles.statsRow, { backgroundColor: colors.card2 }]}>
             <View style={styles.statCell}>
               <Text style={[styles.statVal, { color: colors.primary }]}>{profile?.points || 0}</Text>
-              <Text style={[styles.statLbl, { color: colors.mut }]}>النقاط</Text>
+              <Text style={[styles.statLbl, { color: colors.mut }]}>{t('points')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.line }]} />
             <View style={styles.statCell}>
               <Text style={[styles.statVal, { color: colors.teal }]}>🔥 {profile?.streak || 0}</Text>
-              <Text style={[styles.statLbl, { color: colors.mut }]}>السلسلة</Text>
+              <Text style={[styles.statLbl, { color: colors.mut }]}>{t('streakStat')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.line }]} />
             <View style={styles.statCell}>
               <Text style={[styles.statVal, { color: colors.gold }]}>
                 {profile?.badge_ids?.length || 1}
               </Text>
-              <Text style={[styles.statLbl, { color: colors.mut }]}>الشارات</Text>
+              <Text style={[styles.statLbl, { color: colors.mut }]}>{t('spfBadges')}</Text>
             </View>
           </View>
 
@@ -134,7 +115,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
             style={[styles.editProfileBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
           >
             <Edit3 color={colors.primary} size={16} />
-            <Text style={[styles.editProfileText, { color: colors.primary }]}>تعديل البيانات والصورة</Text>
+            <Text style={[styles.editProfileText, { color: colors.primary }]}>{t('editProfileCta')}</Text>
           </TouchableOpacity>
         </CustomCard>
 
@@ -146,20 +127,39 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
                 <Moon color={colors.primary} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>الوضع الليلي (OLED Dark)</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مريح للعين وموفر للبطارية</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('darkTitle')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('darkSubtitle')}</Text>
               </View>
             </View>
-            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} />
+            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label={t('darkSwitchLabel')} />
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
+          {/* LIVE language toggle (v100.3.0): switches the whole
+              translated UI instantly via the reactive i18n engine. */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => {
               RTCHaptics.selection();
-              setAppLanguage(language === 'ar' ? 'en' : 'ar');
+              const next = language === 'ar' ? 'en' : 'ar';
+              // Instant switch when direction stays the same; otherwise
+              // confirm, apply the new direction and reload (v100.4.0d).
+              if (!layoutNeedsReload(next)) {
+                setAppLanguage(next);
+                return;
+              }
+              Alert.alert(t('dirSwitchTitle'), t('dirSwitchMessage'), [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('dirSwitchConfirm'),
+                  onPress: () => {
+                    setAppLanguage(next);
+                    applyLayoutDirection(next);
+                    reloadApp();
+                  },
+                },
+              ]);
             }}
             style={styles.menuItem}
           >
@@ -168,9 +168,9 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
                 <Globe color={colors.teal} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>اللغة (Language)</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('langTitle')}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>
-                  {language === 'ar' ? 'العربية (Arabic)' : 'English (الإنجليزية)'}
+                  {language === 'ar' ? t('langArabic') : t('langEnglish')}
                 </Text>
               </View>
             </View>
@@ -189,7 +189,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
               <View style={[styles.menuIcon, { backgroundColor: colors.gold + '18' }]}>
                 <ShieldCheck color={colors.gold} size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>التحقق من صحة شهادة</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('verifyShortcut')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>
@@ -205,7 +205,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
               <View style={[styles.menuIcon, { backgroundColor: '#7A30D818' }]}>
                 <LifeBuoy color="#7A30D8" size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>مركز المساعدة ودليل الفروع</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('spfSupport')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>
@@ -221,7 +221,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
               <View style={[styles.menuIcon, { backgroundColor: colors.primarySoft }]}>
                 <ExternalLink color={colors.primary} size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>عن مراكز رسالة للتدريب</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('spfAbout')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>
@@ -234,21 +234,21 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
           style={[styles.logoutBtn, { backgroundColor: colors.red + '14', borderColor: colors.red + '30' }]}
         >
           <LogOut color={colors.red} size={18} />
-          <Text style={[styles.logoutText, { color: colors.red }]}>تسجيل الخروج من الحساب</Text>
+          <Text style={[styles.logoutText, { color: colors.red }]}>{t('logoutCta')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.versionText, { color: colors.mut }]}>
-          مسار RTC — الإصدار {RTC_CONFIG.version} (Native Build 10000)
+          {t('versionLine', { v: RTC_CONFIG.version })}
         </Text>
       </ScrollView>
 
       {/* Logout Confirm Modal */}
       <ConfirmModal
         visible={logoutModalVisible}
-        title="تسجيل الخروج"
-        message="هل أنت متأكد من رغبتك في تسجيل الخروج من التطبيق؟"
-        confirmLabel="تسجيل الخروج"
-        cancelLabel="البقاء"
+        title={t('logout')}
+        message={t('vpLogoutConfirm')}
+        confirmLabel={t('logout')}
+        cancelLabel={t('stay')}
         isDestructive
         onConfirm={handleLogout}
         onCancel={() => setLogoutModalVisible(false)}

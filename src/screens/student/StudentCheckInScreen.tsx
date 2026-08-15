@@ -19,6 +19,8 @@ import { TextInputField } from '../../components/common/TextInputField';
 import { CustomButton } from '../../components/common/CustomButton';
 import { QRScannerModal } from '../../components/qr/QRScannerModal';
 import { RTCHaptics } from '../../core/native/haptics';
+import { withTimeout } from '../../core/performance/withTimeout';
+import { useT } from '../../core/i18n';
 import {
   QrCode,
   Camera,
@@ -35,6 +37,7 @@ export const StudentCheckInScreen: React.FC<{
   onNavigate?: (screenId: string) => void;
 }> = ({ onBack, onNavigate }) => {
   const { colors, showToast } = useAppStore();
+  const { t } = useT();
   const { refreshProfile } = useAuthStore();
 
   const [code, setCode] = useState('');
@@ -45,7 +48,7 @@ export const StudentCheckInScreen: React.FC<{
   const handleCheckIn = async (checkinCode: string) => {
     const cleanCode = checkinCode.trim().toUpperCase();
     if (!cleanCode) {
-      showToast('أدخل رمز الحضور المكون من ٦ أحرف أو امسح الرمز بالكاميرا', 'warn');
+      showToast(t('emptyCodeWarn'), 'warn');
       return;
     }
 
@@ -53,15 +56,17 @@ export const StudentCheckInScreen: React.FC<{
     setSuccessInfo(null);
 
     try {
-      const res = await RPC.studentCheckIn(cleanCode);
+      // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
+      const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
-      showToast('تم تسجيل حضورك بنجاح وكسب نقاط المحاضرة 🎉', 'ok');
-      setSuccessInfo({ message: res?.message || 'تم تسجيل الحضور واحتساب النقاط' });
+      const msg = res?.message || t('checkInSuccessDefault');
+      showToast(t('checkInDoneToast'), 'ok');
+      setSuccessInfo({ message: msg });
       await refreshProfile();
       setCode('');
     } catch (e: any) {
       RTCHaptics.error();
-      showToast(e?.message || 'رمز الحضور غير صالح أو منتهي الصلاحية', 'err');
+      showToast(e?.message || t('invalidCodeError'), 'err');
     } finally {
       setLoading(false);
     }
@@ -69,7 +74,7 @@ export const StudentCheckInScreen: React.FC<{
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="تسجيل الحضور" subtitle="إثبات الحضور بالرمز أو الكاميرا" showBack onBack={onBack} />
+      <GlassHeader title={t('checkInTitle')} subtitle={t('checkInSubtitle')} showBack onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Success Card if checked in */}
@@ -78,11 +83,14 @@ export const StudentCheckInScreen: React.FC<{
             <View style={[styles.successIconCircle, { backgroundColor: colors.teal + '18' }]}>
               <CheckCircle2 color={colors.teal} size={36} />
             </View>
-            <Text style={[styles.successTitle, { color: colors.teal }]}>تم تسجيل الحضور بنجاح!</Text>
+            <Text style={[styles.successTitle, { color: colors.teal }]}>{t('checkInSuccessTitle')}</Text>
             <Text style={[styles.successMessage, { color: colors.txt }]}>{successInfo.message}</Text>
             <View style={[styles.pointsEarnedBadge, { backgroundColor: colors.teal + '14' }]}>
               <Sparkles color={colors.teal} size={16} />
-              <Text style={[styles.pointsEarnedText, { color: colors.teal }]}>+10 نقاط تضاف لسجلك</Text>
+              {/* Message comes from the backend RPC — no more hardcoded +10 (F-6) */}
+              <Text style={[styles.pointsEarnedText, { color: colors.teal }]} numberOfLines={2}>
+                {successInfo.message}
+              </Text>
             </View>
           </CustomCard>
         ) : null}
@@ -92,13 +100,13 @@ export const StudentCheckInScreen: React.FC<{
           <View style={[styles.qrIconWrap, { backgroundColor: colors.teal + '18' }]}>
             <Camera color={colors.teal} size={32} />
           </View>
-          <Text style={[styles.qrCardTitle, { color: colors.txt }]}>مسح رمز QR من هاتف المدرب</Text>
+          <Text style={[styles.qrCardTitle, { color: colors.txt }]}>{t('scanCardTitle')}</Text>
           <Text style={[styles.qrCardSubtitle, { color: colors.mut }]}>
-            وجّه كاميرا هاتفك نحو شاشة المدرب لتسجيل الحضور الفوري في ثانية واحدة
+            {t('scanCardSubtitle')}
           </Text>
 
           <CustomButton
-            title="فتح كاميرا مسح QR"
+            title={t('openCameraCta')}
             onPress={() => {
               RTCHaptics.light();
               setScannerVisible(true);
@@ -113,17 +121,17 @@ export const StudentCheckInScreen: React.FC<{
         {/* Divider with 'أو' */}
         <View style={styles.orRow}>
           <View style={[styles.orLine, { backgroundColor: colors.line }]} />
-          <Text style={[styles.orText, { color: colors.mut }]}>أو أدخل الرمز يدوياً</Text>
+          <Text style={[styles.orText, { color: colors.mut }]}>{t('orManual')}</Text>
           <View style={[styles.orLine, { backgroundColor: colors.line }]} />
         </View>
 
         {/* Manual Code Input Card */}
         <CustomCard style={styles.manualCard}>
           <TextInputField
-            label="رمز الحضور (6 أحرف/أرقام)"
+            label={t('codeLabel')}
             value={code}
             onChangeText={setCode}
-            placeholder="مثال: X7K9P2"
+            placeholder={t('codePlaceholder')}
             maxLength={10}
             inputStyle={{
               textAlign: 'center',
@@ -134,7 +142,7 @@ export const StudentCheckInScreen: React.FC<{
           />
 
           <CustomButton
-            title="تأكيد وتسجيل الحضور"
+            title={t('confirmCheckInCta')}
             onPress={() => handleCheckIn(code)}
             variant="primary"
             size="big"
@@ -147,7 +155,7 @@ export const StudentCheckInScreen: React.FC<{
         <View style={styles.rulesNote}>
           <ShieldAlert color={colors.mut} size={15} />
           <Text style={[styles.rulesText, { color: colors.mut }]}>
-            يُفتح رمز الحضور أثناء وقت المحاضرة فقط، ولا يمكن تسجيل الحضور نيابة عن زميل.
+            {t('checkInRules')}
           </Text>
         </View>
       </ScrollView>

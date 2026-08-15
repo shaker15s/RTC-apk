@@ -10,6 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
@@ -31,9 +32,12 @@ import {
   LifeBuoy,
 } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
+import { useT } from '../../core/i18n';
+import { layoutNeedsReload, applyLayoutDirection, reloadApp } from '../../core/i18n/direction';
 
 export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
+  const { t } = useT();
   const { profile, signOut, refreshProfile } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -47,12 +51,12 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
   const handleRefreshCache = async () => {
     RTCHaptics.light();
     await refreshProfile();
-    showToast('تم تحديث البيانات وإعادة مزامنة الحساب بنجاح', 'ok');
+    showToast(t('refreshDone'), 'ok');
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader title="إعدادات المشرف" subtitle="إدارة النظام والحساب" showAvatar={false} />
+      <GlassHeader title={t('asTitle')} subtitle={t('asSubtitle')} showAvatar={false} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
@@ -65,15 +69,15 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
             <View style={styles.profileInfo}>
               <View style={styles.nameRoleRow}>
                 <Text style={[styles.fullName, { color: colors.txt }]} numberOfLines={1}>
-                  {profile?.full_name || 'مشرف النظام'}
+                  {profile?.full_name || t('asRole')}
                 </Text>
                 <View style={[styles.roleBadge, { backgroundColor: colors.red + '18' }]}>
-                  <Text style={[styles.roleBadgeText, { color: colors.red }]}>مشرف عام</Text>
+                  <Text style={[styles.roleBadgeText, { color: colors.red }]}>{t('asRoleAlt')}</Text>
                 </View>
               </View>
 
               <Text style={[styles.infoText, { color: colors.mut }]}>
-                {profile?.branch_name || 'الإدارة المركزية - جمعية رسالة'}
+                {profile?.branch_name || t('asBranch')}
               </Text>
             </View>
           </View>
@@ -87,7 +91,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
             style={[styles.editProfileBtn, { backgroundColor: colors.card2, borderColor: colors.line }]}
           >
             <Edit3 color={colors.primary} size={16} />
-            <Text style={[styles.editProfileText, { color: colors.primary }]}>تعديل البيانات والصورة</Text>
+            <Text style={[styles.editProfileText, { color: colors.primary }]}>{t('editProfileCta')}</Text>
           </TouchableOpacity>
         </CustomCard>
 
@@ -99,20 +103,38 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <Moon color={colors.primary} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>الوضع الليلي (OLED Dark)</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>مظهر داكن مريح للعين</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('darkTitle')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('darkSubtitle')}</Text>
               </View>
             </View>
-            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} />
+            <SwitchToggle value={isDark} onValueChange={toggleDarkMode} label={t('darkSwitchLabel')} />
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
+          {/* LIVE language toggle (v100.3.0) */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => {
               RTCHaptics.selection();
-              setAppLanguage(language === 'ar' ? 'en' : 'ar');
+              const next = language === 'ar' ? 'en' : 'ar';
+              // Instant switch when direction stays the same; otherwise
+              // confirm, apply the new direction and reload (v100.4.0d).
+              if (!layoutNeedsReload(next)) {
+                setAppLanguage(next);
+                return;
+              }
+              Alert.alert(t('dirSwitchTitle'), t('dirSwitchMessage'), [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('dirSwitchConfirm'),
+                  onPress: () => {
+                    setAppLanguage(next);
+                    applyLayoutDirection(next);
+                    reloadApp();
+                  },
+                },
+              ]);
             }}
             style={styles.menuItem}
           >
@@ -121,9 +143,9 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <Globe color={colors.teal} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>اللغة (Language)</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('langTitle')}</Text>
                 <Text style={[styles.menuSubtitle, { color: colors.mut }]}>
-                  {language === 'ar' ? 'العربية (Arabic)' : 'English (الإنجليزية)'}
+                  {language === 'ar' ? t('langArabic') : t('langEnglish')}
                 </Text>
               </View>
             </View>
@@ -138,8 +160,8 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
                 <RefreshCw color={colors.gold} size={18} />
               </View>
               <View>
-                <Text style={[styles.menuTitle, { color: colors.txt }]}>تحديث ومزامنة البيانات</Text>
-                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>إعادة تحميل الملف الشخصي والفروع</Text>
+                <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('refresh')}</Text>
+                <Text style={[styles.menuSubtitle, { color: colors.mut }]}>{t('refreshSub')}</Text>
               </View>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
@@ -157,7 +179,7 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
               <View style={[styles.menuIcon, { backgroundColor: '#7A30D818' }]}>
                 <LifeBuoy color="#7A30D8" size={18} />
               </View>
-              <Text style={[styles.menuTitle, { color: colors.txt }]}>مركز الدعم والمساعدة</Text>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('asSupport')}</Text>
             </View>
             <ChevronLeft color={colors.mut} size={18} />
           </TouchableOpacity>
@@ -170,21 +192,21 @@ export const AdminSettingsScreen: React.FC<{ onNavigate: (screenId: string) => v
           style={[styles.logoutBtn, { backgroundColor: colors.red + '14', borderColor: colors.red + '30' }]}
         >
           <LogOut color={colors.red} size={18} />
-          <Text style={[styles.logoutText, { color: colors.red }]}>تسجيل الخروج من الحساب</Text>
+          <Text style={[styles.logoutText, { color: colors.red }]}>{t('logoutCta')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.versionText, { color: colors.mut }]}>
-          مسار RTC — لوحة المشرف {RTC_CONFIG.version} (Native Build 10000)
+          {t('versionAdminLine', { v: RTC_CONFIG.version })}
         </Text>
       </ScrollView>
 
       {/* Logout Confirm Modal */}
       <ConfirmModal
         visible={logoutModalVisible}
-        title="تسجيل الخروج"
-        message="هل تريد الخروج من حساب المشرف؟"
-        confirmLabel="تسجيل الخروج"
-        cancelLabel="البقاء"
+        title={t('logout')}
+        message={t('asLogoutConfirm')}
+        confirmLabel={t('logout')}
+        cancelLabel={t('stay')}
         isDestructive
         onConfirm={handleLogout}
         onCancel={() => setLogoutModalVisible(false)}

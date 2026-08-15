@@ -73,7 +73,12 @@ export function validateFullName(name: string): boolean {
 }
 
 export function validateEgyptianPhone(phone: string): boolean {
-  const clean = String(phone || '').trim();
+  // Normalize common user formats: "010 1234 5678", "010-123-45678",
+  // Arabic digits and parentheses are accepted (fixes F-7).
+  const clean = String(phone || '')
+    .replace(/[\s\-–—().]/g, '')
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .trim();
   return EGYPT_PHONE_REGEX.test(clean);
 }
 
@@ -81,14 +86,21 @@ export function validateEgyptianPhone(phone: string): boolean {
 const STUDENT_ROUTES = {
   prefix: ['s-', 'support'],
   extra: ['support'],
+  // Students must NOT reach shared staff screens even though they
+  // start with "s-" (fixes a real privilege leak found in the QA pass).
+  deny: ['s-analytics'],
 };
 
 const VOLUNTEER_ROUTES = {
   prefix: ['v-', 's-analytics', 'support', 's-notifications', 's-edit-profile'],
+  extra: [] as string[],
+  deny: [] as string[],
 };
 
 const ADMIN_ROUTES = {
   prefix: ['a-', 's-analytics', 'support', 's-notifications', 's-edit-profile'],
+  extra: [] as string[],
+  deny: [] as string[],
 };
 
 const PUBLIC_ROUTES = ['splash', 'onboarding', 'verify', 'changelog'];
@@ -99,7 +111,8 @@ export function canAccess(screenId: string, role: string | null | undefined): bo
   if (!role) return false;
 
   const allow = role === 'admin' ? ADMIN_ROUTES : role === 'volunteer' ? VOLUNTEER_ROUTES : STUDENT_ROUTES;
-  if ('extra' in allow && (allow as any).extra.includes(screenId)) return true;
+  if (allow.deny.includes(screenId)) return false;
+  if (allow.extra.includes(screenId)) return true;
 
   return allow.prefix.some((p) => screenId === p || screenId.startsWith(p));
 }

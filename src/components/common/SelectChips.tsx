@@ -1,11 +1,12 @@
 /**
- * Selectable Chips Component (for filters, branches, categories).
+ * Selectable Chips Component with Liquid Glass background and tactile selection physics.
  */
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { ScrollView, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { RTCHaptics } from '../../core/native/haptics';
 import { Radii } from '../../core/theme/tokens';
+import { AnimatedPressable } from './AnimatedPressable';
 
 export interface ChipItem {
   id: string;
@@ -21,7 +22,7 @@ export interface SelectChipsProps {
 }
 
 export const SelectChips: React.FC<SelectChipsProps> = ({ items, selectedId, onSelect, style }) => {
-  const { colors } = useAppStore();
+  const { colors, isDark } = useAppStore();
 
   return (
     <ScrollView
@@ -32,9 +33,9 @@ export const SelectChips: React.FC<SelectChipsProps> = ({ items, selectedId, onS
       {items.map((item) => {
         const isSelected = item.id === selectedId;
         return (
-          <TouchableOpacity
+          <AnimatedPressable
             key={item.id}
-            activeOpacity={0.8}
+            scaleTarget={0.94}
             onPress={() => {
               RTCHaptics.selection();
               onSelect(item.id);
@@ -42,8 +43,16 @@ export const SelectChips: React.FC<SelectChipsProps> = ({ items, selectedId, onS
             style={[
               styles.chip,
               {
-                backgroundColor: isSelected ? colors.primary : colors.card2,
-                borderColor: isSelected ? 'transparent' : colors.line,
+                backgroundColor: isSelected
+                  ? colors.primary
+                  : isDark
+                  ? 'rgba(255, 255, 255, 0.05)'
+                  : colors.card2,
+                borderColor: isSelected
+                  ? 'rgba(255, 255, 255, 0.25)'
+                  : isDark
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : colors.line,
               },
             ]}
           >
@@ -51,14 +60,14 @@ export const SelectChips: React.FC<SelectChipsProps> = ({ items, selectedId, onS
               style={[
                 styles.chipText,
                 {
-                  color: isSelected ? '#FFFFFF' : colors.mut,
-                  fontWeight: isSelected ? '700' : '500',
+                  color: isSelected ? '#FFFFFF' : isDark ? colors.txt : colors.mut,
+                  fontWeight: isSelected ? '800' : '600',
                 },
               ]}
             >
               {item.label} {item.count !== undefined ? `(${item.count})` : ''}
             </Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         );
       })}
     </ScrollView>
@@ -70,15 +79,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: Radii.full,
     borderWidth: 1,
+    overflow: 'hidden',
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 12.5,
+    letterSpacing: 0.1,
   },
 });

@@ -5,12 +5,7 @@ import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { RTCHaptics } from '../../core/native/haptics';
 import { BadgeCounter } from '../common/BadgeCounter';
-import Animated, {
-  useAnimatedStyle,
-  withSpring,
-  useSharedValue,
-} from 'react-native-reanimated';
-import { SpringConfigs } from '../../core/animations';
+import { Radii, Shadows } from '../../core/theme/tokens';
 import {
   Home,
   BookOpen,
@@ -73,91 +68,105 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
   return (
     <View
       style={[
-        styles.container,
+        styles.outerContainer,
         {
-          paddingBottom: Math.max(insets.bottom, 8),
-          backgroundColor: isDark ? 'rgba(16, 23, 38, 0.96)' : 'rgba(255, 255, 255, 0.96)',
-          borderTopColor: colors.line,
+          bottom: Math.max(insets.bottom, 12),
         },
       ]}
     >
-      <View style={styles.tabRow}>
-        {tabs.map((tab) => {
-          const isActive = currentScreen === tab.id;
-          const color = isActive ? colors.primary : colors.mut;
+      <View
+        style={[
+          styles.islandCard,
+          {
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.94)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 40, 142, 0.09)',
+          },
+          isDark ? Shadows.medium : Shadows.soft,
+        ]}
+      >
+        <View style={styles.tabRow}>
+          {tabs.map((tab) => {
+            const isActive = currentScreen === tab.id;
+            const color = isActive ? colors.primary : isDark ? colors.mut : '#64748B';
 
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              activeOpacity={0.7}
-              onPress={() => {
-                RTCHaptics.selection();
-                onTabPress(tab.id);
-              }}
-              style={styles.tabButton}
-            >
-              <View
-                style={[
-                  styles.iconWrap,
-                  isActive && {
-                    backgroundColor: colors.primarySoft,
-                    borderRadius: 14,
-                  },
-                ]}
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                activeOpacity={0.75}
+                onPress={() => {
+                  RTCHaptics.selection();
+                  onTabPress(tab.id);
+                }}
+                style={styles.tabButton}
               >
-                {tab.icon(color, 20)}
-                {tab.id === 's-home' && unreadNotificationsCount > 0 ? (
-                  <View style={styles.badgeWrap}>
-                    <BadgeCounter count={unreadNotificationsCount} size="sm" />
-                  </View>
-                ) : null}
-              </View>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  {
-                    color,
-                    fontWeight: isActive ? '800' : '500',
-                  },
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <View
+                  style={[
+                    styles.iconWrap,
+                    isActive && {
+                      backgroundColor: isDark ? 'rgba(60, 110, 255, 0.16)' : 'rgba(0, 40, 142, 0.08)',
+                      borderRadius: Radii.lg,
+                    },
+                  ]}
+                >
+                  {tab.icon(color, 21)}
+                  {tab.id === 's-home' && unreadNotificationsCount > 0 ? (
+                    <View style={styles.badgeWrap}>
+                      <BadgeCounter count={unreadNotificationsCount} size="sm" />
+                    </View>
+                  ) : null}
+                </View>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color,
+                      fontWeight: isActive ? '800' : '600',
+                    },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderTopWidth: 1,
-    paddingTop: 6,
+  outerContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    left: 14,
+    right: 14,
     zIndex: 100,
+    alignItems: 'center',
+  },
+  islandCard: {
+    width: '100%',
+    borderRadius: Radii.xxl,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   tabRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   iconWrap: {
     position: 'relative',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -165,6 +174,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     marginTop: 2,
     textAlign: 'center',
+    letterSpacing: 0.1,
   },
   badgeWrap: {
     position: 'absolute',
@@ -172,4 +182,3 @@ const styles = StyleSheet.create({
     right: -4,
   },
 });
-

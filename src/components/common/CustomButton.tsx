@@ -1,18 +1,19 @@
 /**
- * Custom Native Button with Haptics and design system variants.
+ * Custom Native Button with Button-in-Button Architecture, Haptics, and Kinetic Spring Dynamics.
  */
 import React from 'react';
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  View,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { RTCHaptics } from '../../core/native/haptics';
 import { Radii } from '../../core/theme/tokens';
+import { AnimatedPressable } from './AnimatedPressable';
 
 export interface CustomButtonProps {
   title: string;
@@ -22,6 +23,7 @@ export interface CustomButtonProps {
   loading?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
+  trailingIcon?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
@@ -34,10 +36,11 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   loading = false,
   disabled = false,
   icon,
+  trailingIcon,
   style,
   textStyle,
 }) => {
-  const { colors } = useAppStore();
+  const { colors, isDark } = useAppStore();
 
   const handlePress = () => {
     if (disabled || loading) return;
@@ -46,14 +49,14 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   };
 
   const getBackgroundColor = () => {
-    if (disabled) return colors.mut + '40';
+    if (disabled) return isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
     switch (variant) {
       case 'primary':
         return colors.primary;
       case 'teal':
         return colors.teal;
       case 'soft':
-        return colors.card2;
+        return isDark ? 'rgba(255, 255, 255, 0.06)' : colors.card2;
       case 'danger':
         return colors.red + '18';
       case 'ghost':
@@ -79,26 +82,33 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   const getHeight = () => {
     switch (size) {
       case 'big':
-        return 54;
+        return 56;
       case 'mid':
-        return 46;
+        return 48;
       case 'sm':
-        return 38;
+        return 40;
     }
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.78}
+    <AnimatedPressable
       onPress={handlePress}
       disabled={disabled || loading}
+      scaleTarget={0.97}
       style={[
         styles.base,
         {
           backgroundColor: getBackgroundColor(),
           height: getHeight(),
-          borderColor: variant === 'soft' ? colors.line : variant === 'danger' ? colors.red + '40' : 'transparent',
-          borderWidth: variant === 'soft' || variant === 'danger' ? 1 : 0,
+          borderColor:
+            variant === 'soft'
+              ? colors.line
+              : variant === 'danger'
+              ? colors.red + '40'
+              : variant === 'primary' || variant === 'teal'
+              ? 'rgba(255, 255, 255, 0.2)'
+              : 'transparent',
+          borderWidth: variant === 'ghost' ? 0 : 1,
         },
         style,
       ]}
@@ -106,37 +116,73 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={getTextColor()} size="small" />
       ) : (
-        <>
-          {icon ? <>{icon}</> : null}
+        <View style={styles.contentRow}>
+          {icon ? <View style={styles.leadingIconWrap}>{icon}</View> : null}
           <Text
             style={[
               styles.text,
               {
                 color: getTextColor(),
-                fontSize: size === 'big' ? 15 : size === 'mid' ? 13.5 : 12.5,
+                fontSize: size === 'big' ? 15.5 : size === 'mid' ? 14 : 12.5,
               },
               textStyle,
             ]}
           >
             {title}
           </Text>
-        </>
+          {trailingIcon ? (
+            <View
+              style={[
+                styles.trailingBadge,
+                {
+                  backgroundColor:
+                    variant === 'primary' || variant === 'teal'
+                      ? 'rgba(255, 255, 255, 0.18)'
+                      : isDark
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.06)',
+                },
+              ]}
+            >
+              {trailingIcon}
+            </View>
+          ) : null}
+        </View>
       )}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: Radii.lg,
+    borderRadius: Radii.full,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingHorizontal: 22,
+    overflow: 'hidden',
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  leadingIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trailingBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: Radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
   text: {
     fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 });

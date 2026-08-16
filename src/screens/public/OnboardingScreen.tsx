@@ -1,11 +1,4 @@
-/**
- * Onboarding Screen with Multi-mode Access:
- * 1. Fast Demo One-Tap Access (Student / Volunteer / Admin)
- * 2. Email & Password Sign-In / Sign-Up
- * 3. Google Sign-In
- * 4. Step 2: Profile Data Completion (Phone & Branch)
- */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,25 +24,17 @@ import { RTCNotifications } from '../../core/native/notifications';
 import { RTC_CONFIG } from '../../core/config';
 import { useT } from '../../core/i18n';
 import {
-  Gift,
   Sparkles,
   ShieldCheck,
-  Lock,
   LifeBuoy,
   MapPin,
   Check,
   ChevronDown,
   X,
-  GraduationCap,
-  Users,
-  Shield,
-  Mail,
-  KeyRound,
   UserPlus,
   LogIn,
-  Zap,
 } from 'lucide-react-native';
-import { Radii, Shadows } from '../../core/theme/tokens';
+import { Radii } from '../../core/theme/tokens';
 
 export interface OnboardingScreenProps {
   onLoginSuccess?: () => void;
@@ -66,35 +51,31 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
-    signInWithDemoRole,
     updateProfileData,
     resetAuthData,
     initAuth,
     isLoading,
+    error: authError,
   } = useAuthStore();
   const { t } = useT();
 
-  const [step, setStep] = useState<1 | 2>(session?.user && !profile?.phone ? 2 : 1);
-  const [authTab, setAuthTab] = useState<'demo' | 'email' | 'google'>('demo');
-
-  // Email form state
+  const [step, setStep] = useState<1 | 2>(session?.user && (!profile?.phone || !profile?.branch_id) ? 2 : 1);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [emailNameInput, setEmailNameInput] = useState('');
-  const [emailPhoneInput, setEmailPhoneInput] = useState('');
 
-  // Step 2 state
-  const [fullName, setFullName] = useState(profile?.full_name || session?.user?.user_metadata?.full_name || '');
-  const [phone, setPhone] = useState(profile?.phone || '');
-  const [selectedBranchId, setSelectedBranchId] = useState(profile?.branch_id || (branches[0]?.id || 'b1'));
+  // Form State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState(branches[0]?.id || '');
   const [branchModalVisible, setBranchModalVisible] = useState(false);
 
+  // Validation Errors
   const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [branchError, setBranchError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (session?.user) {
       if (!fullName) {
         setFullName(profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || '');
@@ -111,58 +92,65 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
     }
   }, [session, profile]);
 
-  const handleDemoSignIn = async (role: 'student' | 'volunteer' | 'admin') => {
-    RTCHaptics.selection();
-    await signInWithDemoRole(role);
-    showToast(
-      role === 'student'
-        ? 'مرحباً بك كطالب في مسار RTC! 🎓'
-        : role === 'volunteer'
-        ? 'مرحباً بك كمدرب / متطوع! 👨‍🏫'
-        : 'مرحباً بك في لوحة تحكم المسؤول 👑',
-      'ok'
-    );
-    if (onLoginSuccess) onLoginSuccess();
-  };
+  useEffect(() => {
+    if (authError) {
+      showToast(authError, 'err');
+    }
+  }, [authError]);
 
   const handleEmailAuth = async () => {
     RTCHaptics.light();
-    if (!emailInput || !emailInput.includes('@')) {
+    
+    if (!email || !email.includes('@')) {
       showToast('يرجى إدخال بريد إلكتروني صحيح', 'err');
       return;
     }
-    if (!passwordInput || passwordInput.length < 6) {
+    
+    if (!password || password.length < 6) {
       showToast('كلمة المرور يجب أن تكون ٦ أحرف على الأقل', 'err');
       return;
     }
 
     if (isSignUp) {
-      if (!emailNameInput.trim()) {
-        showToast('يرجى إدخال الاسم الثلاثي بالكامل', 'err');
+      let hasError = false;
+      if (!validateFullName(fullName)) {
+        setNameError('يرجى إدخال الاسم الثلاثي بالكامل');
+        hasError = true;
+      } else {
+        setNameError(null);
+      }
+
+      if (!validateEgyptianPhone(phone)) {
+        setPhoneError('يرجى إدخال رقم موبايل مصري صحيح (11 رقم)');
+        hasError = true;
+      } else {
+        setPhoneError(null);
+      }
+
+      if (!selectedBranchId) {
+        setBranchError('يرجى اختيار الفرع');
+        hasError = true;
+      } else {
+        setBranchError(null);
+      }
+
+      if (hasError) {
+        RTCHaptics.error();
         return;
       }
-      if (!validateEgyptianPhone(emailPhoneInput)) {
-        showToast('يرجى إدخال رقم موبايل مصري صحيح (11 رقم)', 'err');
-        return;
-      }
-      await signUpWithEmail(
-        emailInput,
-        passwordInput,
-        emailNameInput,
-        emailPhoneInput,
-        selectedBranchId
-      );
-      showToast('تم إنشاء الحساب بنجاح! مرحباً بك في مسار 🌟', 'ok');
+
+      await signUpWithEmail(email, password, fullName.trim(), phone.trim(), selectedBranchId);
+      if (onLoginSuccess) onLoginSuccess();
     } else {
-      await signInWithEmail(emailInput, passwordInput);
-      showToast('تم تسجيل الدخول بنجاح! 🚀', 'ok');
+      await signInWithEmail(email, password);
+      if (onLoginSuccess) onLoginSuccess();
     }
-    if (onLoginSuccess) onLoginSuccess();
   };
 
   const handleGoogleSignIn = async () => {
     RTCHaptics.light();
     await signInWithGoogle();
+    if (onLoginSuccess) onLoginSuccess();
   };
 
   const handleSaveProfile = async () => {
@@ -254,7 +242,43 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
     ]);
   };
 
-  const selectedBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
+  const renderBranchPicker = (error: string | null) => {
+    const selectedBranch = branches.find((b) => b.id === selectedBranchId) || null;
+    return (
+      <View style={{ marginBottom: 14 }}>
+        <Text style={[styles.branchLabel, { color: colors.txt }]}>
+          الفرع <Text style={{ color: colors.red }}>*</Text>
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setBranchModalVisible(true)}
+          style={[
+            styles.branchPickerBtn,
+            {
+              backgroundColor: colors.card2,
+              borderColor: error ? colors.red : colors.line,
+            },
+          ]}
+        >
+          <View style={styles.branchInner}>
+            <View style={[styles.branchIcon, { backgroundColor: colors.teal + '18' }]}>
+              <MapPin color={colors.teal} size={18} />
+            </View>
+            <Text
+              style={[
+                styles.branchSelectedText,
+                { color: selectedBranch ? colors.txt : colors.mut },
+              ]}
+            >
+              {selectedBranch?.name_ar || 'اختر الفرع'}
+            </Text>
+          </View>
+          <ChevronDown color={colors.mut} size={18} />
+        </TouchableOpacity>
+        {error ? <Text style={[styles.branchErrorText, { color: colors.red }]}>{error}</Text> : null}
+      </View>
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -262,7 +286,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
       style={[styles.container, { backgroundColor: colors.bg, paddingTop: insets.top }]}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
     >
-      {/* Header with dots and help */}
       <View style={styles.header}>
         <View style={styles.dots}>
           <View
@@ -300,250 +323,117 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         keyboardShouldPersistTaps="handled"
       >
         {step === 1 ? (
-          /* Step 1: Welcome & Flexible Sign-In */
           <View style={styles.step1Wrap}>
-            {/* Top Brand Pill */}
-            <View style={styles.badgeRow}>
-              <View style={[styles.freePill, { backgroundColor: colors.teal + '18', borderColor: colors.teal + '40' }]}>
-                <Gift color={colors.teal} size={16} />
-                <Text style={[styles.freeText, { color: colors.teal }]}>منصة رسالة للتدريب مجاناً 100%</Text>
-              </View>
-            </View>
-
-            {/* Main Hero Headline */}
             <View style={styles.headlineWrap}>
               <View style={styles.eyebrowRow}>
                 <Sparkles color={colors.gold} size={18} />
-                <Text style={[styles.eyebrow, { color: colors.gold }]}>مسار RTC الذكي</Text>
+                <Text style={[styles.eyebrow, { color: colors.gold }]}>مراكز رسالة للتدريب</Text>
               </View>
               <Text style={[styles.title, { color: colors.txt }]}>{t('welcomeTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.mut }]}>
-                ابدأ رحلتك التدريبية، سجل حضورك بالـ QR، واستلم شهاداتك المعتمدة فوراً.
+                ابدأ رحلتك التدريبية، سجل حضورك، واستلم شهاداتك المعتمدة فوراً.
               </Text>
             </View>
 
-            {/* Auth Mode Switcher Tabs */}
-            <View style={[styles.authTabsRow, { backgroundColor: colors.card2, borderColor: colors.line }]}>
-              <TouchableOpacity
-                onPress={() => {
-                  RTCHaptics.selection();
-                  setAuthTab('demo');
-                }}
-                style={[
-                  styles.authTabBtn,
-                  authTab === 'demo' && { backgroundColor: colors.primary, elevation: 2 },
-                ]}
-              >
-                <Zap color={authTab === 'demo' ? '#FFFFFF' : colors.mut} size={16} />
-                <Text
-                  style={[
-                    styles.authTabText,
-                    { color: authTab === 'demo' ? '#FFFFFF' : colors.mut },
-                  ]}
+            <CustomCard style={styles.emailCard} innerStyle={{ padding: 20, gap: 14 }}>
+              <View style={styles.authToggleRow}>
+                <TouchableOpacity
+                  onPress={() => setIsSignUp(false)}
+                  style={[styles.authToggleBtn, !isSignUp && { backgroundColor: colors.primary }]}
                 >
-                  ⚡ دخول تجريبي فوري
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  RTCHaptics.selection();
-                  setAuthTab('email');
-                }}
-                style={[
-                  styles.authTabBtn,
-                  authTab === 'email' && { backgroundColor: colors.primary, elevation: 2 },
-                ]}
-              >
-                <Mail color={authTab === 'email' ? '#FFFFFF' : colors.mut} size={16} />
-                <Text
-                  style={[
-                    styles.authTabText,
-                    { color: authTab === 'email' ? '#FFFFFF' : colors.mut },
-                  ]}
-                >
-                  إيميل وكلمة سر
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  RTCHaptics.selection();
-                  setAuthTab('google');
-                }}
-                style={[
-                  styles.authTabBtn,
-                  authTab === 'google' && { backgroundColor: colors.primary, elevation: 2 },
-                ]}
-              >
-                <ShieldCheck color={authTab === 'google' ? '#FFFFFF' : colors.mut} size={16} />
-                <Text
-                  style={[
-                    styles.authTabText,
-                    { color: authTab === 'google' ? '#FFFFFF' : colors.mut },
-                  ]}
-                >
-                  Google
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* TAB 1: Fast Demo Accounts */}
-            {authTab === 'demo' && (
-              <CustomCard style={styles.demoCard} innerStyle={{ padding: 18, gap: 14 }}>
-                <View style={styles.demoHeader}>
-                  <Text style={[styles.demoHeaderText, { color: colors.txt }]}>
-                    اختر الدور الذي ترغب في تجربته بنقرة واحدة:
+                  <Text style={{ color: !isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
+                    تسجيل الدخول
                   </Text>
-                </View>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleDemoSignIn('student')}
-                  style={[styles.roleOptionCard, { backgroundColor: colors.primarySoft, borderColor: colors.primary + '40' }]}
-                >
-                  <View style={[styles.roleOptionIcon, { backgroundColor: colors.primary }]}>
-                    <GraduationCap color="#FFFFFF" size={22} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.roleOptionTitle, { color: colors.txt }]}>حساب طالب نشط 🎓</Text>
-                    <Text style={[styles.roleOptionDesc, { color: colors.mut }]}>
-                      (عبدالله شاكر) - دورات مسجلة، سجل حضور ذكي، نقاط، شارات وشهادات.
-                    </Text>
-                  </View>
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleDemoSignIn('volunteer')}
-                  style={[styles.roleOptionCard, { backgroundColor: colors.teal + '14', borderColor: colors.teal + '40' }]}
+                  onPress={() => setIsSignUp(true)}
+                  style={[styles.authToggleBtn, isSignUp && { backgroundColor: colors.primary }]}
                 >
-                  <View style={[styles.roleOptionIcon, { backgroundColor: colors.teal }]}>
-                    <Users color="#FFFFFF" size={22} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.roleOptionTitle, { color: colors.txt }]}>حساب مدرب / متطوع 👨‍🏫</Text>
-                    <Text style={[styles.roleOptionDesc, { color: colors.mut }]}>
-                      (م. أحمد شاكر) - مجموعات تدريبية، توليد باركود التحضير، وتقارير المحاضرات.
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleDemoSignIn('admin')}
-                  style={[styles.roleOptionCard, { backgroundColor: colors.gold + '14', borderColor: colors.gold + '40' }]}
-                >
-                  <View style={[styles.roleOptionIcon, { backgroundColor: colors.gold }]}>
-                    <Shield color="#FFFFFF" size={22} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.roleOptionTitle, { color: colors.txt }]}>حساب مسؤول نظام 👑</Text>
-                    <Text style={[styles.roleOptionDesc, { color: colors.mut }]}>
-                      (أ. شاكر عبدالله) - لوحة تحكم كاملة، إدارة المستخدمين والفروع والشهادات.
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </CustomCard>
-            )}
-
-            {/* TAB 2: Email & Password Sign-In / Sign-Up */}
-            {authTab === 'email' && (
-              <CustomCard style={styles.emailCard} innerStyle={{ padding: 18, gap: 12 }}>
-                <View style={styles.emailToggleRow}>
-                  <TouchableOpacity
-                    onPress={() => setIsSignUp(false)}
-                    style={[styles.emailToggleBtn, !isSignUp && { backgroundColor: colors.primary }]}
-                  >
-                    <Text style={{ color: !isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
-                      تسجيل دخول
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setIsSignUp(true)}
-                    style={[styles.emailToggleBtn, isSignUp && { backgroundColor: colors.primary }]}
-                  >
-                    <Text style={{ color: isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
-                      إنشاء حساب جديد
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {isSignUp && (
-                  <>
-                    <TextInputField
-                      label="الاسم بالكامل"
-                      value={emailNameInput}
-                      onChangeText={setEmailNameInput}
-                      placeholder="مثال: عبدالله شاكر محمود"
-                      required
-                    />
-                    <TextInputField
-                      label="رقم الموبايل"
-                      value={emailPhoneInput}
-                      onChangeText={setEmailPhoneInput}
-                      placeholder="010XXXXXXXX"
-                      keyboardType="phone-pad"
-                      maxLength={11}
-                      required
-                    />
-                  </>
-                )}
-
-                <TextInputField
-                  label="البريد الإلكتروني"
-                  value={emailInput}
-                  onChangeText={setEmailInput}
-                  placeholder="name@domain.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  required
-                />
-
-                <TextInputField
-                  label="كلمة المرور"
-                  value={passwordInput}
-                  onChangeText={setPasswordInput}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  required
-                />
-
-                <CustomButton
-                  title={isSignUp ? 'إنشاء حساب والدخول' : 'تسجيل الدخول'}
-                  onPress={handleEmailAuth}
-                  variant="primary"
-                  size="big"
-                  loading={isLoading}
-                  icon={isSignUp ? <UserPlus color="#FFFFFF" size={20} /> : <LogIn color="#FFFFFF" size={20} />}
-                  style={{ marginTop: 8 }}
-                />
-              </CustomCard>
-            )}
-
-            {/* TAB 3: Google Sign-In */}
-            {authTab === 'google' && (
-              <CustomCard style={styles.googleGate} innerStyle={{ padding: 22, gap: 16 }}>
-                <CustomButton
-                  title={t('googleCta')}
-                  onPress={handleGoogleSignIn}
-                  variant="primary"
-                  size="big"
-                  loading={isLoading}
-                  icon={<ShieldCheck color="#FFFFFF" size={22} />}
-                  style={{ width: '100%' }}
-                />
-
-                <View style={styles.privacyNote}>
-                  <Lock color={colors.mut} size={15} />
-                  <Text style={[styles.privacyText, { color: colors.mut }]}>
-                    {t('privacyNote')}
+                  <Text style={{ color: isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
+                    حساب جديد
                   </Text>
-                </View>
-              </CustomCard>
-            )}
+                </TouchableOpacity>
+              </View>
 
-            {/* Quick Actions & Verification */}
+              {isSignUp && (
+                <>
+                  <TextInputField
+                    label="الاسم بالكامل"
+                    value={fullName}
+                    onChangeText={(text) => {
+                      setFullName(text);
+                      if (nameError) setNameError(null);
+                    }}
+                    placeholder="الاسم الثلاثي"
+                    error={nameError}
+                    required
+                  />
+                  <TextInputField
+                    label="رقم الموبايل"
+                    value={phone}
+                    onChangeText={(text) => {
+                      setPhone(text);
+                      if (phoneError) setPhoneError(null);
+                    }}
+                    placeholder="010XXXXXXXX"
+                    keyboardType="phone-pad"
+                    maxLength={11}
+                    error={phoneError}
+                    required
+                  />
+                  {renderBranchPicker(branchError)}
+                </>
+              )}
+
+              <TextInputField
+                label="البريد الإلكتروني"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="name@domain.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                required
+              />
+
+              <TextInputField
+                label="كلمة المرور"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                secureTextEntry
+                required
+              />
+
+              <CustomButton
+                title={isSignUp ? 'إنشاء حساب' : 'دخول'}
+                onPress={handleEmailAuth}
+                variant="primary"
+                size="big"
+                loading={isLoading}
+                icon={isSignUp ? <UserPlus color="#FFFFFF" size={20} /> : <LogIn color="#FFFFFF" size={20} />}
+                style={{ marginTop: 8 }}
+              />
+
+              {!isSignUp && (
+                <>
+                  <View style={styles.dividerRow}>
+                    <View style={[styles.divider, { backgroundColor: colors.line }]} />
+                    <Text style={[styles.dividerText, { color: colors.mut }]}>أو</Text>
+                    <View style={[styles.divider, { backgroundColor: colors.line }]} />
+                  </View>
+
+                  <CustomButton
+                    title="المتابعة باستخدام Google"
+                    onPress={handleGoogleSignIn}
+                    variant="soft"
+                    size="big"
+                    loading={isLoading}
+                    icon={<ShieldCheck color={colors.primary} size={22} />}
+                  />
+                </>
+              )}
+            </CustomCard>
+
             <View style={styles.quickAccessRow}>
               {onOpenVerify ? (
                 <TouchableOpacity
@@ -560,7 +450,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
               ) : null}
             </View>
 
-            {/* Footer Links */}
             <View style={styles.linksRow}>
               <TouchableOpacity onPress={() => Linking.openURL(RTC_CONFIG.officialUrl)}>
                 <Text style={[styles.footerLink, { color: colors.primary }]}>{t('officialSite')}</Text>
@@ -576,7 +465,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
             </View>
           </View>
         ) : (
-          /* Step 2: Complete Profile */
           <View style={styles.step2Wrap}>
             <View style={styles.step2Header}>
               <Text style={[styles.step2Title, { color: colors.txt }]}>{t('completeProfile')}</Text>
@@ -620,38 +508,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
                 required
               />
 
-              <View style={{ marginBottom: 14 }}>
-                <Text style={[styles.branchLabel, { color: colors.txt }]}>
-                  {t('branch')} <Text style={{ color: colors.red }}>*</Text>
-                </Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setBranchModalVisible(true)}
-                  style={[
-                    styles.branchPickerBtn,
-                    {
-                      backgroundColor: colors.card2,
-                      borderColor: branchError ? colors.red : colors.line,
-                    },
-                  ]}
-                >
-                  <View style={styles.branchInner}>
-                    <View style={[styles.branchIcon, { backgroundColor: colors.teal + '18' }]}>
-                      <MapPin color={colors.teal} size={18} />
-                    </View>
-                    <Text
-                      style={[
-                        styles.branchSelectedText,
-                        { color: selectedBranch ? colors.txt : colors.mut },
-                      ]}
-                    >
-                      {selectedBranch?.name_ar || t('branchPlaceholder')}
-                    </Text>
-                  </View>
-                  <ChevronDown color={colors.mut} size={18} />
-                </TouchableOpacity>
-                {branchError ? <Text style={[styles.branchErrorText, { color: colors.red }]}>{branchError}</Text> : null}
-              </View>
+              {renderBranchPicker(branchError)}
 
               <CustomButton
                 title={t('saveStart')}
@@ -771,25 +628,9 @@ const styles = StyleSheet.create({
   },
   step1Wrap: {
     flex: 1,
-    justifyContent: 'space-between',
-    gap: 16,
-    paddingTop: 10,
-  },
-  badgeRow: {
-    alignItems: 'center',
-  },
-  freePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: Radii.full,
-    borderWidth: 1,
-  },
-  freeText: {
-    fontSize: 13,
-    fontWeight: '700',
+    justifyContent: 'center',
+    gap: 24,
+    paddingTop: 20,
   },
   headlineWrap: {
     alignItems: 'center',
@@ -799,109 +640,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginBottom: 4,
   },
   eyebrow: {
     fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '700',
   },
   title: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: '800',
     textAlign: 'center',
-    lineHeight: 34,
   },
   subtitle: {
-    fontSize: 13.5,
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
     paddingHorizontal: 10,
   },
-  authTabsRow: {
-    flexDirection: 'row',
-    padding: 4,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    gap: 4,
-  },
-  authTabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 8,
-    borderRadius: Radii.md,
-  },
-  authTabText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  demoCard: {
-    borderRadius: Radii.xl,
-  },
-  demoHeader: {
-    marginBottom: 4,
-  },
-  demoHeaderText: {
-    fontSize: 13.5,
-    fontWeight: '700',
-  },
-  roleOptionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-  },
-  roleOptionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roleOptionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  roleOptionDesc: {
-    fontSize: 11,
-    lineHeight: 15,
-  },
   emailCard: {
-    borderRadius: Radii.xl,
+    marginTop: 10,
   },
-  emailToggleRow: {
+  authToggleRow: {
     flexDirection: 'row',
-    backgroundColor: '#00000010',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: Radii.md,
-    padding: 3,
-    marginBottom: 6,
+    padding: 4,
+    marginBottom: 8,
   },
-  emailToggleBtn: {
+  authToggleBtn: {
     flex: 1,
+    paddingVertical: 10,
     alignItems: 'center',
-    paddingVertical: 6,
     borderRadius: Radii.sm,
   },
-  googleGate: {
-    borderRadius: Radii.xl,
-  },
-  privacyNote: {
+  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    marginVertical: 12,
   },
-  privacyText: {
-    fontSize: 12,
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
   },
   quickAccessRow: {
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 10,
   },
   verifyCertBtn: {
     flexDirection: 'row',
@@ -913,52 +701,58 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   verifyCertText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   linksRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingTop: 10,
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 20,
   },
   footerLink: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
   step2Wrap: {
-    gap: 18,
-    paddingTop: 16,
+    flex: 1,
+    justifyContent: 'center',
+    gap: 24,
+    paddingTop: 20,
   },
   step2Header: {
-    gap: 6,
+    alignItems: 'center',
+    gap: 8,
   },
   step2Title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
+    textAlign: 'center',
   },
   step2Subtitle: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   formCard: {
-    padding: 18,
-    gap: 6,
+    padding: 20,
+    gap: 16,
   },
   branchLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 6,
+    textAlign: 'left',
   },
   branchPickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: Radii.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: Radii.md,
-    borderWidth: 1,
   },
   branchInner: {
     flexDirection: 'row',
@@ -966,61 +760,59 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   branchIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 6,
+    borderRadius: Radii.sm,
   },
   branchSelectedText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   branchErrorText: {
-    fontSize: 11.5,
+    fontSize: 12,
     marginTop: 4,
+    textAlign: 'left',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: '#00000060',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    borderTopLeftRadius: Radii.xxl,
-    borderTopRightRadius: Radii.xxl,
-    maxHeight: '75%',
-    padding: 20,
-    gap: 14,
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
+    padding: 24,
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '800',
   },
   branchItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: Radii.md,
+    padding: 16,
+    borderRadius: Radii.lg,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   branchItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   branchItemName: {
-    fontSize: 14,
+    fontSize: 16,
   },
   branchItemAddress: {
-    fontSize: 11,
+    fontSize: 13,
     marginTop: 2,
   },
 });

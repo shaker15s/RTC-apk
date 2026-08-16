@@ -21,7 +21,7 @@ import { useT, t, dateLocale } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { colors } = useAppStore();
+  const { colors, showToast } = useAppStore();
   const { t } = useT();
 
   const [ledger, setLedger] = useState<PointsLedgerItem[]>([]);
@@ -33,6 +33,7 @@ export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack })
       const data = await Repository.fetchLedger();
       setLedger(data);
     } catch (e) {
+      showToast(t('genericLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -94,7 +95,7 @@ export const PointsLedgerScreen: React.FC<{ onBack: () => void }> = ({ onBack })
                   </View>
 
                   <View style={styles.textWrap}>
-                    <Text style={[styles.title, { color: colors.txt }]}>
+                    <Text style={[styles.title, { color: colors.txt }]} numberOfLines={1} ellipsizeMode="tail">
                       {item.points_rules?.title || item.notes || t('plEntry')}
                     </Text>
                     <View style={styles.dateRow}>

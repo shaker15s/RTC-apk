@@ -76,6 +76,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
       const data = await Repository.fetchUsers(searchQuery || undefined);
       setUsers(data);
     } catch (e) {
+      showToast(t('genericLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);

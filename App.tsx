@@ -122,6 +122,23 @@ export default function App() {
       }
     });
 
+    // 5. Silent Automatic OTA Update check on launch (no user disruption)
+    if (!__DEV__) {
+      import('expo-updates')
+        .then(async (Updates) => {
+          try {
+            const check = await Updates.checkForUpdateAsync();
+            if (check.isAvailable) {
+              await Updates.fetchUpdateAsync();
+              // Downloaded in background, will apply on next cold boot
+            }
+          } catch (e) {
+            // Non-blocking if offline
+          }
+        })
+        .catch(() => {});
+    }
+
     return () => {
       cleanupNet();
       linkSub.remove();

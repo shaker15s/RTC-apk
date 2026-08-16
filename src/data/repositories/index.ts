@@ -6,15 +6,6 @@ import { t } from '../../core/i18n';
 import { RPC, UserProfile } from '../rpc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import {
-  MOCK_BRANCHES,
-  MOCK_COURSES,
-  MOCK_BATCHES,
-  MOCK_ENROLLMENTS,
-  MOCK_CERTS,
-  MOCK_NOTIFICATIONS,
-  MOCK_POINTS_LEDGER,
-} from '../mockData';
 
 export interface Branch {
   id: string;
@@ -191,12 +182,12 @@ export const Repository = {
         .eq('is_active', true)
         .order('sort_order');
       if (error) throw error;
-      const list = data && data.length ? data : MOCK_BRANCHES;
-      await writeCache('branches', list);
+      const list = data || [];
+      if (list.length) await writeCache('branches', list);
       return list;
     } catch (e) {
       const cached = await readCache<Branch[]>('branches');
-      return cached && cached.length ? cached : MOCK_BRANCHES;
+      return cached || [];
     }
   },
 
@@ -215,15 +206,15 @@ export const Repository = {
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
       if (error) throw error;
-      const list = data && data.length ? data : MOCK_COURSES;
-      if (!branchId) await writeCache('courses', list);
+      const list = data || [];
+      if (!branchId && list.length) await writeCache('courses', list);
       return list;
     } catch (e) {
       if (!branchId) {
         const cached = await readCache<Course[]>('courses');
-        if (cached && cached.length) return cached;
+        return cached || [];
       }
-      return MOCK_COURSES;
+      return [];
     }
   },
 
@@ -240,9 +231,9 @@ export const Repository = {
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data && data.length ? data : MOCK_BATCHES) || MOCK_BATCHES;
+      return data || [];
     } catch (e) {
-      return MOCK_BATCHES;
+      return [];
     }
   },
 
@@ -250,7 +241,7 @@ export const Repository = {
   async fetchMyEnrollments(): Promise<Enrollment[]> {
     try {
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.user) return MOCK_ENROLLMENTS;
+      if (!session?.user) return [];
       const { data, error } = await supabase
         .from('enrollments')
         .select(
@@ -259,9 +250,9 @@ export const Repository = {
         .eq('student_id', session.user.id)
         .order('joined_at', { ascending: false });
       if (error) throw error;
-      return (data && data.length ? data : MOCK_ENROLLMENTS) || MOCK_ENROLLMENTS;
+      return data || [];
     } catch (e) {
-      return MOCK_ENROLLMENTS;
+      return [];
     }
   },
 
@@ -269,16 +260,16 @@ export const Repository = {
   async fetchMyBatches(): Promise<Batch[]> {
     try {
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.user) return MOCK_BATCHES;
+      if (!session?.user) return [];
       const { data, error } = await supabase
         .from('batches')
         .select('*, courses(id, title, category, icon, color, sessions_count, max_students), branches(name_ar)')
         .eq('instructor_id', session.user.id)
         .eq('is_active', true);
       if (error) throw error;
-      return (data && data.length ? data : MOCK_BATCHES) || MOCK_BATCHES;
+      return data || [];
     } catch (e) {
-      return MOCK_BATCHES;
+      return [];
     }
   },
 
@@ -286,7 +277,7 @@ export const Repository = {
   async fetchNotifications(): Promise<NotificationItem[]> {
     try {
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.user) return MOCK_NOTIFICATIONS;
+      if (!session?.user) return [];
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -294,9 +285,9 @@ export const Repository = {
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data && data.length ? data : MOCK_NOTIFICATIONS) || MOCK_NOTIFICATIONS;
+      return data || [];
     } catch (e) {
-      return MOCK_NOTIFICATIONS;
+      return [];
     }
   },
 
@@ -316,14 +307,14 @@ export const Repository = {
         .limit(80);
       if (mineOnly) {
         const session = (await supabase.auth.getSession()).data.session;
-        if (!session?.user) return MOCK_CERTS;
+        if (!session?.user) return [];
         q = q.eq('student_id', session.user.id);
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data && data.length ? data : MOCK_CERTS) || MOCK_CERTS;
+      return data || [];
     } catch (e) {
-      return MOCK_CERTS;
+      return [];
     }
   },
 
@@ -331,7 +322,7 @@ export const Repository = {
   async fetchLedger(): Promise<PointsLedgerItem[]> {
     try {
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session?.user) return MOCK_POINTS_LEDGER;
+      if (!session?.user) return [];
       const { data, error } = await supabase
         .from('points_ledger')
         .select('*, points_rules(code, title)')
@@ -339,9 +330,9 @@ export const Repository = {
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data && data.length ? data : MOCK_POINTS_LEDGER) || MOCK_POINTS_LEDGER;
+      return data || [];
     } catch (e) {
-      return MOCK_POINTS_LEDGER;
+      return [];
     }
   },
 
@@ -546,9 +537,6 @@ export const Repository = {
       .select('*, profiles(full_name, avatar_url, phone), sessions(title, session_date, batches(name))')
       .order('created_at', { ascending: false });
     if (batchId) {
-      // Filtering an embedded relation must use the embedded table name
-      // as it appears in the select (plural "sessions") — the old code
-      // used "session.batch_id" which is not a valid PostgREST path.
       q = q.eq('sessions.batch_id', batchId);
     }
     const { data, error } = await q;

@@ -158,10 +158,10 @@ export const AdminCertsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
             <CustomCard key={cert.id} style={styles.certCard}>
               <View style={styles.certTop}>
                 <View style={styles.certInfo}>
-                  <Text style={[styles.studentName, { color: colors.txt }]}>
+                  <Text style={[styles.studentName, { color: colors.txt }]} numberOfLines={1} ellipsizeMode="tail">
                     {cert.profiles?.full_name || t('aceStudent')}
                   </Text>
-                  <Text style={[styles.courseTitle, { color: colors.mut }]}>
+                  <Text style={[styles.courseTitle, { color: colors.mut }]} numberOfLines={1} ellipsizeMode="tail">
                     {cert.courses?.title || t('aceCourse')}
                   </Text>
                 </View>

@@ -272,8 +272,8 @@ export const EditProfileScreen: React.FC<{ onBack: () => void }> = ({ onBack }) 
                     ]}
                   >
                     <View style={styles.branchItemLeft}>
-                      <Text style={[styles.branchItemName, { color: colors.txt }]}>{item.name_ar}</Text>
-                      {item.city ? <Text style={[styles.branchItemCity, { color: colors.mut }]}>{item.city}</Text> : null}
+                      <Text style={[styles.branchItemName, { color: colors.txt }]} numberOfLines={1} ellipsizeMode="tail">{item.name_ar}</Text>
+                      {item.city ? <Text style={[styles.branchItemCity, { color: colors.mut }]} numberOfLines={1} ellipsizeMode="tail">{item.city}</Text> : null}
                     </View>
                     {isSelected ? <CheckCircle2 color={colors.primary} size={20} /> : null}
                   </TouchableOpacity>
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   cameraBadge: {
     position: 'absolute',
     bottom: -4,
-    right: -4,
+    end: -4,
     width: 32,
     height: 32,
     borderRadius: 16,

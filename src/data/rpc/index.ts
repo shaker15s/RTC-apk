@@ -1,9 +1,9 @@
 /**
  * Master RPC Client for Masar RTC Native Mobile.
- * Encapsulates the 26 documented PostgreSQL RPC functions with exact parameter names.
+ * Encapsulates the 26+ documented PostgreSQL RPC functions with exact parameter names.
+ * All fake fallbacks removed for production accuracy.
  */
 import { supabase } from '../supabaseClient';
-import { MOCK_LEADERBOARD, MOCK_ATTENDANCE_RECORDS } from '../mockData';
 
 export interface UserProfile {
   id: string;
@@ -141,40 +141,27 @@ export const RPC = {
 
   // 7. join_batch
   async joinBatch(batchId: string): Promise<{ success: boolean; status: 'enrolled' | 'waitlist' }> {
-    try {
-      const res = await supabase.rpc('join_batch', {
-        p_batch_id: batchId,
-      });
-      return unwrap(res);
-    } catch (e) {
-      return { success: true, status: 'enrolled' };
-    }
+    const res = await supabase.rpc('join_batch', {
+      p_batch_id: batchId,
+    });
+    return unwrap(res);
   },
 
   // 8. start_session
   async startSession(batchId: string, title?: string): Promise<{ id: string; checkin_code: string }> {
-    try {
-      const res = await supabase.rpc('start_session', {
-        p_batch_id: batchId,
-        p_title: title || null,
-      });
-      return unwrap(res);
-    } catch (e) {
-      const code = String(Math.floor(1000 + Math.random() * 9000));
-      return { id: 'sess-' + Date.now(), checkin_code: code };
-    }
+    const res = await supabase.rpc('start_session', {
+      p_batch_id: batchId,
+      p_title: title || null,
+    });
+    return unwrap(res);
   },
 
   // 9. student_check_in
   async studentCheckIn(code: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const res = await supabase.rpc('student_check_in', {
-        p_code: code,
-      });
-      return unwrap(res);
-    } catch (e) {
-      return { success: true, message: 'تم تسجيل حضورك بنجاح وحصلت على ١٥ نقطة تميز! 🎉' };
-    }
+    const res = await supabase.rpc('student_check_in', {
+      p_code: code,
+    });
+    return unwrap(res);
   },
 
   // 10. record_session_attendance
@@ -244,10 +231,9 @@ export const RPC = {
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
     try {
       const res = await supabase.rpc('get_leaderboard');
-      const rows = unwrap(res, []);
-      return (rows && rows.length ? rows : MOCK_LEADERBOARD) || MOCK_LEADERBOARD;
+      return unwrap(res, []) || [];
     } catch (e) {
-      return MOCK_LEADERBOARD;
+      return [];
     }
   },
 
@@ -347,8 +333,7 @@ export const RPC = {
     return unwrap(res);
   },
 
-  // 27. admin_award_points (admin only — added in v100.1.0, fixes P0-1)
-  // Requires the SQL function in docs/sql/2026-08-15-quality-fixes.sql
+  // 27. admin_award_points (admin only)
   async adminAwardPoints(userId: string, points: number, reason?: string): Promise<{ success: boolean; new_balance?: number }> {
     const res = await supabase.rpc('admin_award_points', {
       p_user_id: userId,
@@ -358,10 +343,7 @@ export const RPC = {
     return unwrap(res);
   },
 
-  // 28. get_active_session (instructor/admin — added in v100.1.0, fixes P0-5)
-  // Returns the open session for a batch, or null. Requires the SQL
-  // function in docs/sql/2026-08-15-quality-fixes.sql — callers must
-  // catch the "function does not exist" error and fall back to local state.
+  // 28. get_active_session (instructor/admin)
   async getActiveSession(batchId: string): Promise<{ id: string; checkin_code: string; title?: string } | null> {
     const res = await supabase.rpc('get_active_session', {
       p_batch_id: batchId,
@@ -369,10 +351,7 @@ export const RPC = {
     return unwrap(res, null);
   },
 
-  // 29. get_my_next_session (student — added in v100.1.0, fixes F-2)
-  // Returns the student's real upcoming session, or null. Requires the
-  // SQL function in docs/sql/2026-08-15-quality-fixes.sql — callers must
-  // catch the error and fall back to showing the latest enrollment.
+  // 29. get_my_next_session (student)
   async getMyNextSession(): Promise<{
     session_id?: string;
     title?: string;
@@ -387,14 +366,13 @@ export const RPC = {
     return unwrap(res, null);
   },
 
-  // 30. get_my_attendance (student — added in v100.2.0, enhanced v100.4.0)
+  // 30. get_my_attendance (student)
   async getMyAttendance(): Promise<MyAttendanceItem[]> {
     try {
       const res = await supabase.rpc('get_my_attendance');
-      const rows = unwrap(res, []);
-      return (rows && rows.length ? rows : MOCK_ATTENDANCE_RECORDS) || MOCK_ATTENDANCE_RECORDS;
+      return unwrap(res, []) || [];
     } catch (e) {
-      return MOCK_ATTENDANCE_RECORDS;
+      return [];
     }
   },
 };

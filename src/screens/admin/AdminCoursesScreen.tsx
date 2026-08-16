@@ -70,6 +70,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
       const data = await Repository.fetchCourses(true);
       setCourses(data);
     } catch (e) {
+      showToast(t('coursesLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);

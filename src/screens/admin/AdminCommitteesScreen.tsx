@@ -42,6 +42,7 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
       const data = await Repository.fetchCommittees();
       setCommittees(data);
     } catch (e) {
+      showToast(t('genericLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -60,3 +60,10 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           npx eas-cli update --branch preview --message "${{ github.event.head_commit.message }}" --non-interactive
+
+      - name: 📦 Build New APK Automatically on EAS Cloud
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx eas-cli build --platform android --profile preview --non-interactive --no-wait

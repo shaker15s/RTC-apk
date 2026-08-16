@@ -59,4 +59,4 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          npx eas-cli update --auto --non-interactive
+          npx eas-cli update --branch preview --message "${{ github.event.head_commit.message }}" --non-interactive

@@ -46,3 +46,17 @@ jobs:
         if: success()
         run: |
           echo "✅ All Masar RTC mobile quality checks and test suites passed with 100% parity!"
+
+      - name: Setup Expo & EAS CLI
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🚀 Publish Automatic Over-The-Air (OTA) Update to Mobile App
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx eas-cli update --auto --non-interactive

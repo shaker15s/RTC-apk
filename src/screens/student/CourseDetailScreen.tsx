@@ -279,7 +279,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                       <CustomButton
                         title="✓ تم الانضمام للدفعة بنجاح"
                         onPress={() => {}}
-                        variant="secondary"
+                        variant="teal"
                         size="mid"
                         disabled={true}
                       />

@@ -26,6 +26,8 @@ import { useSessionStore } from '../state/sessionStore';
 import { canAccess } from '../core/security/sanitizers';
 import { RTCHaptics } from '../core/native/haptics';
 import { navigationRef } from './navigationRef';
+import { RootStackParamList } from './types';
+import { linking } from './linking';
 import { t } from '../core/i18n';
 
 // Layout & Feedback Components
@@ -78,7 +80,7 @@ import { AdminCommitteesScreen } from '../screens/admin/AdminCommitteesScreen';
 import { AdminBroadcastScreen } from '../screens/admin/AdminBroadcastScreen';
 import { AdminAnalyticsScreen } from '../screens/admin/AdminAnalyticsScreen';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // ---------------------------------------------------------------
 // Screen adapter: injects onNavigate / onBack into every screen so
@@ -124,7 +126,7 @@ function OnboardingWithNav() {
 }
 
 // Registered route table (single source of truth)
-type RouteDef = { name: string; component: React.ComponentType<any> };
+type RouteDef = { name: keyof RootStackParamList; component: React.ComponentType<any> };
 
 const PUBLIC_SCREENS: RouteDef[] = [
   { name: 'onboarding', component: OnboardingWithNav },
@@ -179,7 +181,7 @@ const AUTHED_SCREENS: RouteDef[] = [
 ];
 
 // Screens that show the floating bottom tab bar
-const TAB_SCREENS = [
+const TAB_SCREENS: (keyof RootStackParamList)[] = [
   's-home',
   's-courses',
   's-points',
@@ -197,26 +199,6 @@ const TAB_SCREENS = [
   'a-analytics',
   's-analytics',
 ];
-
-// Deep-link mapping (org.resala.rtc.masar://)
-const linking = {
-  prefixes: ['org.resala.rtc.masar://', 'masar-rtc://'],
-  // OAuth return URLs are handled by the auth store (App.tsx listener) —
-  // keep them away from the navigator to avoid "screen not found" warnings.
-  filter: (url: string) => !(url.includes('code=') || url.includes('access_token')),
-  config: {
-    screens: {
-      onboarding: '',
-      verify: 'verify',
-      changelog: 'changelog',
-      's-home': 'home',
-      's-courses': 'courses',
-      's-points': 'points',
-      's-certs': 'certs',
-      's-profile': 'profile',
-    },
-  },
-};
 
 function RootFlow() {
   const { session, profile, isInitialized } = useAuthStore();
@@ -307,7 +289,7 @@ function RootShell({ currentRoute, setCurrentRoute }: { currentRoute: string; se
     return () => sub.remove();
   }, [showToast]);
 
-  const showTabBar = !!session && TAB_SCREENS.includes(currentRoute);
+  const showTabBar = !!session && TAB_SCREENS.includes(currentRoute as keyof RootStackParamList);
 
   const handleTabPress = (screenId: string) => {
     const role = profile?.role || 'student';

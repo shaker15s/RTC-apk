@@ -194,14 +194,21 @@ const COMPONENTS_TO_CHECK = [
   'common/ActionSheet.tsx',
   'common/SearchBar.tsx',
   'common/StatCard.tsx',
+  'common/Typography.tsx',
+  'common/SectionHeader.tsx',
+  'common/StatusPill.tsx',
+  'common/MetricCard.tsx',
+  'common/PrimaryActionCard.tsx',
+  'common/ListRow.tsx',
   'feedback/SuccessAnimation.tsx',
   'layout/BottomNavigationBar.tsx',
   'layout/GlassHeader.tsx',
+  'layout/ScreenScaffold.tsx',
   'cert/CertificateCard.tsx',
 ];
 
-// Navigation layer files (React Navigation migration — v100.2.0)
-const NAVIGATION_FILES = ['navigationRef.ts', 'AppNavigator.tsx'];
+// Navigation layer files (React Navigation migration — v100.2.0 & v100.4.0 typed routing)
+const NAVIGATION_FILES = ['navigationRef.ts', 'AppNavigator.tsx', 'types.ts', 'linking.ts'];
 const navigationBaseDir = path.join(__dirname, '../src/navigation');
 NAVIGATION_FILES.forEach((file) => {
   assert(fs.existsSync(path.join(navigationBaseDir, file)), `Navigation file created: ${file}`);

@@ -3,26 +3,18 @@
  * components (notification taps, deep links, tab bar).
  */
 import { createNavigationContainerRef } from '@react-navigation/native';
+import { RootStackParamList } from './types';
 
-// All registered screen names + their route params (loose by design:
-// most screens take none, a few take ids).
-export type RootParamList = Record<string, object | undefined> & {
-  's-course-detail': { courseId?: string };
-  's-course-rating': { courseId?: string; courseTitle?: string };
-  'v-batches': { selectedBatchId?: string };
-  'v-attendance': { sessionId?: string; batchId?: string };
-  'v-report': { sessionId?: string; sessionTitle?: string };
-  verify: { serial?: string };
-};
+export type RootParamList = RootStackParamList;
 
-export const navigationRef = createNavigationContainerRef<RootParamList>();
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 /**
  * Navigate to a screen from anywhere in the app (guarded at call sites).
  */
-export function navigateFromOutside<K extends keyof RootParamList>(
+export function navigateFromOutside<K extends keyof RootStackParamList>(
   screenId: K,
-  params?: RootParamList[K]
+  params?: RootStackParamList[K]
 ) {
   if (navigationRef.isReady()) {
     // @ts-ignore — params shapes vary per screen and are validated upstream

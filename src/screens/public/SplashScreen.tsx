@@ -41,6 +41,10 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
       <Text style={styles.tagline}>{t('tagline')}</Text>
       <Text style={styles.org}>{t('org')}</Text>
 
+      <View style={styles.badgePill}>
+        <Text style={styles.badgeText}>✨ تحديث مباشر — v100.4.0 (Live OTA)</Text>
+      </View>
+
       <View style={styles.loaderWrap}>
         <ActivityIndicator color="#89F5E7" size="small" />
       </View>
@@ -96,6 +100,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loaderWrap: {
-    marginTop: 36,
+    marginTop: 24,
+  },
+  badgePill: {
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(137, 245, 231, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(137, 245, 231, 0.4)',
+  },
+  badgeText: {
+    color: '#89F5E7',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

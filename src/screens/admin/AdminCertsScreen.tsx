@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  FlatList,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -143,18 +144,30 @@ export const AdminCertsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
         }
       />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
-        {loading ? (
-          <View style={{ gap: 10 }}>
-            <SkeletonLoader height={110} borderRadius={Radii.xl} />
-            <SkeletonLoader height={110} borderRadius={Radii.xl} />
-          </View>
-        ) : certs.length ? (
-          certs.map((cert) => (
+      {loading ? (
+        <View style={styles.scrollContent}>
+          <SkeletonLoader height={110} borderRadius={Radii.xl} />
+          <SkeletonLoader height={110} borderRadius={Radii.xl} />
+        </View>
+      ) : (
+        <FlatList
+          data={certs}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          ListEmptyComponent={
+            <EmptyStateView
+              title={t('aceEmptyTitle')}
+              description={t('aceEmptyDesc')}
+              icon={<Award color={colors.gold} size={36} />}
+            />
+          }
+          renderItem={({ item: cert }) => (
             <CustomCard key={cert.id} style={styles.certCard}>
               <View style={styles.certTop}>
                 <View style={styles.certInfo}>
@@ -189,15 +202,9 @@ export const AdminCertsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                 </Text>
               </View>
             </CustomCard>
-          ))
-        ) : (
-          <EmptyStateView
-            title={t('aceEmptyTitle')}
-            description={t('aceEmptyDesc')}
-            icon={<Award color={colors.gold} size={36} />}
-          />
-        )}
-      </ScrollView>
+          )}
+        />
+      )}
 
       {/* Bulk Issue Modal */}
       <Modal visible={bulkModalVisible} transparent animationType="slide" onRequestClose={() => setBulkModalVisible(false)}>

@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  FlatList,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -166,19 +167,31 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
         <SelectChips items={filterChips} selectedId={roleFilter} onSelect={(id) => setRoleFilter(id as any)} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
-        {loading ? (
-          <View style={{ gap: 10 }}>
-            <SkeletonLoader height={80} borderRadius={Radii.lg} />
-            <SkeletonLoader height={80} borderRadius={Radii.lg} />
-            <SkeletonLoader height={80} borderRadius={Radii.lg} />
-          </View>
-        ) : filteredUsers.length ? (
-          filteredUsers.map((user) => {
+      {loading ? (
+        <View style={styles.scrollContent}>
+          <SkeletonLoader height={80} borderRadius={Radii.lg} />
+          <SkeletonLoader height={80} borderRadius={Radii.lg} />
+          <SkeletonLoader height={80} borderRadius={Radii.lg} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          ListEmptyComponent={
+            <EmptyStateView
+              title={t('auEmptyTitle')}
+              description={t('auEmptyDesc')}
+              icon={<Users color={colors.primary} size={32} />}
+            />
+          }
+          renderItem={({ item: user }) => {
             const roleColor =
               user.role === 'admin' ? colors.red : user.role === 'volunteer' ? colors.teal : colors.primary;
 
@@ -250,15 +263,9 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
                 </View>
               </CustomCard>
             );
-          })
-        ) : (
-          <EmptyStateView
-            title={t('auEmptyTitle')}
-            description={t('auEmptyDesc')}
-            icon={<Users color={colors.primary} size={32} />}
-          />
-        )}
-      </ScrollView>
+          }}
+        />
+      )}
 
       {/* Role Change Modal */}
       <Modal visible={roleModalVisible} transparent animationType="slide" onRequestClose={() => setRoleModalVisible(false)}>

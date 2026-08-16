@@ -1,7 +1,9 @@
 /**
  * Automated Test Suite for Masar RTC Mobile (rtc_mobile)
- * Tests RPC contract parity (all 26 functions exactly as documented in docs/RPC-CONTRACT.md),
- * Screen parity (all 34 screens), Reusable Components, security sanitizers, role-based route guards, and phone/name validators.
+ * Tests RPC contract parity (all 29 functions exactly as documented in docs/RPC-CONTRACT.md),
+ * Screen parity (all 34 screens), Navigation Layer, Reusable Components,
+ * Security Sanitizers & Route Guards (Unit Suite), i18n Engine & Localization Parity (Unit Suite),
+ * Design Tokens & WCAG Contrast Standards (Unit Suite), and App Configuration.
  */
 
 const fs = require('fs');
@@ -30,13 +32,14 @@ console.log('======================================================\n');
 // -------------------------------------------------------------
 console.log('🧰 0. Compiling the REAL source with tsc --noEmit...');
 const repoRoot = path.join(__dirname, '..');
-const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const tsc = spawnSync(npxBin, ['tsc', '--noEmit'], {
+const tscBin = path.join(repoRoot, 'node_modules/typescript/bin/tsc');
+
+const tsc = spawnSync(process.execPath, [tscBin, '--noEmit'], {
   cwd: repoRoot,
   encoding: 'utf8',
   timeout: 180000,
-  shell: true,
 });
+
 if (tsc.status === 0) {
   console.log('  \x1b[32m✔ PASS:\x1b[0m TypeScript compilation succeeded with zero errors');
   passedTests++;
@@ -48,31 +51,9 @@ if (tsc.status === 0) {
 }
 
 // -------------------------------------------------------------
-// 0b. LOAD THE REAL SECURITY MODULE (no more copy-pasted validators)
-// The suite previously re-implemented the validators inside the test
-// file, which let tests pass while the real code behaved differently.
-// Now we transpile and execute the actual sanitizers.ts source.
+// 1. RPC CONTRACT PARITY (Exact PostgreSQL Functions)
 // -------------------------------------------------------------
-let realSanitizers = null;
-try {
-  const ts = require(path.join(repoRoot, 'node_modules/typescript'));
-  const src = fs.readFileSync(path.join(repoRoot, 'src/core/security/sanitizers.ts'), 'utf8');
-  const js = ts.transpileModule(src, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  }).outputText;
-  const moduleObj = { exports: {} };
-  // sanitizers.ts is dependency-free by design, so a bare module scope is safe.
-  new Function('module', 'exports', 'require', js)(moduleObj, moduleObj.exports, require);
-  realSanitizers = moduleObj.exports;
-} catch (e) {
-  console.error('  Could not load real sanitizers module:', e);
-}
-assert(!!realSanitizers, 'Real sanitizers.ts module loaded and executed');
-
-// -------------------------------------------------------------
-// 1. RPC CONTRACT PARITY (Exact 26 PostgreSQL Functions)
-// -------------------------------------------------------------
-console.log('📦 1. Testing 26 RPC Functions Parity with docs/RPC-CONTRACT.md...');
+console.log('\n📦 1. Testing RPC Functions Parity with docs/RPC-CONTRACT.md...');
 
 const ALL_RPCS = [
   'get_my_profile',
@@ -179,9 +160,15 @@ ALL_34_SCREENS.forEach((screenFileName) => {
 });
 
 // -------------------------------------------------------------
-// 3. REUSABLE COMPONENTS & DESIGN SYSTEM CHECK
+// 3. REUSABLE COMPONENTS, NAVIGATION LAYER & DESIGN TOKENS
 // -------------------------------------------------------------
-console.log('\n🧩 3. Testing Reusable Components & Design Tokens...');
+console.log('\n🧩 3. Testing Navigation Layer & Reusable Components...');
+
+const NAVIGATION_FILES = ['navigationRef.ts', 'AppNavigator.tsx', 'types.ts', 'linking.ts'];
+const navigationBaseDir = path.join(__dirname, '../src/navigation');
+NAVIGATION_FILES.forEach((file) => {
+  assert(fs.existsSync(path.join(navigationBaseDir, file)), `Navigation file created: ${file}`);
+});
 
 const COMPONENTS_TO_CHECK = [
   'common/AnimatedPressable.tsx',
@@ -207,13 +194,6 @@ const COMPONENTS_TO_CHECK = [
   'cert/CertificateCard.tsx',
 ];
 
-// Navigation layer files (React Navigation migration — v100.2.0 & v100.4.0 typed routing)
-const NAVIGATION_FILES = ['navigationRef.ts', 'AppNavigator.tsx', 'types.ts', 'linking.ts'];
-const navigationBaseDir = path.join(__dirname, '../src/navigation');
-NAVIGATION_FILES.forEach((file) => {
-  assert(fs.existsSync(path.join(navigationBaseDir, file)), `Navigation file created: ${file}`);
-});
-
 const componentsBaseDir = path.join(__dirname, '../src/components');
 COMPONENTS_TO_CHECK.forEach((cmpPath) => {
   const fullPath = path.join(componentsBaseDir, cmpPath);
@@ -221,116 +201,29 @@ COMPONENTS_TO_CHECK.forEach((cmpPath) => {
 });
 
 // -------------------------------------------------------------
-// 4. SECURITY SANITIZERS & VALIDATORS UNIT TESTS
-//    — executing the REAL functions loaded from sanitizers.ts
+// 4. MODULAR UNIT TEST SUITES (Unit Directory)
 // -------------------------------------------------------------
-console.log('\n🔒 4. Testing Security Sanitizers, Route Guards & Validators (REAL code)...');
+console.log('\n======================================================');
+console.log('🔬 4. Running Modular Unit Test Suites (tests/unit/)');
+console.log('======================================================');
 
-const {
-  validateEgyptianPhone,
-  validateFullName,
-  isUuid,
-  maskPhone,
-  canAccess,
-  maskName,
-  safeUrl,
-} = realSanitizers;
+// 4a. Security Sanitizers Unit Tests
+const { runSanitizersTests } = require('./unit/sanitizers.test.js');
+const sanitizersResult = runSanitizersTests();
+passedTests += sanitizersResult.passed;
+failedTests += sanitizersResult.failed;
 
-// Phone validator tests — the real validator now normalizes spaces,
-// dashes and Arabic-Indic digits before matching (v100.1.0, fixes F-7).
-assert(validateEgyptianPhone('01012345678') === true, 'Valid Vodafone Egyptian phone (010)');
-assert(validateEgyptianPhone('01112345678') === true, 'Valid Etisalat Egyptian phone (011)');
-assert(validateEgyptianPhone('01212345678') === true, 'Valid Orange Egyptian phone (012)');
-assert(validateEgyptianPhone('01512345678') === true, 'Valid WE Egyptian phone (015)');
-assert(validateEgyptianPhone('01912345678') === false, 'Invalid prefix (019) rejected');
-assert(validateEgyptianPhone('0101234567') === false, '10-digit number rejected');
-assert(validateEgyptianPhone('010123456789') === false, '12-digit number rejected');
-assert(validateEgyptianPhone('abc010123456') === false, 'Alphabetic characters rejected');
-assert(validateEgyptianPhone('010 1234 5678') === true, 'Phone with spaces accepted (normalized)');
-assert(validateEgyptianPhone('010-123-45678') === true, 'Phone with dashes accepted (normalized)');
-assert(validateEgyptianPhone('٠١٠١٢٣٤٥٦٧٨') === true, 'Arabic-Indic digits accepted (normalized)');
+// 4b. i18n Engine & Localization Parity Unit Tests
+const { runI18nTests } = require('./unit/i18n.test.js');
+const i18nResult = runI18nTests();
+passedTests += i18nResult.passed;
+failedTests += i18nResult.failed;
 
-// Full name validator tests
-assert(validateFullName('أحمد محمد علي') === true, 'Valid 3-part Arabic name');
-assert(validateFullName('محمود كمال الدين إبراهيم حسن') === true, 'Valid 4-part Arabic name');
-assert(validateFullName('أحمد') === false, 'Single word name rejected');
-assert(validateFullName('أحمد محمد') === false, 'Two word name rejected');
-assert(validateFullName('أحمد <script>alert(1)</script>') === false, 'HTML injection in name rejected');
-
-// UUID validator tests
-assert(isUuid('a3bb189e-8bf9-3888-9912-ace4e6543002') === true, 'Valid standard UUID v4');
-assert(isUuid('invalid-uuid-1234') === false, 'Invalid UUID rejected');
-
-// Privacy Masking tests
-assert(maskPhone('01012345678') === '010••••78', 'Phone correctly masked for privacy');
-assert(maskName('محمد أحمد حسن') === 'م*** أ*** ح***', 'Name correctly masked for privacy');
-assert(maskPhone('') === '—', 'Empty phone masked as dash');
-
-// URL safety tests
-assert(safeUrl('https://resala.org') === 'https://resala.org/', 'HTTPS url allowed');
-assert(safeUrl('javascript:alert(1)') === '', 'javascript: url rejected');
-assert(safeUrl('https://user:pass@evil.com') === '', 'URL with credentials rejected');
-assert(safeUrl('tel:19450') === 'tel:19450', 'tel: url allowed');
-
-// Route Guard security tests (REAL canAccess from sanitizers.ts)
-assert(canAccess('s-home', 'student') === true, 'Student can access s-home');
-assert(canAccess('s-course-rating', 'student') === true, 'Student can access s-course-rating');
-assert(canAccess('v-report', 'volunteer') === true, 'Volunteer can access v-report');
-assert(canAccess('a-analytics', 'admin') === true, 'Admin can access a-analytics');
-assert(canAccess('a-users', 'student') === false, 'Student blocked from admin users screen');
-assert(canAccess('a-broadcast', 'volunteer') === false, 'Volunteer blocked from admin broadcast');
-assert(canAccess('v-batches', 'volunteer') === true, 'Volunteer can access v-batches');
-assert(canAccess('a-users', 'admin') === true, 'Admin can access a-users');
-assert(canAccess('verify', null) === true, 'Public unauthenticated user can access verify');
-assert(canAccess('s-analytics', 'volunteer') === true, 'Volunteer can access shared analytics tab');
-assert(canAccess('s-analytics', 'admin') === true, 'Admin can access shared analytics tab');
-assert(canAccess('s-analytics', 'student') === false, 'Student blocked from analytics');
-
-// -------------------------------------------------------------
-// 4b. i18n ENGINE — execute the REAL bilingual module (v100.3.0)
-// -------------------------------------------------------------
-console.log('\n🌐 4b. Testing the REAL i18n engine (loading core/i18n)...');
-
-try {
-  const ts = require(path.join(repoRoot, 'node_modules/typescript'));
-  const i18nSrc = fs.readFileSync(path.join(__dirname, '../src/core/i18n/index.ts'), 'utf8');
-  const i18nJs = ts.transpileModule(i18nSrc, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  }).outputText;
-  const i18nModule = { exports: {} };
-  new Function('module', 'exports', 'require', i18nJs)(i18nModule, i18nModule.exports, require);
-  const realI18n = i18nModule.exports;
-
-  assert(typeof realI18n.t === 'function', 'i18n.t() is exported');
-  assert(typeof realI18n.setLanguage === 'function', 'i18n.setLanguage() is exported');
-
-  const arKeys = Object.keys(realI18n.STRINGS.ar);
-  const enKeys = Object.keys(realI18n.STRINGS.en);
-  assert(arKeys.length > 200, `Dictionary has ${arKeys.length}+ Arabic keys`);
-  assert(
-    arKeys.length === enKeys.length && arKeys.every((k) => enKeys.includes(k)),
-    'Arabic and English dictionaries have identical key sets'
-  );
-
-  // Interpolation
-  assert(
-    realI18n.t('pointsToNext', { p: 50, n: 100 }) === '50 / 100 نقطة للمستوى التالي',
-    'Arabic interpolation works'
-  );
-
-  // Live language switching
-  realI18n.setLanguage('en');
-  assert(realI18n.t('home') === 'Home', 'Language switch to English works');
-  assert(realI18n.t('pointsToNext', { p: 50, n: 100 }) === '50 / 100 points to next level', 'English interpolation works');
-  realI18n.setLanguage('ar');
-  assert(realI18n.t('home') === 'الرئيسية', 'Language switch back to Arabic works');
-
-  // Missing keys must never surface raw keys to users — Arabic fallback.
-  assert(realI18n.t('this_key_does_not_exist') === 'this_key_does_not_exist', 'Unknown keys fall back safely');
-} catch (e) {
-  console.error('  i18n module load failed:', e);
-  assert(false, 'i18n module loads and runs');
-}
+// 4c. Design Tokens, WCAG AA/AAA Contrast & Touch Targets Unit Tests
+const { runDesignTokensTests } = require('./unit/designTokens.test.js');
+const tokensResult = runDesignTokensTests();
+passedTests += tokensResult.passed;
+failedTests += tokensResult.failed;
 
 // -------------------------------------------------------------
 // 5. CONFIG & APP JSON AUDIT
@@ -345,12 +238,12 @@ assert(appJson.expo.ios.bundleIdentifier === 'org.resala.rtc.masar', 'iOS bundle
 assert(appJson.expo.scheme === 'org.resala.rtc.masar', 'Deep link scheme is org.resala.rtc.masar');
 
 console.log('\n======================================================');
-console.log(`📊 Test Results: ${passedTests} Passed, ${failedTests} Failed`);
+console.log(`📊 Final Aggregated Test Results: ${passedTests} Passed, ${failedTests} Failed`);
 console.log('======================================================\n');
 
 if (failedTests > 0) {
   process.exit(1);
 } else {
-  console.log('✨ All mobile tests passed with 100% parity!\n');
+  console.log('✨ All mobile tests and quality checks passed with 100% parity!\n');
   process.exit(0);
 }

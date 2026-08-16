@@ -1,0 +1,48 @@
+name: Masar RTC CI/CD & Quality Engineering
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Type Check & Quality Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm ci || npm install
+
+      - name: TypeScript Static Type Analysis (tsc --noEmit)
+        run: |
+          npx tsc --noEmit
+
+      - name: Run Quality Test Suite (Parity, Contracts, Security, i18n & Design Tokens)
+        run: |
+          node tests/run-tests.js
+
+      - name: Verify 100% Passing Status
+        if: success()
+        run: |
+          echo "✅ All Masar RTC mobile quality checks and test suites passed with 100% parity!"

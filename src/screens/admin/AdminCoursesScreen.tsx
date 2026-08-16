@@ -294,7 +294,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.txt }]}>
-                {t('acNewBatchTitle', { course: selectedCourseForBatch?.title })}
+                {t('acNewBatchTitle', { course: selectedCourseForBatch?.title || '' })}
               </Text>
               <TouchableOpacity onPress={() => setBatchModalVisible(false)}>
                 <X color={colors.mut} size={22} />

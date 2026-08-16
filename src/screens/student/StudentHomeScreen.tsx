@@ -1,47 +1,55 @@
+/**
+ * StudentHomeScreen — Mission Control / Today View for Masar RTC Students.
+ * Built according to Apple HIG & Google Material 3 standards.
+ * Centers the experience around the student's next immediate action:
+ * 1. Is there an active session right now? -> Instant Check-in CTA
+ * 2. When is my next lecture? -> Upcoming session card with location & time
+ * 3. What is my certificate eligibility progress?
+ * 4. Key learning metrics (Points, Level, Attendance Rate)
+ */
 import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   Linking,
-  RefreshControl,
+  Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Repository, Enrollment } from '../../data/repositories';
 import { RPC } from '../../data/rpc';
+import { ScreenScaffold } from '../../components/layout/ScreenScaffold';
+import { SectionHeader } from '../../components/common/SectionHeader';
+import { StatusPill } from '../../components/common/StatusPill';
+import { MetricCard } from '../../components/common/MetricCard';
+import { PrimaryActionCard } from '../../components/common/PrimaryActionCard';
+import { ListRow } from '../../components/common/ListRow';
 import { CustomCard } from '../../components/common/CustomCard';
-import { GlassHeader } from '../../components/layout/GlassHeader';
-import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
-import { AnimatedPressable } from '../../components/common/AnimatedPressable';
-import { AnimatedNumber } from '../../components/common/AnimatedNumber';
-import { EmptyState } from '../../components/common/EmptyState';
+import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
 import { useT, dateLocale } from '../../core/i18n';
 import { useRealtimeNotifications } from '../../data/realtime/useRealtimeNotifications';
-import Animated, {
-  FadeInDown,
-  FadeInRight,
-  FadeInUp,
-} from 'react-native-reanimated';
+import { Radii, Spacing, Shadows, TouchTarget } from '../../core/theme/tokens';
 import {
   Compass,
   QrCode,
-  Bell,
-  LifeBuoy,
-  Facebook,
-  ExternalLink,
+  Award,
+  Sparkles,
+  BookOpen,
   Calendar,
   Clock,
   MapPin,
+  Flame,
+  FileQuestion,
   ChevronLeft,
-  MonitorPlay,
+  GraduationCap,
+  Layers,
+  Facebook,
+  ExternalLink,
 } from 'lucide-react-native';
-import { Radii, Shadows } from '../../core/theme/tokens';
 
 export interface StudentHomeScreenProps {
   onNavigate: (screenId: string, params?: any) => void;
@@ -66,9 +74,6 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
       showToast(t('homeLoadError'), 'warn');
     }
 
-    // Real upcoming session from the backend (fixes F-2). If the RPC is
-    // not deployed yet or fails, we gracefully fall back to showing the
-    // latest enrollment in the "next lecture" card.
     try {
       const upcoming = await RPC.getMyNextSession();
       setNextSession(upcoming);
@@ -89,490 +94,323 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
     await Promise.all([refreshProfile(), loadData()]);
   };
 
-  // Calculate level based on points
+  // Gamification stats
   const points = profile?.points || 0;
   const level = Math.min(10, Math.floor(points / 100) + 1);
   const nextLevelPoints = level * 100;
   const currentLevelBase = (level - 1) * 100;
   const progressPercent = Math.min(100, Math.max(0, ((points - currentLevelBase) / 100) * 100));
 
-  // Next session from active enrollments
   const activeEnrollments = enrollments.filter((e) => e.status === 'enrolled');
-  const nextEnrollment = activeEnrollments[0];
+  const completedEnrollments = enrollments.filter((e) => e.status === 'completed');
 
-  // Prefer the backend's real "next session" (F-2), fall back to the
-  // latest enrollment when the RPC is unavailable.
-  const upcomingTitle =
-    nextSession?.course_title || nextSession?.title ||
-    nextEnrollment?.batches?.courses?.title || nextEnrollment?.batches?.name || '';
-  const upcomingSchedule = nextSession?.session_date
-    ? new Date(nextSession.session_date).toLocaleDateString(dateLocale(), {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : nextEnrollment?.batches?.schedule || '';
-  const upcomingLocation = nextSession?.location
-    ? `${nextSession.location}${nextSession.room ? ` (${nextSession.room})` : ''}`
-    : nextEnrollment?.batches?.location
-    ? `${nextEnrollment.batches.location}${nextEnrollment.batches.room ? ` (${nextEnrollment.batches.room})` : ''}`
-    : '';
-  const upcomingMeetingUrl = nextSession?.meeting_url || nextEnrollment?.batches?.meeting_url || '';
+  // Greeting based on time of day
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'صباح الخير' : 'مساء الخير';
+  const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : 'يا بطل';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader
-        title={t('home')}
-        subtitle={t('appName')}
-        showNotif
-        onNotifPress={() => onNavigate('s-notifications')}
-        showAvatar
-        onAvatarPress={() => onNavigate('s-profile')}
-      />
+    <ScreenScaffold
+      title={`${greeting}، ${firstName} 👋`}
+      subtitle={profile?.branch_name ? `فرع ${profile.branch_name}` : 'مسار للتدريب'}
+      showNotif
+      onNotifPress={() => onNavigate('s-notifications')}
+      showAvatar
+      onAvatarPress={() => onNavigate('s-profile')}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      loading={loading}
+    >
+      {/* 1. Hero Next Action: Active Session OR Upcoming Lecture OR Explore */}
+      {nextSession ? (
+        <PrimaryActionCard
+          title={nextSession.course_title || 'محاضرتك القادمة'}
+          subtitle={`${nextSession.branch_name || profile?.branch_name || 'الفرع'} • ${nextSession.date || 'اليوم'} ${nextSession.time ? `• ${nextSession.time}` : ''}`}
+          badge={nextSession.is_active ? '🔴 الجلسة نشطة الآن' : 'المحاضرة القادمة'}
+          actionLabel={nextSession.is_active ? 'تسجيل الحضور بالرمز' : 'عرض التفاصيل'}
+          onPress={() => {
+            if (nextSession.is_active) {
+              onNavigate('s-checkin');
+            } else if (nextSession.course_id) {
+              onNavigate('s-course-detail', { courseId: nextSession.course_id });
+            }
+          }}
+          icon={<QrCode color="#FFFFFF" size={24} />}
+          gradientColors={nextSession.is_active ? ['#00554E', '#00288E'] : undefined}
+        />
+      ) : activeEnrollments.length > 0 ? (
+        <PrimaryActionCard
+          title={activeEnrollments[0]?.batches?.courses?.title || 'دوراتي النشطة'}
+          subtitle={`أنت مسجل في ${activeEnrollments.length} ${activeEnrollments.length === 1 ? 'دورة تدريبية' : 'دورات تدريبية'}`}
+          badge="مسار التعلم"
+          actionLabel="متابعة الدورات"
+          onPress={() => onNavigate('s-courses')}
+          icon={<GraduationCap color="#FFFFFF" size={24} />}
+        />
+      ) : (
+        <PrimaryActionCard
+          title="ابدأ مسار تدريبك اليوم!"
+          subtitle="استكشف الدورات المتاحة في فروع رسالة وطوّر مهاراتك مجاناً."
+          badge="فرصة تدريبية"
+          actionLabel="استكشف الدورات"
+          onPress={() => onNavigate('s-explore')}
+          icon={<Compass color="#FFFFFF" size={24} />}
+        />
+      )}
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
-        {/* Grad Hero */}
-        <Animated.View entering={FadeInDown.duration(450).springify()}>
-          <LinearGradient colors={['#00288E', '#1E40AF', '#00554E']} style={[styles.gradHero, Shadows.soft]}>
-            <View style={styles.heroTop}>
-              <View style={styles.heroGreeting}>
-                <Text style={styles.greetingSub}>{t('greetingSub')}</Text>
-                <Text style={styles.greetingName} numberOfLines={1}>
-                  {profile?.full_name || t('studentFallback')} 👋
-                </Text>
-                <Text style={styles.greetingBranch}>{profile?.branch_name || t('branchFallback')}</Text>
-              </View>
+      {/* 2. Key Metrics Grid */}
+      <View style={styles.metricsRow}>
+        <MetricCard
+          label="النقاط"
+          value={points}
+          suffix=" نقطة"
+          color={colors.primary}
+          icon={<Flame color={colors.primary} size={18} />}
+          onPress={() => onNavigate('s-points')}
+          style={{ flex: 1 }}
+        />
+        <MetricCard
+          label="المستوى"
+          value={`المستوى ${level}`}
+          sublabel={`${nextLevelPoints - points} نقطة للمستوى التالي`}
+          color={colors.gold}
+          icon={<Sparkles color={colors.gold} size={18} />}
+          onPress={() => onNavigate('s-points')}
+          style={{ flex: 1 }}
+        />
+      </View>
 
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelBadgeSub}>{t('levelLabel')}</Text>
-                <Text style={styles.levelBadgeNum}>{level} ⭐</Text>
-              </View>
-            </View>
-
-            {/* Level Progress Bar */}
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
-            </View>
-            <Text style={styles.progressText}>
-              {t('pointsToNext', { p: points, n: nextLevelPoints })}
-            </Text>
-
-            {/* Stat Pills */}
-            {/* The fake "attendance %" (streak*20) was removed — it showed
-                values >100% and lied to students (F-1). Real stats only. */}
-            <View style={styles.statPillsRow}>
-              <View style={styles.statPill}>
-                <AnimatedNumber
-                  value={activeEnrollments.length}
-                  style={styles.statPillVal}
-                />
-                <Text style={styles.statPillLbl}>{t('activeCoursesStat')}</Text>
-              </View>
-              <View style={styles.statPill}>
-                <AnimatedNumber
-                  value={points}
-                  style={styles.statPillVal}
-                />
-                <Text style={styles.statPillLbl}>{t('pointsStat')}</Text>
-              </View>
-              <View style={styles.statPill}>
-                <AnimatedNumber
-                  value={profile?.streak || 0}
-                  prefix="🔥 "
-                  style={styles.statPillVal}
-                />
-                <Text style={styles.statPillLbl}>{t('streakStat')}</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Quick Actions Grid */}
-        <Animated.View entering={FadeInUp.delay(100).duration(400)} style={styles.quickGrid}>
-          <AnimatedPressable
-            onPress={() => onNavigate('s-explore')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: colors.primary + '18' }]}>
-              <Compass color={colors.primary} size={22} />
-            </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('explore')}</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            onPress={() => onNavigate('s-checkin')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: colors.teal + '18' }]}>
-              <QrCode color={colors.teal} size={22} />
-            </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('checkinHome')}</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            onPress={() => onNavigate('s-notifications')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: colors.gold + '22' }]}>
-              <Bell color={colors.gold} size={22} />
-            </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('notifShort')}</Text>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            onPress={() => onNavigate('support')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: '#7A30D818' }]}>
-              <LifeBuoy color="#7A30D8" size={22} />
-            </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('supportShort')}</Text>
-          </AnimatedPressable>
-        </Animated.View>
-
-        {/* Facebook Social Banner */}
-        <Animated.View entering={FadeInUp.delay(200).duration(400)}>
-          <AnimatedPressable
+      {/* 3. Quick Action Hub */}
+      <View style={styles.sectionWrap}>
+        <SectionHeader title="الإجراءات السريعة" />
+        <View style={styles.actionGrid}>
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={() => {
-              RTCHaptics.light();
-              Linking.openURL(profile?.branches?.facebook_url || RTC_CONFIG.facebookPageUrl);
+              RTCHaptics.selection();
+              onNavigate('s-checkin');
             }}
-            style={[styles.socialBanner, { backgroundColor: colors.card, borderColor: colors.line }]}
+            activeOpacity={0.7}
           >
-            <View style={styles.socialLeft}>
-              <View style={styles.fbIcon}>
-                <Facebook color="#FFFFFF" size={20} />
-              </View>
-              <View>
-                <Text style={[styles.fbTitle, { color: colors.txt }]}>{t('facebookTitle')}</Text>
-                <Text style={[styles.fbSub, { color: colors.mut }]}>{t('facebookSubtitle')}</Text>
-              </View>
+            <View style={[styles.actionIconBox, { backgroundColor: colors.primarySoft }]}>
+              <QrCode color={colors.primary} size={22} />
             </View>
-            <ExternalLink color="#1877F2" size={18} />
-          </AnimatedPressable>
-        </Animated.View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>تسجيل الحضور</Text>
+          </TouchableOpacity>
 
-        {/* Next Lecture Card */}
-        {loading ? (
-          <SkeletonLoader height={130} borderRadius={Radii.xl} />
-        ) : upcomingTitle ? (
-          <Animated.View entering={FadeInUp.delay(300).duration(400)}>
-            <CustomCard style={styles.nextLectureCard}>
-              <View style={styles.nextHeader}>
-                <View style={[styles.tagPill, { backgroundColor: colors.teal + '18' }]}>
-                  <Calendar color={colors.teal} size={14} />
-                  <Text style={[styles.tagText, { color: colors.teal }]}>{t('nextLecture')}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => onNavigate('s-courses')}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                >
-                  <Text style={[styles.viewAllText, { color: colors.primary }]}>{t('myCourses')}</Text>
-                  <ChevronLeft color={colors.primary} size={16} />
-                </TouchableOpacity>
-              </View>
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('s-explore');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: colors.tealSoft }]}>
+              <Compass color={colors.teal} size={22} />
+            </View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>استكشاف الدورات</Text>
+          </TouchableOpacity>
 
-              <Text style={[styles.nextCourseTitle, { color: colors.txt }]}>
-                {upcomingTitle}
-              </Text>
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('s-certs');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: colors.goldSoft }]}>
+              <Award color={colors.gold} size={22} />
+            </View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>شهاداتي</Text>
+          </TouchableOpacity>
 
-              <View style={styles.nextDetails}>
-                {upcomingSchedule ? (
-                  <View style={styles.nextDetailItem}>
-                    <Clock color={colors.mut} size={15} />
-                    <Text style={[styles.nextDetailText, { color: colors.mut }]}>
-                      {upcomingSchedule}
-                    </Text>
-                  </View>
-                ) : null}
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('s-excuse');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: colors.amberSoft }]}>
+              <FileQuestion color={colors.amber} size={22} />
+            </View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>تقديم عذر</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-                {upcomingLocation ? (
-                  <View style={styles.nextDetailItem}>
-                    <MapPin color={colors.mut} size={15} />
-                    <Text style={[styles.nextDetailText, { color: colors.mut }]}>
-                      {upcomingLocation}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
+      {/* 4. Active Enrollments List */}
+      <View style={styles.sectionWrap}>
+        <SectionHeader
+          title="دوراتي الحالية"
+          badge={activeEnrollments.length}
+          actionLabel="عرض الكل"
+          onAction={() => onNavigate('s-courses')}
+        />
 
-              {/* Online batches: show the real join link (fixes F-11) */}
-              {upcomingMeetingUrl ? (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    RTCHaptics.light();
-                    Linking.openURL(upcomingMeetingUrl);
-                  }}
-                  style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft }]}
-                >
-                  <MonitorPlay color={colors.primary} size={16} />
-                  <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
-                    {t('joinOnlineCta')}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-            </CustomCard>
-          </Animated.View>
-        ) : (
-          <EmptyState
-            icon={<Compass color={colors.primary} size={32} />}
-            title={t('noCoursesTitle')}
-            subtitle={t('noCoursesSubtitle')}
-            actionLabel={t('exploreCoursesCta')}
-            onAction={() => onNavigate('s-explore')}
+        {activeEnrollments.length === 0 ? (
+          <EmptyStateView
+            title="لا توجد دورات نشطة حالياً"
+            description="لم تقم بالانضمام إلى أي دورة بعد. تصفح الدورات التدريبية المتاحة وانضم إلى دفعتك القادمة."
+            icon={<BookOpen color={colors.mut} size={32} />}
           />
+        ) : (
+          <View style={styles.coursesList}>
+            {activeEnrollments.slice(0, 3).map((item) => (
+              <CustomCard
+                key={item.id}
+                onPress={() => {
+                  if (item.batches?.course_id) {
+                    onNavigate('s-course-detail', { courseId: item.batches.course_id });
+                  }
+                }}
+                style={styles.courseCard}
+              >
+                <View style={styles.courseCardHeader}>
+                  <View style={styles.courseTitleWrap}>
+                    <Text style={[styles.courseTitle, { color: colors.txt }]} numberOfLines={1}>
+                      {item.batches?.courses?.title || 'دورة تدريبية'}
+                    </Text>
+                    <Text style={[styles.courseMeta, { color: colors.mut }]} numberOfLines={1}>
+                      {item.batches?.name || item.batches?.branches?.name_ar || 'مسار التدريب'}
+                    </Text>
+                  </View>
+                  <StatusPill label="قيد الدراسة" variant="enrolled" size="sm" />
+                </View>
+              </CustomCard>
+            ))}
+          </View>
         )}
-      </ScrollView>
-    </View>
+      </View>
+
+      {/* 5. Official Social & Community Links */}
+      <View style={styles.communityCardWrap}>
+        <CustomCard style={[styles.communityCard, { backgroundColor: colors.card2, borderColor: colors.line }]}>
+          <View style={styles.communityRow}>
+            <View style={styles.communityText}>
+              <Text style={[styles.communityTitle, { color: colors.txt }]}>مجتمع مراكز رسالة للتدريب</Text>
+              <Text style={[styles.communityDesc, { color: colors.mut }]}>
+                تابع مواعيد الدورات الجديدة والإعلانات الرسمية على صفحتنا
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.facebookBtn, { backgroundColor: '#1877F2' }]}
+              onPress={() => {
+                RTCHaptics.selection();
+                Linking.openURL(RTC_CONFIG.facebookPageUrl);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="صفحة فيسبوك"
+            >
+              <Facebook color="#FFFFFF" size={18} />
+              <Text style={styles.facebookBtnText}>متابعة</Text>
+            </TouchableOpacity>
+          </View>
+        </CustomCard>
+      </View>
+    </ScreenScaffold>
   );
 };
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 90,
-    gap: 16,
-  },
-  gradHero: {
-    padding: 20,
-    borderRadius: Radii.xxl,
-    shadowColor: '#00288E',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  heroTop: {
+  metricsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
+    gap: Spacing.md,
   },
-  heroGreeting: {
-    flex: 1,
+  sectionWrap: {
+    gap: Spacing.sm,
   },
-  greetingSub: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 12,
-  },
-  greetingName: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  greetingBranch: {
-    color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 11.5,
-    marginTop: 2,
-  },
-  levelBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  levelBadgeSub: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 10,
-  },
-  levelBadgeNum: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 3,
-    marginTop: 16,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#89F5E7',
-    borderRadius: 3,
-  },
-  progressText: {
-    color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 10.5,
-    marginTop: 5,
-    textAlign: 'right',
-  },
-  statPillsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 14,
-  },
-  statPill: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderRadius: 12,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  statPillVal: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  statPillLbl: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 10,
-    marginTop: 1,
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickCard: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: Radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    gap: 8,
-  },
-  quickIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickTitle: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  socialBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: Radii.xl,
-    borderWidth: 1,
-  },
-  socialLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  fbIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#1877F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fbTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  fbSub: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  nextLectureCard: {
-    gap: 10,
-  },
-  nextHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  tagPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radii.full,
-  },
-  tagText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-  },
-  viewAllText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  nextCourseTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  nextDetails: {
+  actionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-    marginTop: 4,
+    gap: Spacing.md,
   },
-  nextDetailItem: {
-    flexDirection: 'row',
+  actionGridItem: {
+    flex: 1,
+    minWidth: '45%',
+    padding: Spacing.md,
+    borderRadius: Radii.lg,
+    borderWidth: 1,
     alignItems: 'center',
-    gap: 6,
+    gap: Spacing.sm,
+    minHeight: 90,
+    justifyContent: 'center',
   },
-  nextDetailText: {
-    fontSize: 12,
-  },
-  joinOnlineBtn: {
-    flexDirection: 'row',
+  actionIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: Radii.md,
-    marginTop: 2,
   },
-  joinOnlineText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-  },
-  noCoursesCard: {
-    alignItems: 'center',
-    padding: 24,
-    gap: 8,
-  },
-  noCoursesTitle: {
-    fontSize: 15,
+  actionGridLabel: {
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
   },
-  noCoursesSub: {
-    fontSize: 12.5,
-    textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 280,
+  coursesList: {
+    gap: Spacing.sm,
   },
-  exploreBtn: {
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: Radii.md,
+  courseCard: {
+    padding: Spacing.md,
   },
-  exploreBtnText: {
+  courseCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  courseTitleWrap: {
+    flex: 1,
+    gap: 2,
+    paddingEnd: Spacing.sm,
+  },
+  courseTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  courseMeta: {
+    fontSize: 12,
+  },
+  communityCardWrap: {
+    marginTop: Spacing.xs,
+  },
+  communityCard: {
+    padding: Spacing.lg,
+    borderWidth: 1,
+  },
+  communityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  communityText: {
+    flex: 1,
+    gap: 2,
+  },
+  communityTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  communityDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  facebookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radii.full,
+    minHeight: TouchTarget.minHeight,
+  },
+  facebookBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
   },
 });

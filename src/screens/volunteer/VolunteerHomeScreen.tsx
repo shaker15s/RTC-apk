@@ -1,44 +1,52 @@
 /**
- * Volunteer Home Screen (v-home)
- * Quick dashboard for instructors to start active sessions, review student rosters, and handle excuses.
+ * VolunteerHomeScreen — "Faster Than Paper" Live Session Hub for Instructors & Volunteers.
+ * Centers the experience around quick class management:
+ * 1. 1-Tap "Start Session" to launch QR code and live check-in
+ * 2. Pending student excuses requiring review
+ * 3. Quick session report creation
+ * 4. Active batch rosters
  */
 import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
-  RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Repository, Batch } from '../../data/repositories';
+import { ScreenScaffold } from '../../components/layout/ScreenScaffold';
+import { SectionHeader } from '../../components/common/SectionHeader';
+import { StatusPill } from '../../components/common/StatusPill';
+import { MetricCard } from '../../components/common/MetricCard';
+import { PrimaryActionCard } from '../../components/common/PrimaryActionCard';
 import { CustomCard } from '../../components/common/CustomCard';
-import { GlassHeader } from '../../components/layout/GlassHeader';
-import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
+import { useT } from '../../core/i18n';
+import { Radii, Spacing, TouchTarget } from '../../core/theme/tokens';
 import {
   Users,
   Play,
   FileCheck2,
-  BarChart3,
   Calendar,
   Clock,
   MapPin,
   ChevronLeft,
   GraduationCap,
   Sparkles,
+  ClipboardList,
+  Award,
+  QrCode,
 } from 'lucide-react-native';
-import { useT } from '../../core/i18n';
-import { Radii } from '../../core/theme/tokens';
 
-export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, params?: any) => void }> = ({
-  onNavigate,
-}) => {
-  const { colors } = useAppStore();
+export interface VolunteerHomeScreenProps {
+  onNavigate: (screenId: string, params?: any) => void;
+}
+
+export const VolunteerHomeScreen: React.FC<VolunteerHomeScreenProps> = ({ onNavigate }) => {
+  const { colors, showToast } = useAppStore();
   const { t } = useT();
   const { profile, refreshProfile } = useAuthStore();
 
@@ -51,6 +59,7 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
       const data = await Repository.fetchMyBatches();
       setBatches(data);
     } catch (e) {
+      showToast(t('vhErrorLoad'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,293 +75,217 @@ export const VolunteerHomeScreen: React.FC<{ onNavigate: (screenId: string, para
     await Promise.all([refreshProfile(), loadData()]);
   };
 
+  const activeBatches = batches.filter((b) => b.is_active);
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <GlassHeader
-        title={t('vhDashboardTitle')}
-        subtitle={t('vhDashboardSubtitle')}
-        showNotif
-        onNotifPress={() => onNavigate('s-notifications')}
-        showAvatar
-        onAvatarPress={() => onNavigate('v-profile')}
+    <ScreenScaffold
+      title={`مرحباً، ${profile?.full_name?.split(' ')[0] || 'المدرب'} 🌟`}
+      subtitle={profile?.branch_name ? `فرع ${profile.branch_name}` : 'لوحة المدرب والمتطوع'}
+      showNotif
+      onNotifPress={() => onNavigate('s-notifications')}
+      showAvatar
+      onAvatarPress={() => onNavigate('v-profile')}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      loading={loading}
+    >
+      {/* 1. Hero Action: Fast Session Launcher */}
+      <PrimaryActionCard
+        title="ابدأ الجلسة الآن وشارك رمز الحضور"
+        subtitle="اختر الدفعة لتوليد رمز QR وكود التحقق المباشر لتسجيل حضور الطلاب فورياً."
+        badge="إدارة المحاضرة"
+        actionLabel="بدء الجلسة وعرض الرمز"
+        onPress={() => onNavigate('v-batches')}
+        icon={<QrCode color="#FFFFFF" size={24} />}
+        gradientColors={['#00554E', '#00288E']}
       />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
-        {/* Volunteer Hero */}
-        <LinearGradient colors={['#00554E', '#003C36', '#00288E']} style={styles.heroCard}>
-          <View style={styles.heroGreeting}>
-            <Text style={styles.heroSub}>{t('vhWelcome')}</Text>
-            <Text style={styles.heroName} numberOfLines={1}>
-              {profile?.full_name || t('coachRole')} 🌟
-            </Text>
-            <Text style={styles.heroBranch}>{profile?.branch_name || t('rtcCenters')}</Text>
-          </View>
+      {/* 2. Key Metrics Row */}
+      <View style={styles.metricsRow}>
+        <MetricCard
+          label="المجموعات النشطة"
+          value={activeBatches.length}
+          color={colors.teal}
+          icon={<GraduationCap color={colors.teal} size={18} />}
+          onPress={() => onNavigate('v-batches')}
+          style={{ flex: 1 }}
+        />
+        <MetricCard
+          label="إجمالي المجموعات"
+          value={batches.length}
+          color={colors.primary}
+          icon={<Users color={colors.primary} size={18} />}
+          onPress={() => onNavigate('v-courses')}
+          style={{ flex: 1 }}
+        />
+      </View>
 
-          <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatVal}>{batches.length}</Text>
-              <Text style={styles.heroStatLbl}>{t('myGroups')}</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatVal}>
-                {batches.reduce((acc, b) => acc + (b.sessions_done || 0), 0)}
-              </Text>
-              <Text style={styles.heroStatLbl}>{t('vhLecturesDone')}</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatVal}>{profile?.points || 0}</Text>
-              <Text style={styles.heroStatLbl}>{t('vhVolunteerPoints')}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Quick Actions Grid */}
-        <View style={styles.quickGrid}>
+      {/* 3. Quick Action Hub for Coach */}
+      <View style={styles.sectionWrap}>
+        <SectionHeader title="أدوات إدارة المحاضرات" />
+        <View style={styles.actionGrid}>
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => onNavigate('v-batches')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('v-batches');
+            }}
+            activeOpacity={0.7}
           >
-            <View style={[styles.quickIcon, { backgroundColor: colors.teal + '18' }]}>
+            <View style={[styles.actionIconBox, { backgroundColor: colors.tealSoft }]}>
               <Play color={colors.teal} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('vhStartLecture')}</Text>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>بدء جلسة</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => onNavigate('v-excuses')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('v-attendance');
+            }}
+            activeOpacity={0.7}
           >
-            <View style={[styles.quickIcon, { backgroundColor: colors.primarySoft }]}>
-              <FileCheck2 color={colors.primary} size={22} />
+            <View style={[styles.actionIconBox, { backgroundColor: colors.primarySoft }]}>
+              <ClipboardList color={colors.primary} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('vhReviewExcuses')}</Text>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>سجل الحضور</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => onNavigate('s-analytics')}
-            style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('v-excuses');
+            }}
+            activeOpacity={0.7}
           >
-            <View style={[styles.quickIcon, { backgroundColor: colors.gold + '18' }]}>
-              <BarChart3 color={colors.gold} size={22} />
+            <View style={[styles.actionIconBox, { backgroundColor: colors.amberSoft }]}>
+              <FileCheck2 color={colors.amber} size={22} />
             </View>
-            <Text style={[styles.quickTitle, { color: colors.txt }]}>{t('analytics')}</Text>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>مراجعة الأعذار</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('v-report');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: colors.goldSoft }]}>
+              <Award color={colors.gold} size={22} />
+            </View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>تقرير الجلسة</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        {/* My Batches List */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('vhCurrentGroups')}</Text>
-          <TouchableOpacity onPress={() => onNavigate('v-batches')}>
-            <Text style={[styles.viewAllText, { color: colors.primary }]}>{t('vhViewAll')}</Text>
-          </TouchableOpacity>
-        </View>
+      {/* 4. Active Batches List */}
+      <View style={styles.sectionWrap}>
+        <SectionHeader
+          title="مجموعاتي التدريبية"
+          badge={batches.length}
+          actionLabel="عرض الكل"
+          onAction={() => onNavigate('v-batches')}
+        />
 
-        {loading ? (
-          <View style={{ gap: 10 }}>
-            <SkeletonLoader height={120} borderRadius={Radii.xl} />
-            <SkeletonLoader height={120} borderRadius={Radii.xl} />
-          </View>
-        ) : batches.length ? (
-          batches.map((batch) => (
-            <TouchableOpacity
-              key={batch.id}
-              activeOpacity={0.8}
-              onPress={() => onNavigate('v-batches', { selectedBatchId: batch.id })}
-            >
-              <CustomCard style={styles.batchCard}>
-                <View style={styles.batchHeader}>
-                  <View>
-                    <Text style={[styles.batchCourseTitle, { color: colors.txt }]}>
-                      {batch.courses?.title || batch.name}
+        {batches.length === 0 ? (
+          <EmptyStateView
+            title="لا توجد مجموعات مسندة لك بعد"
+            description="عند إسناد مجموعات تدريبية لك من قبل المشرف، ستظهر هنا فورياً لتتمكن من بدء الجلسات وتسجيل الحضور."
+            icon={<Users color={colors.mut} size={32} />}
+          />
+        ) : (
+          <View style={styles.batchesList}>
+            {batches.slice(0, 3).map((item) => (
+              <CustomCard
+                key={item.id}
+                onPress={() => onNavigate('v-batches', { selectedBatchId: item.id })}
+                style={styles.batchCard}
+              >
+                <View style={styles.batchCardHeader}>
+                  <View style={styles.batchTitleWrap}>
+                    <Text style={[styles.batchTitle, { color: colors.txt }]} numberOfLines={1}>
+                      {item.courses?.title || item.name}
                     </Text>
-                    <Text style={[styles.batchName, { color: colors.mut }]}>{batch.name}</Text>
-                  </View>
-
-                  <View style={[styles.sessionsBadge, { backgroundColor: colors.teal + '18' }]}>
-                    <Text style={[styles.sessionsText, { color: colors.teal }]}>
-                      {t('sessionN', { n: batch.sessions_done + 1 })}
+                    <Text style={[styles.batchMeta, { color: colors.mut }]} numberOfLines={1}>
+                      {item.name} • {item.branches?.name_ar || 'الفرع'}
                     </Text>
                   </View>
-                </View>
-
-                <View style={styles.batchDetails}>
-                  {batch.schedule ? (
-                    <View style={styles.detailItem}>
-                      <Clock color={colors.mut} size={14} />
-                      <Text style={[styles.detailText, { color: colors.mut }]}>{batch.schedule}</Text>
-                    </View>
-                  ) : null}
-
-                  {batch.branches?.name_ar ? (
-                    <View style={styles.detailItem}>
-                      <MapPin color={colors.mut} size={14} />
-                      <Text style={[styles.detailText, { color: colors.mut }]}>{batch.branches.name_ar}</Text>
-                    </View>
-                  ) : null}
+                  <StatusPill
+                    label={item.is_active ? 'نشطة' : 'مكتملة'}
+                    variant={item.is_active ? 'active' : 'completed'}
+                    size="sm"
+                  />
                 </View>
               </CustomCard>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <EmptyStateView
-            title={t('vhEmptyGroupsTitle')}
-            description={t('vhEmptyGroupsDesc')}
-            icon={<GraduationCap color={colors.teal} size={32} />}
-          />
+            ))}
+          </View>
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </ScreenScaffold>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 90,
-    gap: 16,
-  },
-  heroCard: {
-    padding: 20,
-    borderRadius: Radii.xxl,
-    shadowColor: '#00554E',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  heroGreeting: {
-    gap: 2,
-  },
-  heroSub: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 12,
-  },
-  heroName: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  heroBranch: {
-    color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  heroStatsRow: {
+  metricsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: 'rgba(0, 0, 0, 0.18)',
-    borderRadius: Radii.lg,
-    paddingVertical: 12,
-    marginTop: 16,
+    gap: Spacing.md,
   },
-  heroStatItem: {
-    alignItems: 'center',
+  sectionWrap: {
+    gap: Spacing.sm,
   },
-  heroStatVal: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  heroStatLbl: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 10.5,
-    marginTop: 2,
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  quickGrid: {
+  actionGrid: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: Spacing.md,
   },
-  quickCard: {
+  actionGridItem: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+    minWidth: '45%',
+    padding: Spacing.md,
     borderRadius: Radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 1,
-    gap: 8,
+    alignItems: 'center',
+    gap: Spacing.sm,
+    minHeight: 90,
+    justifyContent: 'center',
   },
-  quickIcon: {
+  actionIconBox: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickTitle: {
-    fontSize: 12,
+  actionGridLabel: {
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  viewAllText: {
-    fontSize: 12.5,
-    fontWeight: '700',
+  batchesList: {
+    gap: Spacing.sm,
   },
   batchCard: {
-    padding: 16,
-    gap: 10,
+    padding: Spacing.md,
   },
-  batchHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  batchCourseTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  batchName: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  sessionsBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: Radii.full,
-  },
-  sessionsText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  batchDetails: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  detailItem: {
+  batchCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
   },
-  detailText: {
+  batchTitleWrap: {
+    flex: 1,
+    gap: 2,
+    paddingEnd: Spacing.sm,
+  },
+  batchTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  batchMeta: {
     fontSize: 12,
   },
 });

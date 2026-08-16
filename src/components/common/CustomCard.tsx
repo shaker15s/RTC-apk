@@ -7,17 +7,28 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { Radii, Shadows } from '../../core/theme/tokens';
 
+import { AnimatedPressable } from './AnimatedPressable';
+
 export interface CustomCardProps {
   children: React.ReactNode;
   style?: ViewStyle | ViewStyle[];
   innerStyle?: ViewStyle | ViewStyle[];
   variant?: 'elevated' | 'flat' | 'glass';
+  onPress?: () => void;
+  scaleTarget?: number;
 }
 
-export const CustomCard: React.FC<CustomCardProps> = ({ children, style, innerStyle, variant = 'elevated' }) => {
+export const CustomCard: React.FC<CustomCardProps> = ({
+  children,
+  style,
+  innerStyle,
+  variant = 'elevated',
+  onPress,
+  scaleTarget = 0.98,
+}) => {
   const { colors, isDark } = useAppStore();
 
-  return (
+  const cardContent = (
     <View
       style={[
         styles.outerHalo,
@@ -52,6 +63,16 @@ export const CustomCard: React.FC<CustomCardProps> = ({ children, style, innerSt
       </View>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <AnimatedPressable onPress={onPress} scaleTarget={scaleTarget}>
+        {cardContent}
+      </AnimatedPressable>
+    );
+  }
+
+  return cardContent;
 };
 
 const styles = StyleSheet.create({

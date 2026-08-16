@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     padding: 2,
+    direction: 'ltr', // Explicit LTR guarantees physical coordinate stability in both RTL and LTR
   },
   thumb: {
     width: 22,

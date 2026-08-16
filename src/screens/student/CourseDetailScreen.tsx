@@ -54,6 +54,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   const { t } = useT();
   const { profile } = useAuthStore();
 
+  const [myEnrolledBatchIds, setMyEnrolledBatchIds] = useState<Record<string, 'enrolled' | 'waitlist'>>({});
   const [course, setCourse] = useState<Course | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [seatCounts, setSeatCounts] = useState<Record<string, { enrolled: number; capacity: number }>>({});
@@ -78,6 +79,20 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
         const counts = await RPC.batchSeatCounts(data.batches.map((b) => b.id));
         setSeatCounts(counts);
       }
+
+      // Check user's current enrollments
+      try {
+        const myEnrollments = await Repository.fetchMyEnrollments();
+        const enrolledMap: Record<string, 'enrolled' | 'waitlist'> = {};
+        myEnrollments.forEach((e) => {
+          if (e.batch_id) {
+            enrolledMap[e.batch_id] = e.status === 'waitlist' ? 'waitlist' : 'enrolled';
+          }
+        });
+        setMyEnrolledBatchIds(enrolledMap);
+      } catch (e) {
+        // Non-blocking
+      }
     } catch (e: any) {
       showToast(t('courseLoadError'), 'err');
     } finally {
@@ -90,23 +105,23 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   }, [courseId]);
 
   const handleJoinBatch = async (batchId: string) => {
+    if (myEnrolledBatchIds[batchId]) return;
     RTCHaptics.light();
     setJoiningBatchId(batchId);
     try {
       // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
       const res = await withTimeout(RPC.joinBatch(batchId), 15000);
       if (res?.status === 'waitlist') {
+        setMyEnrolledBatchIds((prev) => ({ ...prev, [batchId]: 'waitlist' }));
         showToast(t('waitlisted'), 'warn');
       } else {
         RTCHaptics.success();
+        setMyEnrolledBatchIds((prev) => ({ ...prev, [batchId]: 'enrolled' }));
         showToast(t('joinBatchOkToast'), 'ok');
 
-        // Now is the RIGHT moment to ask for notification permission (U-1):
-        // the user just gained a reason to want lecture reminders.
+        // Schedule a lecture reminder
         RTCNotifications.requestPermissions().then((granted) => {
           if (!granted) return;
-
-          // Schedule a lecture reminder if we know a future start time
           const batch = batches.find((b) => b.id === batchId);
           if (batch?.starts_at) {
             RTCNotifications.scheduleCourseReminder(
@@ -260,13 +275,31 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                       ) : null}
                     </View>
 
-                    <CustomButton
-                      title={isFull ? t('joinWaitlist') : t('joinBatch')}
-                      onPress={() => handleJoinBatch(batch.id)}
-                      variant={isFull ? 'soft' : 'primary'}
-                      size="mid"
-                      loading={joiningBatchId === batch.id}
-                    />
+                    {myEnrolledBatchIds[batch.id] === 'enrolled' ? (
+                      <CustomButton
+                        title="✓ تم الانضمام للدفعة بنجاح"
+                        onPress={() => {}}
+                        variant="secondary"
+                        size="mid"
+                        disabled={true}
+                      />
+                    ) : myEnrolledBatchIds[batch.id] === 'waitlist' ? (
+                      <CustomButton
+                        title="⏳ أنت في قائمة الانتظار"
+                        onPress={() => {}}
+                        variant="soft"
+                        size="mid"
+                        disabled={true}
+                      />
+                    ) : (
+                      <CustomButton
+                        title={isFull ? t('joinWaitlist') : t('joinBatch')}
+                        onPress={() => handleJoinBatch(batch.id)}
+                        variant={isFull ? 'soft' : 'primary'}
+                        size="mid"
+                        loading={joiningBatchId === batch.id}
+                      />
+                    )}
                   </CustomCard>
                 );
               })

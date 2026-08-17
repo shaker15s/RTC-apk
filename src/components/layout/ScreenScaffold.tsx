@@ -127,7 +127,7 @@ export const ScreenScaffold: React.FC<ScreenScaffoldProps> = ({
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 80 },
+          { paddingBottom: insets.bottom + 110 },
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}

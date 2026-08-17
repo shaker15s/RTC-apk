@@ -15,6 +15,8 @@ import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { TextInputField } from '../../components/common/TextInputField';
 import { CustomButton } from '../../components/common/CustomButton';
+import { SelectChips } from '../../components/common/SelectChips';
+import { RTCNotifications } from '../../core/native/notifications';
 import { RTCHaptics } from '../../core/native/haptics';
 import { Send, Megaphone, AlertCircle, ShieldAlert } from 'lucide-react-native';
 import { useT } from '../../core/i18n';
@@ -27,6 +29,7 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState<'info' | 'urgent'>('info');
+  const [targetAudience, setTargetAudience] = useState<'all' | 'volunteer' | 'student'>('all');
   const [sending, setSending] = useState(false);
 
   const handleSendBroadcast = async () => {
@@ -45,6 +48,13 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
         message.trim()
       );
 
+      // Present a real heads-up OS notification on the local device as well
+      await RTCNotifications.presentSystemNotification(
+        `📢 ${title.trim()}`,
+        message.trim(),
+        { screen: 's-notifications' }
+      );
+
       RTCHaptics.success();
       showToast(t('abrSent'), 'ok');
       setTitle('');
@@ -56,6 +66,12 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
       setSending(false);
     }
   };
+
+  const audienceChips = [
+    { id: 'all', label: 'الجميع (طلاب + متطوعين)' },
+    { id: 'volunteer', label: 'فريق المتطوعين والمدربين فقط 🤝' },
+    { id: 'student', label: 'الطلاب والمتدربين فقط 🎓' },
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -71,6 +87,15 @@ export const AdminBroadcastScreen: React.FC<{ onBack: () => void }> = ({ onBack 
             <Text style={[styles.formSub, { color: colors.mut }]}>
               {t('abrNote')}
             </Text>
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.txt }}>الفئة المستهدفة للإشعار:</Text>
+            <SelectChips
+              items={audienceChips}
+              selectedId={targetAudience}
+              onSelect={(id) => setTargetAudience(id as any)}
+            />
           </View>
 
           <TextInputField

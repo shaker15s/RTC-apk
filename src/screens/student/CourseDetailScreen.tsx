@@ -53,6 +53,7 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   const { colors, isDark, showToast } = useAppStore();
   const { t } = useT();
   const { profile } = useAuthStore();
+  const isVolunteer = profile?.role === 'volunteer' || profile?.role === 'admin';
 
   const [myEnrolledBatchIds, setMyEnrolledBatchIds] = useState<Record<string, 'enrolled' | 'waitlist'>>({});
   const [course, setCourse] = useState<Course | null>(null);
@@ -275,7 +276,45 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                       ) : null}
                     </View>
 
-                    {myEnrolledBatchIds[batch.id] === 'enrolled' ? (
+                    {isVolunteer && batch.instructor_id === profile?.id ? (
+                      <CustomButton
+                        title="👑 أنت مدرب/منظم هذه الدفعة"
+                        onPress={() => onNavigate && onNavigate('v-batches')}
+                        variant="teal"
+                        size="mid"
+                      />
+                    ) : isVolunteer ? (
+                      <View style={{ gap: 8 }}>
+                        <CustomButton
+                          title={batch.instructor_id ? "🤝 تنظيم/مساعدة في الدفعة" : "👑 تطوع كمدرب/منظم للدفعة"}
+                          onPress={async () => {
+                            RTCHaptics.selection();
+                            try {
+                              setJoiningBatchId(batch.id);
+                              await RPC.assignInstructor(batch.id, profile!.id);
+                              showToast("تم تسجيلك كمنظم/مدرب لهذه الدفعة بنجاح! ⭐", "ok");
+                              await loadData();
+                            } catch (err: any) {
+                              showToast(err?.message || "فشل التسجيل كمنظم", "err");
+                            } finally {
+                              setJoiningBatchId(null);
+                            }
+                          }}
+                          variant="primary"
+                          size="mid"
+                          loading={joiningBatchId === batch.id}
+                        />
+                        {myEnrolledBatchIds[batch.id] === 'enrolled' ? (
+                          <CustomButton
+                            title="✓ مسجل أيضاً كمتدرب"
+                            onPress={() => {}}
+                            variant="soft"
+                            size="mid"
+                            disabled={true}
+                          />
+                        ) : null}
+                      </View>
+                    ) : myEnrolledBatchIds[batch.id] === 'enrolled' ? (
                       <CustomButton
                         title="✓ تم الانضمام للدفعة بنجاح"
                         onPress={() => {}}

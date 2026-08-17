@@ -122,7 +122,7 @@ export default function App() {
       }
     });
 
-    // 5. Silent Automatic OTA Update check on launch (no user disruption)
+    // 5. Automatic OTA Update check & instant application on launch
     if (!__DEV__) {
       import('expo-updates')
         .then(async (Updates) => {
@@ -130,10 +130,11 @@ export default function App() {
             const check = await Updates.checkForUpdateAsync();
             if (check.isAvailable) {
               await Updates.fetchUpdateAsync();
-              // Downloaded in background, will apply on next cold boot
+              // Apply update immediately so user doesn't need to restart twice
+              await Updates.reloadAsync();
             }
           } catch (e) {
-            // Non-blocking if offline
+            // Non-blocking if offline or in expo go
           }
         })
         .catch(() => {});

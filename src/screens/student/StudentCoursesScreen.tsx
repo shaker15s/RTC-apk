@@ -13,16 +13,33 @@ import {
   Linking,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
-import { Repository, Enrollment } from '../../data/repositories';
+import { useAuthStore } from '../../state/authStore';
+import { Repository, Enrollment, Course } from '../../data/repositories';
 import { useT } from '../../core/i18n';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
+import { TextInputField } from '../../components/common/TextInputField';
 import { SelectChips } from '../../components/common/SelectChips';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
-import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay, CalendarCheck, Star } from 'lucide-react-native';
+import {
+  BookOpen,
+  Calendar,
+  Clock,
+  MapPin,
+  ChevronLeft,
+  CheckCircle2,
+  Clock3,
+  MonitorPlay,
+  CalendarCheck,
+  Star,
+  Search,
+  Compass,
+  Sparkles,
+  Award,
+} from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export interface StudentCoursesScreenProps {
@@ -31,17 +48,27 @@ export interface StudentCoursesScreenProps {
 
 export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNavigate }) => {
   const { colors, showToast } = useAppStore();
+  const { branches } = useAuthStore();
   const { t } = useT();
 
+  const [activeMainTab, setActiveMainTab] = useState<'my-courses' | 'explore'>('my-courses');
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [filter, setFilter] = useState<'all' | 'enrolled' | 'waitlist' | 'completed'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     try {
-      const data = await Repository.fetchMyEnrollments();
-      setEnrollments(data);
+      const [myEnrollments, courses] = await Promise.all([
+        Repository.fetchMyEnrollments(),
+        Repository.fetchCourses(true),
+      ]);
+      setEnrollments(myEnrollments);
+      setAllCourses(courses);
     } catch (e) {
       showToast(t('coursesLoadError'), 'warn');
     } finally {
@@ -59,6 +86,24 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
     await loadData();
   };
 
+  const mainTabs = [
+    { id: 'my-courses', label: 'دوراتي المسجل بها' },
+    { id: 'explore', label: 'استكشاف الدورات والتسجيل 🚀' },
+  ];
+
+  // Branch filter chips
+  const branchChips = [
+    { id: 'all', label: t('acAllBranches') },
+    ...branches.map((b) => ({ id: b.id, label: b.name_ar })),
+  ];
+
+  // Category list derived from courses
+  const categories = Array.from(new Set(allCourses.map((c) => c.category).filter(Boolean)));
+  const categoryChips = [
+    { id: 'all', label: t('exAllCats') },
+    ...categories.map((c) => ({ id: c, label: c })),
+  ];
+
   const filteredEnrollments = enrollments.filter((item) => {
     if (filter === 'all') return true;
     return item.status === filter;
@@ -70,6 +115,19 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
     { id: 'waitlist', label: t('filterWaitlist'), count: enrollments.filter((e) => e.status === 'waitlist').length },
     { id: 'completed', label: t('filterCompleted'), count: enrollments.filter((e) => e.status === 'completed').length },
   ];
+
+  const filteredExploreCourses = allCourses.filter((c) => {
+    if (selectedBranchId !== 'all' && c.branch_id && c.branch_id !== selectedBranchId) return false;
+    if (selectedCategory !== 'all' && c.category !== selectedCategory) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchTitle = c.title?.toLowerCase().includes(q);
+      const matchDesc = c.description?.toLowerCase().includes(q);
+      const matchCat = c.category?.toLowerCase().includes(q);
+      return matchTitle || matchDesc || matchCat;
+    }
+    return true;
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -91,9 +149,44 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
         }
       />
 
-      <View style={styles.filterWrap}>
-        <SelectChips items={filterChips} selectedId={filter} onSelect={(id) => setFilter(id as any)} />
+      {/* Main Mode Tabs */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+        <SelectChips
+          items={mainTabs}
+          selectedId={activeMainTab}
+          onSelect={(id) => {
+            RTCHaptics.selection();
+            setActiveMainTab(id as any);
+          }}
+        />
       </View>
+
+      {activeMainTab === 'my-courses' ? (
+        <View style={styles.filterWrap}>
+          <SelectChips items={filterChips} selectedId={filter} onSelect={(id) => setFilter(id as any)} />
+        </View>
+      ) : (
+        <View style={{ paddingHorizontal: 16, paddingTop: 6, gap: 8 }}>
+          <TextInputField
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="ابحث عن دورة، تخصص، مهارة..."
+            icon={<Search color={colors.mut} size={18} />}
+          />
+          <SelectChips
+            items={branchChips}
+            selectedId={selectedBranchId}
+            onSelect={setSelectedBranchId}
+          />
+          {categories.length > 1 ? (
+            <SelectChips
+              items={categoryChips}
+              selectedId={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+          ) : null}
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -106,8 +199,9 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
             <SkeletonLoader height={140} borderRadius={Radii.xl} />
             <SkeletonLoader height={140} borderRadius={Radii.xl} />
           </View>
-        ) : filteredEnrollments.length ? (
-          filteredEnrollments.map((item) => {
+        ) : activeMainTab === 'my-courses' ? (
+          filteredEnrollments.length ? (
+            filteredEnrollments.map((item) => {
             const course = item.batches?.courses;
             const batch = item.batches;
             const sessionsDone = batch?.sessions_done || 0;
@@ -225,17 +319,89 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
           })
         ) : (
           <EmptyStateView
-            title={t('emptyTabTitle')}
-            description={t('emptyTabDesc')}
+            title="لا توجد دورات مسجل بها حالياً"
+            description="لم تقم بالانضمام لأي دورة حتى الآن. يمكنك استكشاف الدورات التدريبية المتاحة والانضمام لدفعتك القادمة الآن!"
             icon={<BookOpen color={colors.primary} size={32} />}
             action={
               <CustomButton
-                title={t('exploreCoursesCta')}
-                onPress={() => onNavigate('s-explore')}
+                title="استكشاف الدورات والتسجيل 🚀"
+                onPress={() => setActiveMainTab('explore')}
                 variant="primary"
                 size="mid"
               />
             }
+          />
+        )
+      ) : filteredExploreCourses.length ? (
+        filteredExploreCourses.map((course) => (
+            <TouchableOpacity
+              key={course.id}
+              activeOpacity={0.85}
+              onPress={() => {
+                RTCHaptics.light();
+                onNavigate('s-course-detail', { courseId: course.id });
+              }}
+            >
+              <CustomCard style={styles.courseCard}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.titleWrap}>
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <View style={[styles.categoryPill, { backgroundColor: colors.primarySoft }]}>
+                        <Text style={[styles.categoryText, { color: colors.primary }]}>
+                          {course.category || t('trainingGeneral')}
+                        </Text>
+                      </View>
+                      {course.branches?.name_ar ? (
+                        <View style={[styles.categoryPill, { backgroundColor: colors.teal + '18' }]}>
+                          <Text style={[styles.categoryText, { color: colors.teal }]}>
+                            فرع {course.branches.name_ar}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.courseTitle, { color: colors.txt }]}>
+                      {course.title}
+                    </Text>
+                    {course.description ? (
+                      <Text style={{ fontSize: 12.5, color: colors.mut, lineHeight: 18 }} numberOfLines={2}>
+                        {course.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+
+                <View style={styles.footerRow}>
+                  <View style={styles.footerLeft}>
+                    <View style={styles.footerItem}>
+                      <Calendar color={colors.mut} size={14} />
+                      <Text style={[styles.footerItemText, { color: colors.mut }]}>
+                        {course.sessions_count || 8} محاضرات
+                      </Text>
+                    </View>
+                    {course.instructor_name ? (
+                      <View style={styles.footerItem}>
+                        <Text style={[styles.footerItemText, { color: colors.mut }]}>
+                          المدرب: {course.instructor_name}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <CustomButton
+                    title="التفاصيل والتسجيل 🚀"
+                    variant="primary"
+                    size="sm"
+                    onPress={() => onNavigate('s-course-detail', { courseId: course.id })}
+                  />
+                </View>
+              </CustomCard>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <EmptyStateView
+            title="لا توجد نتائج مطابقة"
+            description="جرب البحث بكلمات أخرى أو اختر فرعاً مختلفاً لاستعراض الدورات المتاحة."
+            icon={<Search color={colors.primary} size={32} />}
           />
         )}
       </ScrollView>
@@ -283,18 +449,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   categoryPill: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radii.sm,
+    alignSelf: 'flex-start',
   },
   categoryText: {
     fontSize: 11,
     fontWeight: '700',
   },
   courseTitle: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '800',
+    marginTop: 2,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -345,6 +512,28 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   detailText: {
+    fontSize: 11.5,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerItemText: {
     fontSize: 11.5,
   },
   joinOnlineBtn: {

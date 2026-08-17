@@ -267,9 +267,11 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
 
         {activeEnrollments.length === 0 ? (
           <EmptyStateView
-            title="لا توجد دورات نشطة حالياً"
-            description="لم تقم بالانضمام إلى أي دورة بعد. تصفح الدورات التدريبية المتاحة وانضم إلى دفعتك القادمة."
-            icon={<BookOpen color={colors.mut} size={32} />}
+            title="لا توجد دورات مسجل بها حالياً"
+            description="لم تقم بالانضمام إلى أي دورة بعد. تصفح جميع الدورات التدريبية المتاحة بجميع الفروع وسجل في دفعتك القادمة الآن!"
+            icon={<BookOpen color={colors.primary} size={32} />}
+            actionText="استكشاف الدورات المتاحة والتسجيل 🚀"
+            onAction={() => onNavigate('s-explore')}
           />
         ) : (
           <View style={styles.coursesList}>

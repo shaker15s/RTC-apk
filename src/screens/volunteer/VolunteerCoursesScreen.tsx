@@ -12,15 +12,17 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
+import { useAuthStore } from '../../state/authStore';
 import { Repository, Batch, Course } from '../../data/repositories';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
+import { TextInputField } from '../../components/common/TextInputField';
 import { SelectChips } from '../../components/common/SelectChips';
 import { CustomButton } from '../../components/common/CustomButton';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
-import { GraduationCap, Calendar, Users, MapPin, ChevronLeft, BookOpen, PlusCircle } from 'lucide-react-native';
+import { GraduationCap, Calendar, Users, MapPin, ChevronLeft, BookOpen, Search } from 'lucide-react-native';
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
@@ -28,11 +30,14 @@ export const VolunteerCoursesScreen: React.FC<{
   onNavigate: (screenId: string, params?: any) => void;
 }> = ({ onNavigate }) => {
   const { colors } = useAppStore();
+  const { branches } = useAuthStore();
   const { t } = useT();
 
   const [activeTab, setActiveTab] = useState<'my-batches' | 'all-courses'>('my-batches');
   const [batches, setBatches] = useState<Batch[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -65,6 +70,23 @@ export const VolunteerCoursesScreen: React.FC<{
     { id: 'all-courses', label: 'استكشاف دورات التطوع' },
   ];
 
+  const branchChips = [
+    { id: 'all', label: t('acAllBranches') },
+    ...branches.map((b) => ({ id: b.id, label: b.name_ar })),
+  ];
+
+  const filteredExploreCourses = allCourses.filter((c) => {
+    if (selectedBranchId !== 'all' && c.branch_id && c.branch_id !== selectedBranchId) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchTitle = c.title?.toLowerCase().includes(q);
+      const matchDesc = c.description?.toLowerCase().includes(q);
+      const matchCat = c.category?.toLowerCase().includes(q);
+      return matchTitle || matchDesc || matchCat;
+    }
+    return true;
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader title={t('myCoursesTitle')} subtitle={t('vcSubtitle')} />
@@ -72,6 +94,22 @@ export const VolunteerCoursesScreen: React.FC<{
       <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
         <SelectChips items={tabChips} selectedId={activeTab} onSelect={(id) => setActiveTab(id as any)} />
       </View>
+
+      {activeTab === 'all-courses' ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 6, gap: 8 }}>
+          <TextInputField
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="ابحث عن دورة للتطوع..."
+            icon={<Search color={colors.mut} size={18} />}
+          />
+          <SelectChips
+            items={branchChips}
+            selectedId={selectedBranchId}
+            onSelect={setSelectedBranchId}
+          />
+        </View>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -140,8 +178,8 @@ export const VolunteerCoursesScreen: React.FC<{
             />
           )
         ) : (
-          allCourses.length ? (
-            allCourses.map((course) => (
+          filteredExploreCourses.length ? (
+            filteredExploreCourses.map((course) => (
               <TouchableOpacity
                 key={course.id}
                 activeOpacity={0.85}

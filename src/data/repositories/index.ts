@@ -49,6 +49,7 @@ export interface Course {
   interview_date?: string;
   level?: string;
   branch_id?: string;
+  instructor_name?: string;
   is_active: boolean;
   branches?: { name_ar: string; slug: string };
 }

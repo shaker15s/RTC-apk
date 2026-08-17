@@ -192,9 +192,11 @@ export const VolunteerHomeScreen: React.FC<VolunteerHomeScreenProps> = ({ onNavi
 
         {batches.length === 0 ? (
           <EmptyStateView
-            title="لا توجد مجموعات مسندة لك بعد"
-            description="عند إسناد مجموعات تدريبية لك من قبل المشرف، ستظهر هنا فورياً لتتمكن من بدء الجلسات وتسجيل الحضور."
-            icon={<Users color={colors.mut} size={32} />}
+            title="لا توجد مجموعات تدريبية مسندة لك"
+            description="يمكنك استكشاف جميع دورات وتخصصات المركز بجميع الفروع، والتنسيق مع الإدارة لتنظيم أو تدريب دفعة قادمة."
+            icon={<GraduationCap color={colors.primary} size={32} />}
+            actionText="استكشاف دورات المركز للتطوع 🎓"
+            onAction={() => onNavigate('v-courses')}
           />
         ) : (
           <View style={styles.batchesList}>

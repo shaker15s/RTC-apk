@@ -24,6 +24,7 @@ import { ScreenScaffold } from '../../components/layout/ScreenScaffold';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { StatusPill } from '../../components/common/StatusPill';
 import { MetricCard } from '../../components/common/MetricCard';
+import { ResponsiveGrid } from '../../components/common/ResponsiveGrid';
 import { PrimaryActionCard } from '../../components/common/PrimaryActionCard';
 import { ListRow } from '../../components/common/ListRow';
 import { CustomCard } from '../../components/common/CustomCard';
@@ -159,7 +160,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
       )}
 
       {/* 2. Key Metrics Grid */}
-      <View style={styles.metricsRow}>
+      <ResponsiveGrid spacing={Spacing.md} minItemWidth={140} maxColumns={2}>
         <MetricCard
           label="النقاط"
           value={points}
@@ -167,23 +168,21 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
           color={colors.primary}
           icon={<Flame color={colors.primary} size={18} />}
           onPress={() => onNavigate('s-points')}
-          style={{ flex: 1 }}
         />
         <MetricCard
           label="المستوى"
           value={`المستوى ${level}`}
-          sublabel={`${nextLevelPoints - points} نقطة للمستوى التالي`}
+          sublabel={`${Math.max(0, nextLevelPoints - points)} نقطة للمستوى القادم`}
           color={colors.gold}
           icon={<Sparkles color={colors.gold} size={18} />}
           onPress={() => onNavigate('s-points')}
-          style={{ flex: 1 }}
         />
-      </View>
+      </ResponsiveGrid>
 
       {/* 3. Quick Action Hub */}
       <View style={styles.sectionWrap}>
         <SectionHeader title="الإجراءات السريعة" />
-        <View style={styles.actionGrid}>
+        <ResponsiveGrid spacing={Spacing.md} minItemWidth={140} maxColumns={2}>
           <TouchableOpacity
             style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={() => {
@@ -239,7 +238,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
             </View>
             <Text style={[styles.actionGridLabel, { color: colors.txt }]}>تقديم عذر</Text>
           </TouchableOpacity>
-        </View>
+        </ResponsiveGrid>
       </View>
 
       {/* 4. Active Enrollments List */}
@@ -329,8 +328,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   actionGridItem: {
-    flex: 1,
-    minWidth: '45%',
+    width: '100%',
     padding: Spacing.md,
     borderRadius: Radii.lg,
     borderWidth: 1,

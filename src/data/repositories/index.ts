@@ -4,6 +4,7 @@
 import { supabase } from '../supabaseClient';
 import { t } from '../../core/i18n';
 import { RPC, UserProfile } from '../rpc';
+import { mapSupabaseError, Result, AppError } from '../result';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -158,7 +159,7 @@ async function writeCache<T>(key: string, data: T): Promise<void> {
 async function clearPublicCache(): Promise<void> {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const cacheKeys = keys.filter((k) => k.startsWith(PUBLIC_CACHE_PREFIX));
+    const cacheKeys = keys.filter((k: string) => k.startsWith(PUBLIC_CACHE_PREFIX));
     if (cacheKeys.length) {
       await AsyncStorage.multiRemove(cacheKeys);
     }
@@ -181,13 +182,23 @@ export const Repository = {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       const list = data || [];
       if (list.length) await writeCache('branches', list);
       return list;
     } catch (e) {
       const cached = await readCache<Branch[]>('branches');
-      return cached || [];
+      if (cached && cached.length) return cached;
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchBranches(force = false): Promise<Result<Branch[]>> {
+    try {
+      const data = await Repository.fetchBranches(force);
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -205,16 +216,25 @@ export const Repository = {
         .order('created_at', { ascending: false });
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       const list = data || [];
       if (!branchId && list.length) await writeCache('courses', list);
       return list;
     } catch (e) {
       if (!branchId) {
         const cached = await readCache<Course[]>('courses');
-        return cached || [];
+        if (cached && cached.length) return cached;
       }
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchCourses(force = false, branchId?: string): Promise<Result<Course[]>> {
+    try {
+      const data = await Repository.fetchCourses(force, branchId);
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -230,10 +250,19 @@ export const Repository = {
         .order('created_at', { ascending: false });
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchBatches(branchId?: string): Promise<Result<Batch[]>> {
+    try {
+      const data = await Repository.fetchBatches(branchId);
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -249,10 +278,19 @@ export const Repository = {
         )
         .eq('student_id', session.user.id)
         .order('joined_at', { ascending: false });
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchMyEnrollments(): Promise<Result<Enrollment[]>> {
+    try {
+      const data = await Repository.fetchMyEnrollments();
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -266,10 +304,19 @@ export const Repository = {
         .select('*, courses(id, title, category, icon, color, sessions_count, max_students), branches(name_ar)')
         .eq('instructor_id', session.user.id)
         .eq('is_active', true);
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchMyBatches(): Promise<Result<Batch[]>> {
+    try {
+      const data = await Repository.fetchMyBatches();
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -284,10 +331,19 @@ export const Repository = {
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(50);
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchNotifications(): Promise<Result<NotificationItem[]>> {
+    try {
+      const data = await Repository.fetchNotifications();
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -311,10 +367,19 @@ export const Repository = {
         q = q.eq('student_id', session.user.id);
       }
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchCerts(mineOnly = true): Promise<Result<CertItem[]>> {
+    try {
+      const data = await Repository.fetchCerts(mineOnly);
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -329,10 +394,19 @@ export const Repository = {
         .eq('student_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(50);
-      if (error) throw error;
+      if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
-      return [];
+      throw mapSupabaseError(e);
+    }
+  },
+
+  async safeFetchLedger(): Promise<Result<PointsLedgerItem[]>> {
+    try {
+      const data = await Repository.fetchLedger();
+      return Result.ok(data);
+    } catch (err: any) {
+      return Result.err(mapSupabaseError(err));
     }
   },
 
@@ -377,37 +451,59 @@ export const Repository = {
     const isAdmin = userProfile?.role === 'admin';
     const isVolunteer = userProfile?.role === 'volunteer';
 
-    const profilesPromise = isAdmin
-      ? RPC.adminListProfiles()
-      : supabase
-          .from('profiles')
-          .select('id, full_name, role, branch_id, points, created_at, status')
-          .then((r) => r.data || []);
+    try {
+      const profilesPromise = isAdmin
+        ? RPC.adminListProfiles()
+        : supabase
+            .from('profiles')
+            .select('id, full_name, role, branch_id, points, created_at, status')
+            .then((r) => {
+              if (r.error) throw r.error;
+              return r.data || [];
+            });
 
-    let batchQuery = supabase
-      .from('batches')
-      .select('id, name, branch_id, sessions_done, schedule, is_active')
-      .eq('is_active', true);
-    if (isVolunteer && userProfile?.id) {
-      batchQuery = batchQuery.eq('instructor_id', userProfile.id);
+      let batchQuery = supabase
+        .from('batches')
+        .select('id, name, branch_id, sessions_done, schedule, is_active')
+        .eq('is_active', true);
+      if (isVolunteer && userProfile?.id) {
+        batchQuery = batchQuery.eq('instructor_id', userProfile.id);
+      }
+
+      const [profs, courses, batches, certs, att, enroll] = await Promise.all([
+        profilesPromise,
+        supabase.from('courses').select('id, title, is_active').eq('is_active', true).then((r) => {
+          if (r.error) throw r.error;
+          return r.data || [];
+        }),
+        batchQuery.then((r) => {
+          if (r.error) throw r.error;
+          return r.data || [];
+        }),
+        supabase.from('certs').select('id').then((r) => {
+          if (r.error) throw r.error;
+          return r.data || [];
+        }),
+        supabase.from('attendance').select('id, status, created_at').then((r) => {
+          if (r.error) throw r.error;
+          return r.data || [];
+        }),
+        supabase.from('enrollments').select('id').then((r) => {
+          if (r.error) throw r.error;
+          return r.data || [];
+        }),
+      ]);
+
+      return { profs, courses, batches, certs, att, enroll };
+    } catch (e) {
+      throw mapSupabaseError(e);
     }
-
-    const [profs, courses, batches, certs, att, enroll] = await Promise.all([
-      profilesPromise,
-      supabase.from('courses').select('id, title, is_active').eq('is_active', true).then((r) => r.data || []),
-      batchQuery.then((r) => r.data || []),
-      supabase.from('certs').select('id').then((r) => r.data || []),
-      supabase.from('attendance').select('id, status, created_at').then((r) => r.data || []),
-      supabase.from('enrollments').select('id').then((r) => r.data || []),
-    ]);
-
-    return { profs, courses, batches, certs, att, enroll };
   },
 
   // Profile Update
   async updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
     const session = (await supabase.auth.getSession()).data.session;
-    if (!session?.user) throw new Error('auth required');
+    if (!session?.user) throw mapSupabaseError(new Error('auth required'));
 
     const allowed = {
       full_name: patch.full_name,
@@ -419,28 +515,31 @@ export const Repository = {
     };
 
     const { error } = await supabase.from('profiles').update(allowed).eq('id', session.user.id);
-    if (error) throw error;
+    if (error) throw mapSupabaseError(error);
 
     let updated = await RPC.getMyProfile();
     if (!updated) {
       await RPC.ensureMyProfile(allowed.full_name, allowed.phone, allowed.branch_id);
       updated = await RPC.getMyProfile();
     }
-    if (!updated) throw new Error('profile-missing');
+    if (!updated) throw mapSupabaseError(new Error('profile-missing'));
     return updated;
   },
 
-  // Admin Users List
+  // Admin Users List with sanitized query
   async fetchUsers(search?: string): Promise<UserProfile[]> {
     let q = supabase
       .from('profiles')
       .select('*, branches(name_ar)')
       .order('created_at', { ascending: false });
     if (search) {
-      q = q.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+      const sanitized = search.replace(/[,.()%*]/g, '').trim();
+      if (sanitized.length > 0) {
+        q = q.or(`full_name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
+      }
     }
     const { data, error } = await q;
-    if (error) throw error;
+    if (error) throw mapSupabaseError(error);
     return (data || []) as UserProfile[];
   },
 

@@ -150,7 +150,6 @@ export const ScreenScaffold: React.FC<ScreenScaffoldProps> = ({
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
-      <OfflineBanner />
       {renderHeader()}
       <KeyboardAvoidingView
         style={styles.keyboardContainer}

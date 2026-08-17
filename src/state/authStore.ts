@@ -304,14 +304,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    set({ isLoading: true });
     try {
       await RPC.disableMyPushDevices().catch(() => {});
-      await supabase.auth.signOut();
-      await RTCSecureStorage.clear();
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      await RTCSecureStorage.clear().catch(() => {});
       await Repository.clearPublicCache().catch(() => {});
-      set({ session: null, profile: null });
     } catch (e) {
-      set({ session: null, profile: null });
+      console.warn('[Auth] signOut cleanup error (non-fatal):', e);
+    } finally {
+      set({ session: null, profile: null, error: null, isLoading: false });
     }
   },
 

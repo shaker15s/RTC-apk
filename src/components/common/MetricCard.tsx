@@ -102,7 +102,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 
   if (onPress) {
     return (
-      <AnimatedPressable onPress={onPress} scaleTarget={0.97}>
+      <AnimatedPressable onPress={onPress} scaleTarget={0.97} style={[{ width: '100%' }, style]}>
         {content}
       </AnimatedPressable>
     );

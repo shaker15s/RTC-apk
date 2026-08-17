@@ -20,6 +20,7 @@ import { ScreenScaffold } from '../../components/layout/ScreenScaffold';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { StatusPill } from '../../components/common/StatusPill';
 import { MetricCard } from '../../components/common/MetricCard';
+import { ResponsiveGrid } from '../../components/common/ResponsiveGrid';
 import { PrimaryActionCard } from '../../components/common/PrimaryActionCard';
 import { CustomCard } from '../../components/common/CustomCard';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
@@ -101,14 +102,13 @@ export const VolunteerHomeScreen: React.FC<VolunteerHomeScreenProps> = ({ onNavi
       />
 
       {/* 2. Key Metrics Row */}
-      <View style={styles.metricsRow}>
+      <ResponsiveGrid spacing={Spacing.md} minItemWidth={140} maxColumns={2}>
         <MetricCard
           label="المجموعات النشطة"
           value={activeBatches.length}
           color={colors.teal}
           icon={<GraduationCap color={colors.teal} size={18} />}
           onPress={() => onNavigate('v-batches')}
-          style={{ flex: 1 }}
         />
         <MetricCard
           label="إجمالي المجموعات"
@@ -116,14 +116,13 @@ export const VolunteerHomeScreen: React.FC<VolunteerHomeScreenProps> = ({ onNavi
           color={colors.primary}
           icon={<Users color={colors.primary} size={18} />}
           onPress={() => onNavigate('v-courses')}
-          style={{ flex: 1 }}
         />
-      </View>
+      </ResponsiveGrid>
 
       {/* 3. Quick Action Hub for Coach */}
       <View style={styles.sectionWrap}>
         <SectionHeader title="أدوات إدارة المحاضرات" />
-        <View style={styles.actionGrid}>
+        <ResponsiveGrid spacing={Spacing.md} minItemWidth={140} maxColumns={2}>
           <TouchableOpacity
             style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={() => {
@@ -170,16 +169,16 @@ export const VolunteerHomeScreen: React.FC<VolunteerHomeScreenProps> = ({ onNavi
             style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={() => {
               RTCHaptics.selection();
-              onNavigate('v-report');
+              onNavigate('v-courses');
             }}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconBox, { backgroundColor: colors.goldSoft }]}>
               <Award color={colors.gold} size={22} />
             </View>
-            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>تقرير الجلسة</Text>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>الشهادات والتقييم</Text>
           </TouchableOpacity>
-        </View>
+        </ResponsiveGrid>
       </View>
 
       {/* 4. Active Batches List */}
@@ -243,8 +242,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   actionGridItem: {
-    flex: 1,
-    minWidth: '45%',
+    width: '100%',
     padding: Spacing.md,
     borderRadius: Radii.lg,
     borderWidth: 1,

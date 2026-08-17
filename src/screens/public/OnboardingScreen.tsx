@@ -331,107 +331,30 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
               </View>
               <Text style={[styles.title, { color: colors.txt }]}>{t('welcomeTitle')}</Text>
               <Text style={[styles.subtitle, { color: colors.mut }]}>
-                ابدأ رحلتك التدريبية، سجل حضورك، واستلم شهاداتك المعتمدة فوراً.
+                بوابتك الموحدة لمتابعة الدورات التدريبية، تسجيل الحضور الذكي، والحصول على الشهادات المعتمدة.
               </Text>
             </View>
 
-            <CustomCard style={styles.emailCard} innerStyle={{ padding: 20, gap: 14 }}>
-              <View style={styles.authToggleRow}>
-                <TouchableOpacity
-                  onPress={() => setIsSignUp(false)}
-                  style={[styles.authToggleBtn, !isSignUp && { backgroundColor: colors.primary }]}
-                >
-                  <Text style={{ color: !isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
-                    تسجيل الدخول
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setIsSignUp(true)}
-                  style={[styles.authToggleBtn, isSignUp && { backgroundColor: colors.primary }]}
-                >
-                  <Text style={{ color: isSignUp ? '#FFFFFF' : colors.mut, fontWeight: '700' }}>
-                    حساب جديد
-                  </Text>
-                </TouchableOpacity>
+            <CustomCard style={styles.emailCard} innerStyle={{ padding: 24, gap: 16 }}>
+              <View style={{ alignItems: 'center', gap: 8 }}>
+                <View style={[styles.googleIconWrap, { backgroundColor: colors.primarySoft }]}>
+                  <ShieldCheck color={colors.primary} size={32} />
+                </View>
+                <Text style={[styles.cardTitle, { color: colors.txt }]}>الدخول الموحد السريع</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.mut }]}>
+                  سجل دخولك بحساب Google للمتابعة والوصول إلى كافة خدمات التدريب.
+                </Text>
               </View>
 
-              {isSignUp && (
-                <>
-                  <TextInputField
-                    label="الاسم بالكامل"
-                    value={fullName}
-                    onChangeText={(text) => {
-                      setFullName(text);
-                      if (nameError) setNameError(null);
-                    }}
-                    placeholder="الاسم الثلاثي"
-                    error={nameError}
-                    required
-                  />
-                  <TextInputField
-                    label="رقم الموبايل"
-                    value={phone}
-                    onChangeText={(text) => {
-                      setPhone(text);
-                      if (phoneError) setPhoneError(null);
-                    }}
-                    placeholder="010XXXXXXXX"
-                    keyboardType="phone-pad"
-                    maxLength={11}
-                    error={phoneError}
-                    required
-                  />
-                  {renderBranchPicker(branchError)}
-                </>
-              )}
-
-              <TextInputField
-                label="البريد الإلكتروني"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="name@domain.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                required
-              />
-
-              <TextInputField
-                label="كلمة المرور"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                secureTextEntry
-                required
-              />
-
               <CustomButton
-                title={isSignUp ? 'إنشاء حساب' : 'دخول'}
-                onPress={handleEmailAuth}
+                title="المتابعة باستخدام Google"
+                onPress={handleGoogleSignIn}
                 variant="primary"
                 size="big"
                 loading={isLoading}
-                icon={isSignUp ? <UserPlus color="#FFFFFF" size={20} /> : <LogIn color="#FFFFFF" size={20} />}
-                style={{ marginTop: 8 }}
+                icon={<ShieldCheck color="#FFFFFF" size={20} />}
+                style={{ width: '100%', marginTop: 8 }}
               />
-
-              {!isSignUp && (
-                <>
-                  <View style={styles.dividerRow}>
-                    <View style={[styles.divider, { backgroundColor: colors.line }]} />
-                    <Text style={[styles.dividerText, { color: colors.mut }]}>أو</Text>
-                    <View style={[styles.divider, { backgroundColor: colors.line }]} />
-                  </View>
-
-                  <CustomButton
-                    title="المتابعة باستخدام Google"
-                    onPress={handleGoogleSignIn}
-                    variant="soft"
-                    size="big"
-                    loading={isLoading}
-                    icon={<ShieldCheck color={colors.primary} size={22} />}
-                  />
-                </>
-              )}
             </CustomCard>
 
             <View style={styles.quickAccessRow}>
@@ -659,6 +582,25 @@ const styles = StyleSheet.create({
   },
   emailCard: {
     marginTop: 10,
+  },
+  googleIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: 8,
   },
   authToggleRow: {
     flexDirection: 'row',

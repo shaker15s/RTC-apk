@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { RPC, BatchRosterStudent } from '../../data/rpc';
@@ -27,13 +28,11 @@ import {
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
-export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused';
+export type AttendanceStatus = 'present' | 'late' | 'absent' | 'excused' | 'unmarked';
 
 export interface VolunteerAttendanceScreenProps {
   sessionId: string;
   batchId: string;
-  /** Roster may be passed by the caller; if omitted the screen loads it
-   *  itself from batch_roster (keeps navigation params serializable). */
   students?: BatchRosterStudent[];
   onBack: () => void;
 }
@@ -53,7 +52,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
   const [attendanceState, setAttendanceState] = useState<Record<string, AttendanceStatus>>(() => {
     const init: Record<string, AttendanceStatus> = {};
     (initialStudents || []).forEach((s) => {
-      init[s.student_id] = 'present';
+      init[s.student_id] = 'unmarked';
     });
     return init;
   });
@@ -61,7 +60,6 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
   const [saving, setSaving] = useState(false);
 
   // Self-load the roster when it wasn't passed through navigation
-  // (fixes non-serializable params with React Navigation).
   useEffect(() => {
     if (initialStudents?.length) return;
     let cancelled = false;
@@ -71,7 +69,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
         setStudents(roster);
         const init: Record<string, AttendanceStatus> = {};
         roster.forEach((s) => {
-          init[s.student_id] = 'present';
+          init[s.student_id] = 'unmarked';
         });
         setAttendanceState(init);
       })
@@ -84,7 +82,6 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchId]);
 
   const setStudentStatus = (studentId: string, status: AttendanceStatus) => {
@@ -92,15 +89,10 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
     setAttendanceState((prev) => ({ ...prev, [studentId]: status }));
   };
 
-  const handleSaveAttendance = async () => {
+  const executeSave = async (records: { student_id: string; status: AttendanceStatus }[]) => {
     setSaving(true);
     try {
-      const records = Object.keys(attendanceState).map((studentId) => ({
-        student_id: studentId,
-        status: attendanceState[studentId],
-      }));
-
-      await RPC.recordSessionAttendance(sessionId, records);
+      await RPC.recordSessionAttendance(sessionId, records as any);
       RTCHaptics.success();
       showToast(t('attendanceSavedToast'), 'ok');
       onBack();
@@ -109,6 +101,33 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveAttendance = async () => {
+    const total = students.length;
+    const records = Object.keys(attendanceState).map((studentId) => ({
+      student_id: studentId,
+      status: attendanceState[studentId] === 'unmarked' ? 'absent' : attendanceState[studentId],
+    }));
+
+    const unmarkedCount = Object.values(attendanceState).filter((s) => s === 'unmarked').length;
+    if (unmarkedCount > 0) {
+      RTCHaptics.warning();
+      Alert.alert(
+        'مراجعة كشف الحضور',
+        `يوجد ${unmarkedCount} طالب لم يتم تحديد حالتهم. سيتم تسجيلهم كـ "غائب". هل تريد المتابعة وحفظ الكشف؟`,
+        [
+          { text: 'إلغاء للمراجعة', style: 'cancel' },
+          {
+            text: 'نعم، حفظ الكشف',
+            onPress: () => executeSave(records),
+          },
+        ]
+      );
+      return;
+    }
+
+    await executeSave(records);
   };
 
   const markAll = (status: AttendanceStatus) => {
@@ -120,9 +139,39 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
     setAttendanceState(updated);
   };
 
+  // Counts
+  const presentCount = Object.values(attendanceState).filter((s) => s === 'present').length;
+  const lateCount = Object.values(attendanceState).filter((s) => s === 'late').length;
+  const absentCount = Object.values(attendanceState).filter((s) => s === 'absent').length;
+  const excusedCount = Object.values(attendanceState).filter((s) => s === 'excused').length;
+  const unmarkedCount = Object.values(attendanceState).filter((s) => s === 'unmarked').length;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader title={t('attendanceMarkTitle')} subtitle={t('attendanceMarkSubtitle')} showBack onBack={onBack} />
+
+      {/* Summary Counters */}
+      <View style={[styles.statsRow, { backgroundColor: colors.card, borderBottomColor: colors.line }]}>
+        <View style={[styles.statChip, { backgroundColor: colors.teal + '15' }]}>
+          <Text style={[styles.statChipText, { color: colors.teal }]}>حاضر: {presentCount}</Text>
+        </View>
+        <View style={[styles.statChip, { backgroundColor: colors.amber + '15' }]}>
+          <Text style={[styles.statChipText, { color: colors.amber }]}>متأخر: {lateCount}</Text>
+        </View>
+        <View style={[styles.statChip, { backgroundColor: colors.red + '15' }]}>
+          <Text style={[styles.statChipText, { color: colors.red }]}>غائب: {absentCount}</Text>
+        </View>
+        {excusedCount > 0 && (
+          <View style={[styles.statChip, { backgroundColor: colors.primary + '15' }]}>
+            <Text style={[styles.statChipText, { color: colors.primary }]}>معذور: {excusedCount}</Text>
+          </View>
+        )}
+        {unmarkedCount > 0 && (
+          <View style={[styles.statChip, { backgroundColor: colors.mut + '15' }]}>
+            <Text style={[styles.statChipText, { color: colors.mut }]}>غير محدد: {unmarkedCount}</Text>
+          </View>
+        )}
+      </View>
 
       {/* Quick Mark All Bar */}
       <View style={styles.quickBar}>
@@ -273,6 +322,23 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  statChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radii.full,
+  },
+  statChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   quickBar: {
     flexDirection: 'row',

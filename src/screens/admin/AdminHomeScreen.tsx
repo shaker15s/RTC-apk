@@ -18,6 +18,7 @@ import { Repository } from '../../data/repositories';
 import { ScreenScaffold } from '../../components/layout/ScreenScaffold';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { MetricCard } from '../../components/common/MetricCard';
+import { ResponsiveGrid } from '../../components/common/ResponsiveGrid';
 import { PrimaryActionCard } from '../../components/common/PrimaryActionCard';
 import { RTCHaptics } from '../../core/native/haptics';
 import { useT } from '../../core/i18n';
@@ -106,45 +107,36 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ onNavigate }) 
       />
 
       {/* 2. Key System KPIs Grid */}
-      <View style={styles.metricsGrid}>
-        <View style={styles.metricsRow}>
-          <MetricCard
-            label="الطلاب النشطون"
-            value={kpis.active_students}
-            color={colors.primary}
-            icon={<Users color={colors.primary} size={18} />}
-            onPress={() => onNavigate('a-users')}
-            style={{ flex: 1 }}
-          />
-          <MetricCard
-            label="المدربون والمتطوعون"
-            value={kpis.active_volunteers}
-            color={colors.teal}
-            icon={<ShieldCheck color={colors.teal} size={18} />}
-            onPress={() => onNavigate('a-users')}
-            style={{ flex: 1 }}
-          />
-        </View>
-
-        <View style={styles.metricsRow}>
-          <MetricCard
-            label="الدفعات النشطة"
-            value={kpis.active_batches}
-            color={colors.amber}
-            icon={<Layers color={colors.amber} size={18} />}
-            onPress={() => onNavigate('a-courses')}
-            style={{ flex: 1 }}
-          />
-          <MetricCard
-            label="الشهادات الصادرة"
-            value={kpis.issued_certificates}
-            color={colors.gold}
-            icon={<Award color={colors.gold} size={18} />}
-            onPress={() => onNavigate('a-certs')}
-            style={{ flex: 1 }}
-          />
-        </View>
-      </View>
+      <ResponsiveGrid spacing={Spacing.md} minItemWidth={140} maxColumns={2}>
+        <MetricCard
+          label="الطلاب النشطون"
+          value={kpis.active_students}
+          color={colors.primary}
+          icon={<Users color={colors.primary} size={18} />}
+          onPress={() => onNavigate('a-users', { initialRole: 'student' })}
+        />
+        <MetricCard
+          label="المدربون والمتطوعون"
+          value={kpis.active_volunteers}
+          color={colors.teal}
+          icon={<ShieldCheck color={colors.teal} size={18} />}
+          onPress={() => onNavigate('a-users', { initialRole: 'volunteer' })}
+        />
+        <MetricCard
+          label="الدفعات النشطة"
+          value={kpis.active_batches}
+          color={colors.amber}
+          icon={<Layers color={colors.amber} size={18} />}
+          onPress={() => onNavigate('a-courses')}
+        />
+        <MetricCard
+          label="الشهادات الصادرة"
+          value={kpis.issued_certificates}
+          color={colors.gold}
+          icon={<Award color={colors.gold} size={18} />}
+          onPress={() => onNavigate('a-certs')}
+        />
+      </ResponsiveGrid>
 
       {/* 3. Fast Administrative Modules */}
       <View style={styles.sectionWrap}>

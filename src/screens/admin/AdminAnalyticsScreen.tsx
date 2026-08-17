@@ -41,15 +41,22 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
     totalCourses: 0,
     totalBatches: 0,
     totalCerts: 0,
-    avgAttendance: 88,
+    avgAttendance: 0,
   });
+  const [chartData, setChartData] = useState<{ label: string; val: number }[]>([]);
+  const [error, setError] = useState<any>(null);
 
   const loadData = async () => {
+    setError(null);
     try {
       const data = await Repository.fetchAnalyticsBundle(profile);
       const profs = data.profs || [];
       const students = profs.filter((p: any) => p.role === 'student');
       const volunteers = profs.filter((p: any) => p.role === 'volunteer');
+      const att = data.att || [];
+
+      const presentAtt = att.filter((a: any) => a.status === 'present' || a.status === 'late').length;
+      const realAvgAttendance = att.length > 0 ? Math.round((presentAtt / att.length) * 100) : 0;
 
       setStats({
         totalUsers: profs.length,
@@ -58,9 +65,39 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
         totalCourses: data.courses?.length || 0,
         totalBatches: data.batches?.length || 0,
         totalCerts: data.certs?.length || 0,
-        avgAttendance: 86,
+        avgAttendance: realAvgAttendance,
       });
-    } catch (e) {
+
+      // Calculate weekly attendance distribution from real attendance records
+      const daySlots = [
+        { label: t('aaSat'), dayIndex: 6, count: 0, total: 0 },
+        { label: t('aaSun'), dayIndex: 0, count: 0, total: 0 },
+        { label: t('aaMon'), dayIndex: 1, count: 0, total: 0 },
+        { label: t('aaTue'), dayIndex: 2, count: 0, total: 0 },
+        { label: t('aaWed'), dayIndex: 3, count: 0, total: 0 },
+        { label: t('aaThu'), dayIndex: 4, count: 0, total: 0 },
+        { label: t('aaFri'), dayIndex: 5, count: 0, total: 0 },
+      ];
+
+      att.forEach((a: any) => {
+        if (a.created_at) {
+          const dayIdx = new Date(a.created_at).getDay();
+          const target = daySlots.find((s) => s.dayIndex === dayIdx);
+          if (target) {
+            target.total++;
+            if (a.status === 'present' || a.status === 'late') target.count++;
+          }
+        }
+      });
+
+      setChartData(
+        daySlots.map((s) => ({
+          label: s.label,
+          val: s.total > 0 ? Math.round((s.count / s.total) * 100) : 0,
+        }))
+      );
+    } catch (e: any) {
+      setError(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,17 +112,6 @@ export const AdminAnalyticsScreen: React.FC<AdminAnalyticsScreenProps> = ({ onBa
     setRefreshing(true);
     loadData();
   };
-
-  // Mock bar chart heights based on actual counts
-  const chartData = [
-    { label: t('aaSat'), val: 78 },
-    { label: t('aaSun'), val: 92 },
-    { label: t('aaMon'), val: 85 },
-    { label: t('aaTue'), val: 95 },
-    { label: t('aaWed'), val: 88 },
-    { label: t('aaThu'), val: 65 },
-    { label: t('aaFri'), val: 40 },
-  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>

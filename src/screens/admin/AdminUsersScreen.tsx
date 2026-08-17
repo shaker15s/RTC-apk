@@ -40,7 +40,12 @@ import {
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
-export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+export interface AdminUsersScreenProps {
+  onBack: () => void;
+  initialRole?: 'all' | 'student' | 'volunteer' | 'admin';
+}
+
+export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack, initialRole = 'all' }) => {
   const { colors, isDark, showToast } = useAppStore();
   const { t } = useT();
 
@@ -55,7 +60,7 @@ export const AdminUsersScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
     }, 350);
     return () => clearTimeout(handler);
   }, [searchInput]);
-  const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'volunteer' | 'admin'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'volunteer' | 'admin'>(initialRole);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 

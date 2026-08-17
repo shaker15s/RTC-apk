@@ -37,7 +37,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
   const [kpis, setKpis] = useState<any>({
     active_students: 0,
     active_batches: 0,
-    attendance_rate: 88,
+    attendance_rate: 0,
     issued_certificates: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -48,10 +48,15 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
       const data = await Repository.fetchAnalyticsBundle(profile);
       const profs = data.profs || [];
       const students = profs.filter((p: any) => p.role === 'student');
+      const att = data.att || [];
+
+      const presentAtt = att.filter((a: any) => a.status === 'present' || a.status === 'late').length;
+      const realAttendanceRate = att.length > 0 ? Math.round((presentAtt / att.length) * 100) : 0;
+
       setKpis({
         active_students: students.length,
         active_batches: data.batches?.length || 0,
-        attendance_rate: 88,
+        attendance_rate: realAttendanceRate,
         issued_certificates: data.certs?.length || 0,
       });
     } catch (e) {

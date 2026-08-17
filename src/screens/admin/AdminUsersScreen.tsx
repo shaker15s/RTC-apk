@@ -17,6 +17,7 @@ import {
 import { useAppStore } from '../../state/appStore';
 import { Repository } from '../../data/repositories';
 import { RPC, UserProfile } from '../../data/rpc';
+import { supabase } from '../../data/supabaseClient';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { TextInputField } from '../../components/common/TextInputField';

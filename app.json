@@ -2,7 +2,7 @@
   "expo": {
     "name": "مسار RTC",
     "slug": "shaker",
-    "version": "2.0.0",
+    "version": "100.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "org.resala.rtc.masar",

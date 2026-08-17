@@ -448,51 +448,40 @@ export const Repository = {
 
   // Analytics Bundle
   async fetchAnalyticsBundle(userProfile: UserProfile | null) {
-    const isAdmin = userProfile?.role === 'admin';
     const isVolunteer = userProfile?.role === 'volunteer';
 
     try {
-      const profilesPromise = isAdmin
-        ? RPC.adminListProfiles()
-        : supabase
-            .from('profiles')
-            .select('id, full_name, role, branch_id, points, created_at, status')
-            .then((r) => {
-              if (r.error) throw r.error;
-              return r.data || [];
-            });
+      let profs: any[] = [];
+      try {
+        profs = (await RPC.adminListProfiles()) || [];
+      } catch (e) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, branch_id, points, created_at, status');
+        profs = data || [];
+      }
 
       let batchQuery = supabase
         .from('batches')
-        .select('id, name, branch_id, sessions_done, schedule, is_active')
+        .select('id, name, branch_id, sessions_done, schedule, is_active, instructor_id')
         .eq('is_active', true);
       if (isVolunteer && userProfile?.id) {
         batchQuery = batchQuery.eq('instructor_id', userProfile.id);
       }
 
-      const [profs, courses, batches, certs, att, enroll] = await Promise.all([
-        profilesPromise,
-        supabase.from('courses').select('id, title, is_active').eq('is_active', true).then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        }),
-        batchQuery.then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        }),
-        supabase.from('certs').select('id').then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        }),
-        supabase.from('attendance').select('id, status, created_at').then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        }),
-        supabase.from('enrollments').select('id').then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        }),
+      const [coursesRes, batchesRes, certsRes, attRes, enrollRes] = await Promise.all([
+        supabase.from('courses').select('id, title, is_active').eq('is_active', true),
+        batchQuery,
+        supabase.from('certs').select('id, student_id, course_id, issued_at'),
+        supabase.from('attendance').select('id, status, created_at, student_id, session_id'),
+        supabase.from('enrollments').select('id, student_id, batch_id, status'),
       ]);
+
+      const courses = coursesRes.data || [];
+      const batches = batchesRes.data || [];
+      const certs = certsRes.data || [];
+      const att = attRes.data || [];
+      const enroll = enrollRes.data || [];
 
       return { profs, courses, batches, certs, att, enroll };
     } catch (e) {
@@ -526,15 +515,31 @@ export const Repository = {
     return updated;
   },
 
-  // Admin Users List with sanitized query
+  // Admin Users List with sanitized query and graceful fallback
   async fetchUsers(search?: string): Promise<UserProfile[]> {
-    let allUsers = await RPC.adminListProfiles() || [];
+    let allUsers: UserProfile[] = [];
+    try {
+      allUsers = (await RPC.adminListProfiles()) || [];
+    } catch (e) {
+      // Fallback: If adminListProfiles fails (e.g. role check in transit), query profiles directly
+      const { data } = await supabase
+        .from('profiles')
+        .select('*, branches(name_ar)')
+        .order('created_at', { ascending: false });
+      if (data && data.length > 0) {
+        allUsers = data.map((p: any) => ({
+          ...p,
+          branch_name: p.branches?.name_ar || '',
+        })) as UserProfile[];
+      }
+    }
     if (search) {
       const sanitized = search.replace(/[,.()%*]/g, '').trim().toLowerCase();
       if (sanitized.length > 0) {
         allUsers = allUsers.filter(u => 
           (u.full_name?.toLowerCase().includes(sanitized)) ||
-          (u.phone?.includes(sanitized))
+          (u.phone?.includes(sanitized)) ||
+          (u.email?.toLowerCase().includes(sanitized))
         );
       }
     }

@@ -16,7 +16,7 @@ import { CustomButton } from '../../components/common/CustomButton';
 import { SuccessAnimation } from '../../components/feedback/SuccessAnimation';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RPC } from '../../data/rpc';
-import { Star, MessageSquare } from 'lucide-react-native';
+import { Star, MessageSquare, UserCheck, Calendar, Building } from 'lucide-react-native';
 import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
@@ -33,20 +33,53 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
 }) => {
   const { colors, showToast } = useAppStore();
   const { t } = useT();
-  const [rating, setRating] = useState<number>(5);
+
+  const [instructorRating, setInstructorRating] = useState<number>(5);
+  const [orgRating, setOrgRating] = useState<number>(5);
+  const [venueRating, setVenueRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
 
-  const handleSubmit = async () => {
-    if (rating < 1) {
-      showToast(t('crPickStars'), 'warn');
-      return;
-    }
+  const renderStarPicker = (
+    title: string,
+    icon: React.ReactNode,
+    value: number,
+    onChange: (val: number) => void
+  ) => (
+    <View style={styles.dimensionSection}>
+      <View style={styles.dimensionHeader}>
+        {icon}
+        <Text style={[styles.dimensionTitle, { color: colors.txt }]}>{title}</Text>
+      </View>
+      <View style={styles.starsRow}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <TouchableOpacity
+            key={star}
+            activeOpacity={0.7}
+            onPress={() => {
+              RTCHaptics.selection();
+              onChange(star);
+            }}
+            style={styles.starButton}
+          >
+            <Star
+              size={32}
+              color={star <= value ? '#F59E0B' : colors.line}
+              fill={star <= value ? '#F59E0B' : 'transparent'}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 
+  const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await RPC.submitCourseRating(courseId, rating, comment.trim());
+      const overallRating = Math.round((instructorRating + orgRating + venueRating) / 3);
+      const detailedComment = `[المدرب: ${instructorRating}/5 | التنظيم: ${orgRating}/5 | المكان: ${venueRating}/5]\n${comment.trim()}`;
+      await RPC.submitCourseRating(courseId, overallRating, detailedComment);
       setShowSuccess(true);
     } catch (e: any) {
       showToast(e?.message || t('crError'), 'err');
@@ -76,43 +109,34 @@ export const CourseRatingScreen: React.FC<CourseRatingScreenProps> = ({
         keyboardShouldPersistTaps="handled"
       >
         <CustomCard style={styles.card}>
-          <Text style={[styles.heading, { color: colors.txt }]}>{t('crQuestion')}</Text>
+          <Text style={[styles.heading, { color: colors.txt }]}>تقييم تجربة الدورة التدريبية</Text>
           <Text style={[styles.subheading, { color: colors.mut }]}>
-            {t('crSub')}
+            رأيك يهمنا لمساعدتنا في تطوير بيئة التدريب والمتطوعين بمركز رسالة
           </Text>
 
-          {/* Stars Selection */}
-          <View style={styles.starsRow}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity
-                key={star}
-                activeOpacity={0.7}
-                onPress={() => {
-                  RTCHaptics.selection();
-                  setRating(star);
-                }}
-                style={styles.starButton}
-              >
-                <Star
-                  size={36}
-                  color={star <= rating ? '#F59E0B' : colors.line}
-                  fill={star <= rating ? '#F59E0B' : 'transparent'}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* 1. Instructor Rating */}
+          {renderStarPicker(
+            'أداء المدرب وأسلوب الشرح',
+            <UserCheck size={18} color={colors.primary} />,
+            instructorRating,
+            setInstructorRating
+          )}
 
-          <Text style={[styles.ratingLabel, { color: colors.primary }]}>
-            {rating === 5
-              ? t('crExcellent')
-              : rating === 4
-              ? t('crVeryGood')
-              : rating === 3
-              ? t('crAverage')
-              : rating === 2
-              ? t('crNeedsImprovement')
-              : t('crPoor')}
-          </Text>
+          {/* 2. Organization Rating */}
+          {renderStarPicker(
+            'التنظيم وإدارة المواعيد',
+            <Calendar size={18} color={colors.teal} />,
+            orgRating,
+            setOrgRating
+          )}
+
+          {/* 3. Venue & Environment Rating */}
+          {renderStarPicker(
+            'المكان، القاعة والتجهيزات',
+            <Building size={18} color={colors.gold} />,
+            venueRating,
+            setVenueRating
+          )}
 
           {/* Review Text Input */}
           <View style={styles.inputWrap}>
@@ -187,20 +211,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 300,
   },
+  dimensionSection: {
+    width: '100%',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dimensionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dimensionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
   starsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginVertical: 12,
+    marginVertical: 4,
   },
   starButton: {
     padding: 4,
-  },
-  ratingLabel: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 8,
   },
   inputWrap: {
     width: '100%',

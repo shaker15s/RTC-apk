@@ -8,6 +8,7 @@ import { useAuthStore } from '../../state/authStore';
 import { useAppStore } from '../../state/appStore';
 import { NotificationItem, Repository } from '../repositories';
 import { RTCHaptics } from '../../core/native/haptics';
+import { RTCNotifications } from '../../core/native/notifications';
 
 export function useRealtimeNotifications() {
   const { session } = useAuthStore();
@@ -49,6 +50,7 @@ export function useRealtimeNotifications() {
           incrementUnread();
           RTCHaptics.medium();
           showToast(newNotif.title, 'info');
+          RTCNotifications.presentSystemNotification(newNotif.title, newNotif.message || '').catch(() => {});
         }
       )
       .subscribe();

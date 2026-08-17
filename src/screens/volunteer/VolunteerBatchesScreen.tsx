@@ -14,6 +14,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
+import { useAuthStore } from '../../state/authStore';
 import { useSessionStore, ActiveSession } from '../../state/sessionStore';
 import { Repository, Batch } from '../../data/repositories';
 import { RPC, BatchRosterStudent } from '../../data/rpc';
@@ -22,6 +23,8 @@ import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
+import { ResponsiveGrid } from '../../components/common/ResponsiveGrid';
+import { Spacing } from '../../core/theme/tokens';
 import { CustomButton } from '../../components/common/CustomButton';
 import { TextInputField } from '../../components/common/TextInputField';
 import { SelectChips } from '../../components/common/SelectChips';
@@ -167,8 +170,25 @@ export const VolunteerBatchesScreen: React.FC<{
     }
   };
 
+  const { profile } = useAuthStore();
+
+  const isCurrentBatchLive = activeSession && activeSession.batchId === activeBatchId;
+
   const currentBatch = batches.find((b) => b.id === activeBatchId);
   const batchChips = batches.map((b) => ({ id: b.id, label: b.name }));
+
+  const qrPayload = isCurrentBatchLive
+    ? JSON.stringify({
+        type: 'masar_checkin',
+        code: activeSession.checkinCode,
+        sessionId: activeSession.id,
+        batchId: activeBatchId,
+        batchName: currentBatch?.name || '',
+        courseTitle: currentBatch?.courses?.title || '',
+        instructor: profile?.full_name || '',
+        date: new Date().toISOString(),
+      })
+    : '';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -186,8 +206,8 @@ export const VolunteerBatchesScreen: React.FC<{
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {/* Active Session Broadcast Bar (If Session Running) */}
-        {activeSession ? (
+        {/* Active Session Broadcast Bar (Only if Session is live FOR THIS BATCH) */}
+        {isCurrentBatchLive ? (
           <CustomCard style={[styles.liveSessionCard, { borderColor: colors.teal }]}>
             <View style={styles.liveSessionTop}>
               <View style={[styles.liveBadge, { backgroundColor: colors.teal }]}>
@@ -196,7 +216,7 @@ export const VolunteerBatchesScreen: React.FC<{
               <Text style={[styles.liveTitle, { color: colors.txt }]}>{activeSession.title}</Text>
             </View>
 
-            {/* Big Code & REAL QR Display (fixes P1-4) */}
+            {/* Big Code & REAL Structured QR Display */}
             <View style={[styles.qrDisplayBox, { backgroundColor: colors.card2, borderColor: colors.line }]}>
               <Text style={[styles.qrCodeLabel, { color: colors.mut }]}>{t('checkinCodeLabel')}</Text>
               <Text style={[styles.qrBigCode, { color: colors.primary }]}>
@@ -204,7 +224,7 @@ export const VolunteerBatchesScreen: React.FC<{
               </Text>
               <View style={styles.qrBox}>
                 <QRCode
-                  value={activeSession.checkinCode}
+                  value={qrPayload || activeSession.checkinCode}
                   size={180}
                   color="#001A6B"
                   backgroundColor="#FFFFFF"
@@ -219,7 +239,6 @@ export const VolunteerBatchesScreen: React.FC<{
                   onNavigate('v-attendance', {
                     sessionId: activeSession.id,
                     batchId: activeBatchId,
-                    // roster is loaded by the attendance screen itself
                   })
                 }
                 variant="primary"
@@ -251,7 +270,7 @@ export const VolunteerBatchesScreen: React.FC<{
                 </Text>
               </View>
 
-              {!activeSession ? (
+              {!isCurrentBatchLive ? (
                 <CustomButton
                   title={t('startSessionCta')}
                   onPress={() => {
@@ -303,49 +322,50 @@ export const VolunteerBatchesScreen: React.FC<{
             <SkeletonLoader height={68} borderRadius={Radii.lg} />
           </View>
         ) : students.length ? (
-          students.map((student) => (
-            <CustomCard key={student.student_id} style={styles.studentCard}>
-              <View style={styles.studentLeft}>
-                <View style={[styles.studentAvatar, { backgroundColor: colors.card2 }]}>
-                  {student.avatar_url ? (
-                    <Image source={{ uri: student.avatar_url }} style={styles.studentAvatarImg} />
-                  ) : (
-                    <Users color={colors.mut} size={18} />
-                  )}
+          <ResponsiveGrid spacing={Spacing.sm} minItemWidth={280} maxColumns={2}>
+            {students.map((student) => (
+              <CustomCard key={student.student_id} style={styles.studentCard}>
+                <View style={styles.studentLeft}>
+                  <View style={[styles.studentAvatar, { backgroundColor: colors.card2 }]}>
+                    {student.avatar_url ? (
+                      <Image source={{ uri: student.avatar_url }} style={styles.studentAvatarImg} />
+                    ) : (
+                      <Users color={colors.mut} size={18} />
+                    )}
+                  </View>
+
+                  <View style={styles.studentInfo}>
+                    <Text style={[styles.studentName, { color: colors.txt }]} numberOfLines={1}>{student.full_name}</Text>
+                    {student.phone ? (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          RTCHaptics.light();
+                          Clipboard.setStringAsync(student.phone as string).catch(() => {});
+                          showToast(t('phoneCopied'), 'info');
+                        }}
+                      >
+                        <Text style={[styles.studentPhone, { color: colors.mut }]}>
+                          {maskPhone(student.phone)} 👆
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </View>
 
-                <View style={styles.studentInfo}>
-                  <Text style={[styles.studentName, { color: colors.txt }]}>{student.full_name}</Text>
-                  {student.phone ? (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        RTCHaptics.light();
-                        Clipboard.setStringAsync(student.phone as string).catch(() => {});
-                        showToast(t('phoneCopied'), 'info');
-                      }}
-                    >
-                      {/* Privacy masking by default (fixes SEC-4): tap to copy full number */}
-                      <Text style={[styles.studentPhone, { color: colors.mut }]}>
-                        {maskPhone(student.phone)} 👆
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              </View>
-
-              <View style={styles.studentRight}>
-                <View style={[styles.attBadge, { backgroundColor: colors.teal + '18' }]}>
-                  <Text style={[styles.attText, { color: colors.teal }]}>
-                    {t('attendancePct', { p: student.attendance_pct || 0 })}
+                <View style={styles.studentRight}>
+                  <View style={[styles.attBadge, { backgroundColor: colors.teal + '18' }]}>
+                    <Text style={[styles.attText, { color: colors.teal }]}>
+                      {t('attendancePct', { p: student.attendance_pct || 0 })}
+                    </Text>
+                  </View>
+                  <Text style={[styles.pointsText, { color: colors.gold }]}>
+                    ⭐ {student.points || 0} {t('ptShort')}
                   </Text>
                 </View>
-                <Text style={[styles.pointsText, { color: colors.gold }]}>
-                  ⭐ {student.points || 0} {t('ptShort')}
-                </Text>
-              </View>
-            </CustomCard>
-          ))
+              </CustomCard>
+            ))}
+          </ResponsiveGrid>
         ) : (
           <EmptyStateView
             title={t('noStudentsTitle')}

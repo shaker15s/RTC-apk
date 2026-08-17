@@ -48,12 +48,17 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Branch filter for courses
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('all');
+
   // New Course Modal State
   const [courseModalVisible, setCourseModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState(t('acProgTech'));
   const [newSessions, setNewSessions] = useState('8');
   const [newDescription, setNewDescription] = useState('');
+  const [newBranchId, setNewBranchId] = useState(branches[0]?.id || '');
+  const [newInstructor, setNewInstructor] = useState('');
   const [creatingCourse, setCreatingCourse] = useState(false);
 
   // New Batch Modal State
@@ -63,6 +68,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
   const [batchSchedule, setBatchSchedule] = useState('');
   const [batchLocation, setBatchLocation] = useState('');
   const [batchBranchId, setBatchBranchId] = useState(branches[0]?.id || '');
+  const [batchInstructor, setBatchInstructor] = useState('');
   const [creatingBatch, setCreatingBatch] = useState(false);
 
   const loadCourses = async () => {
@@ -94,12 +100,14 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
 
     setCreatingCourse(true);
     try {
+      const slug = newTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `course-${Date.now()}`;
       await Repository.createCourse({
         title: newTitle.trim(),
+        slug: `${slug}-${Date.now().toString(36)}`,
         category: newCategory,
         sessions_count: parseInt(newSessions, 10) || 8,
-        description: newDescription.trim() || undefined,
-        branch_id: branches[0]?.id,
+        description: newInstructor.trim() ? `${newDescription.trim()}\nالمدرب: ${newInstructor.trim()}` : newDescription.trim() || undefined,
+        branch_id: newBranchId || branches[0]?.id,
       });
 
       RTCHaptics.success();
@@ -107,6 +115,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
       setCourseModalVisible(false);
       setNewTitle('');
       setNewDescription('');
+      setNewInstructor('');
       await loadCourses();
     } catch (e: any) {
       showToast(e?.message || t('acCourseError'), 'err');
@@ -125,10 +134,10 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
     try {
       await Repository.createBatch({
         course_id: selectedCourseForBatch.id,
-        name: batchName.trim(),
+        name: batchInstructor.trim() ? `${batchName.trim()} (${batchInstructor.trim()})` : batchName.trim(),
         schedule: batchSchedule.trim() || undefined,
         location: batchLocation.trim() || undefined,
-        branch_id: batchBranchId,
+        branch_id: batchBranchId || selectedCourseForBatch.branch_id || branches[0]?.id,
       });
 
       RTCHaptics.success();
@@ -137,6 +146,8 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
       setBatchName('');
       setBatchSchedule('');
       setBatchLocation('');
+      setBatchInstructor('');
+      await loadCourses();
     } catch (e: any) {
       showToast(e?.message || t('acGroupError'), 'err');
     } finally {
@@ -165,6 +176,17 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
         }
       />
 
+      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+        <SelectChips
+          items={[
+            { id: 'all', label: 'كل الفروع' },
+            ...branches.map((b) => ({ id: b.id, label: b.name_ar })),
+          ]}
+          selectedId={selectedBranchFilter}
+          onSelect={setSelectedBranchFilter}
+        />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -176,8 +198,10 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
             <SkeletonLoader height={140} borderRadius={Radii.xl} />
             <SkeletonLoader height={140} borderRadius={Radii.xl} />
           </View>
-        ) : courses.length ? (
-          courses.map((course) => (
+        ) : courses.filter(c => selectedBranchFilter === 'all' || !c.branch_id || c.branch_id === selectedBranchFilter).length ? (
+          courses
+            .filter(c => selectedBranchFilter === 'all' || !c.branch_id || c.branch_id === selectedBranchFilter)
+            .map((course) => (
             <CustomCard key={course.id} style={styles.courseCard}>
               <View style={styles.cardHeader}>
                 <View style={styles.titleWrap}>
@@ -215,6 +239,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
                     RTCHaptics.light();
                     setSelectedCourseForBatch(course);
                     setBatchName(t('acBatchPrefix', { d: new Date().toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' }) }));
+                    setBatchBranchId(course.branch_id || branches[0]?.id || '');
                     setBatchModalVisible(true);
                   }}
                   variant="primary"
@@ -253,6 +278,13 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
             />
 
             <TextInputField
+              label="اسم المدرب المسؤول (اختياري)"
+              value={newInstructor}
+              onChangeText={setNewInstructor}
+              placeholder="مثال: أ. أحمد سامي"
+            />
+
+            <TextInputField
               label={t('acCategory')}
               value={newCategory}
               onChangeText={setNewCategory}
@@ -267,13 +299,24 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               placeholder="8"
             />
 
+            {branches.length > 0 ? (
+              <View style={{ gap: 6, marginVertical: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.txt }}>الفرع:</Text>
+                <SelectChips
+                  items={branches.map(b => ({ id: b.id, label: b.name_ar }))}
+                  selectedId={newBranchId}
+                  onSelect={setNewBranchId}
+                />
+              </View>
+            ) : null}
+
             <TextInputField
               label={t('acDescription')}
               value={newDescription}
               onChangeText={setNewDescription}
               placeholder={t('acDescriptionPlaceholder')}
               multiline
-              numberOfLines={3}
+              numberOfLines={2}
             />
 
             <CustomButton
@@ -310,18 +353,36 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
             />
 
             <TextInputField
+              label="مدرب المجموعة"
+              value={batchInstructor}
+              onChangeText={setBatchInstructor}
+              placeholder="اسم المدرب"
+            />
+
+            <TextInputField
               label={t('acSchedule')}
               value={batchSchedule}
               onChangeText={setBatchSchedule}
-              placeholder={t('acSchedulePlaceholder')}
+              placeholder="مثال: السبت والثلاثاء 6:00 م"
             />
 
             <TextInputField
               label={t('acVenue')}
               value={batchLocation}
               onChangeText={setBatchLocation}
-              placeholder={t('acVenuePlaceholder')}
+              placeholder="القاعة أو الرابط"
             />
+
+            {branches.length > 0 ? (
+              <View style={{ gap: 6, marginVertical: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.txt }}>الفرع:</Text>
+                <SelectChips
+                  items={branches.map(b => ({ id: b.id, label: b.name_ar }))}
+                  selectedId={batchBranchId}
+                  onSelect={setBatchBranchId}
+                />
+              </View>
+            ) : null}
 
             <CustomButton
               title={t('acOpenRegistration')}

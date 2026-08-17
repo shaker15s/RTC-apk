@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
@@ -43,17 +44,36 @@ export const StudentCheckInScreen: React.FC<{
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
-  const [successInfo, setSuccessInfo] = useState<{ message: string } | null>(null);
+  const [celebrationData, setCelebrationData] = useState<{
+    message: string;
+    courseTitle?: string;
+    instructor?: string;
+    points: number;
+  } | null>(null);
 
-  const handleCheckIn = async (checkinCode: string) => {
-    const cleanCode = checkinCode.trim().toUpperCase();
+  const handleCheckIn = async (rawInput: string) => {
+    let cleanCode = rawInput.trim();
+    let meta: any = null;
+
+    try {
+      if (cleanCode.startsWith('{') && cleanCode.endsWith('}')) {
+        const parsed = JSON.parse(cleanCode);
+        if (parsed.code) {
+          cleanCode = parsed.code;
+          meta = parsed;
+        }
+      }
+    } catch (e) {
+      // Use raw input
+    }
+
+    cleanCode = cleanCode.toUpperCase();
     if (!cleanCode) {
       showToast(t('emptyCodeWarn'), 'warn');
       return;
     }
 
     setLoading(true);
-    setSuccessInfo(null);
 
     try {
       // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
@@ -61,7 +81,14 @@ export const StudentCheckInScreen: React.FC<{
       RTCHaptics.success();
       const msg = res?.message || t('checkInSuccessDefault');
       showToast(t('checkInDoneToast'), 'ok');
-      setSuccessInfo({ message: msg });
+      
+      setCelebrationData({
+        message: msg,
+        courseTitle: meta?.courseTitle,
+        instructor: meta?.instructor,
+        points: 15,
+      });
+
       await refreshProfile();
       setCode('');
     } catch (e: any) {
@@ -77,24 +104,6 @@ export const StudentCheckInScreen: React.FC<{
       <GlassHeader title={t('checkInTitle')} subtitle={t('checkInSubtitle')} showBack onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Success Card if checked in */}
-        {successInfo ? (
-          <CustomCard style={[styles.successCard, { borderColor: colors.teal }]}>
-            <View style={[styles.successIconCircle, { backgroundColor: colors.teal + '18' }]}>
-              <CheckCircle2 color={colors.teal} size={36} />
-            </View>
-            <Text style={[styles.successTitle, { color: colors.teal }]}>{t('checkInSuccessTitle')}</Text>
-            <Text style={[styles.successMessage, { color: colors.txt }]}>{successInfo.message}</Text>
-            <View style={[styles.pointsEarnedBadge, { backgroundColor: colors.teal + '14' }]}>
-              <Sparkles color={colors.teal} size={16} />
-              {/* Message comes from the backend RPC — no more hardcoded +10 (F-6) */}
-              <Text style={[styles.pointsEarnedText, { color: colors.teal }]} numberOfLines={2}>
-                {successInfo.message}
-              </Text>
-            </View>
-          </CustomCard>
-        ) : null}
-
         {/* Camera QR Card */}
         <CustomCard style={styles.qrActionCard}>
           <View style={[styles.qrIconWrap, { backgroundColor: colors.teal + '18' }]}>
@@ -168,6 +177,65 @@ export const StudentCheckInScreen: React.FC<{
           handleCheckIn(scannedCode);
         }}
       />
+
+      {/* Luxury Apple Celebration Modal */}
+      <Modal
+        visible={!!celebrationData}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCelebrationData(null)}
+      >
+        <View style={styles.celebrateOverlay}>
+          <View style={[styles.celebrateCard, { backgroundColor: colors.card, borderColor: colors.teal }]}>
+            <View style={[styles.celebrateIconCircle, { backgroundColor: colors.teal + '20' }]}>
+              <CheckCircle2 color={colors.teal} size={48} />
+            </View>
+
+            <Text style={[styles.celebrateTitle, { color: colors.txt }]}>
+              تم تسجيل حضورك بنجاح! 🎉
+            </Text>
+
+            {celebrationData?.courseTitle ? (
+              <Text style={[styles.celebrateCourse, { color: colors.primary }]}>
+                {celebrationData.courseTitle}
+              </Text>
+            ) : null}
+
+            {celebrationData?.instructor ? (
+              <Text style={[styles.celebrateInstructor, { color: colors.mut }]}>
+                المدرب: {celebrationData.instructor}
+              </Text>
+            ) : null}
+
+            <Text style={[styles.celebrateMessage, { color: colors.mut }]}>
+              {celebrationData?.message}
+            </Text>
+
+            <View style={[styles.pointsBadge, { backgroundColor: colors.gold + '18', borderColor: colors.gold + '40' }]}>
+              <Sparkles color={colors.gold} size={18} />
+              <Text style={[styles.pointsText, { color: colors.gold }]}>
+                +{celebrationData?.points || 15} نقطة نشاط وتميز
+              </Text>
+            </View>
+
+            <CustomButton
+              title="رائع، تم"
+              onPress={() => {
+                RTCHaptics.light();
+                setCelebrationData(null);
+                if (onNavigate) {
+                  onNavigate('s-home');
+                } else {
+                  onBack();
+                }
+              }}
+              variant="teal"
+              size="big"
+              style={{ width: '100%', marginTop: 8 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -270,5 +338,63 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     textAlign: 'center',
     lineHeight: 17,
+  },
+  celebrateOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  celebrateCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: Radii.xxl,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    gap: 12,
+  },
+  celebrateIconCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  celebrateTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  celebrateCourse: {
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  celebrateInstructor: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  celebrateMessage: {
+    fontSize: 13.5,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  pointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    marginVertical: 6,
+  },
+  pointsText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

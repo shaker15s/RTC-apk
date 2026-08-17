@@ -130,6 +130,26 @@ export const RTCNotifications = {
   },
 
   /**
+   * Present an immediate system notification in the OS notification shade with sound and vibration.
+   */
+  async presentSystemNotification(title: string, body: string, data?: any): Promise<string | null> {
+    if (Platform.OS === 'web') return null;
+    try {
+      return await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data: data || {},
+          sound: 'default',
+        },
+        trigger: null, // immediate
+      });
+    } catch (e) {
+      return null;
+    }
+  },
+
+  /**
    * Cancel all scheduled lecture reminders.
    */
   async cancelAllCourseReminders(): Promise<void> {

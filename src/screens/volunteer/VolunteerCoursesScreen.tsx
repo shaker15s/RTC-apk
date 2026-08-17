@@ -12,13 +12,15 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
-import { Repository, Batch } from '../../data/repositories';
+import { Repository, Batch, Course } from '../../data/repositories';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
+import { SelectChips } from '../../components/common/SelectChips';
+import { CustomButton } from '../../components/common/CustomButton';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
-import { GraduationCap, Calendar, Users, MapPin, ChevronLeft } from 'lucide-react-native';
+import { GraduationCap, Calendar, Users, MapPin, ChevronLeft, BookOpen, PlusCircle } from 'lucide-react-native';
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
@@ -28,14 +30,20 @@ export const VolunteerCoursesScreen: React.FC<{
   const { colors } = useAppStore();
   const { t } = useT();
 
+  const [activeTab, setActiveTab] = useState<'my-batches' | 'all-courses'>('my-batches');
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     try {
-      const data = await Repository.fetchMyBatches();
-      setBatches(data);
+      const [myBatches, courses] = await Promise.all([
+        Repository.fetchMyBatches(),
+        Repository.fetchCourses(true),
+      ]);
+      setBatches(myBatches);
+      setAllCourses(courses);
     } catch (e) {
     } finally {
       setLoading(false);
@@ -52,9 +60,18 @@ export const VolunteerCoursesScreen: React.FC<{
     await loadData();
   };
 
+  const tabChips = [
+    { id: 'my-batches', label: 'مجموعاتي التدريبية' },
+    { id: 'all-courses', label: 'استكشاف دورات التطوع' },
+  ];
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader title={t('myCoursesTitle')} subtitle={t('vcSubtitle')} />
+
+      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+        <SelectChips items={tabChips} selectedId={activeTab} onSelect={(id) => setActiveTab(id as any)} />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -66,60 +83,120 @@ export const VolunteerCoursesScreen: React.FC<{
             <SkeletonLoader height={130} borderRadius={Radii.xl} />
             <SkeletonLoader height={130} borderRadius={Radii.xl} />
           </View>
-        ) : batches.length ? (
-          batches.map((batch) => (
-            <TouchableOpacity
-              key={batch.id}
-              activeOpacity={0.85}
-              onPress={() => {
-                RTCHaptics.light();
-                if (batch.courses?.id) {
-                  onNavigate('s-course-detail', { courseId: batch.courses.id });
-                }
-              }}
-            >
-              <CustomCard style={styles.courseCard}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.titleWrap}>
-                    <View style={[styles.catBadge, { backgroundColor: colors.teal + '18' }]}>
-                      <Text style={[styles.catText, { color: colors.teal }]}>
-                        {batch.courses?.category || t('vcCertified')}
+        ) : activeTab === 'my-batches' ? (
+          batches.length ? (
+            batches.map((batch) => (
+              <TouchableOpacity
+                key={batch.id}
+                activeOpacity={0.85}
+                onPress={() => {
+                  RTCHaptics.light();
+                  if (batch.courses?.id) {
+                    onNavigate('s-course-detail', { courseId: batch.courses.id });
+                  }
+                }}
+              >
+                <CustomCard style={styles.courseCard}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.titleWrap}>
+                      <View style={[styles.catBadge, { backgroundColor: colors.teal + '18' }]}>
+                        <Text style={[styles.catText, { color: colors.teal }]}>
+                          {batch.courses?.category || t('vcCertified')}
+                        </Text>
+                      </View>
+                      <Text style={[styles.courseTitle, { color: colors.txt }]}>
+                        {batch.courses?.title || batch.name}
                       </Text>
+                      <Text style={[styles.batchName, { color: colors.mut }]}>{batch.name}</Text>
                     </View>
-                    <Text style={[styles.courseTitle, { color: colors.txt }]}>
-                      {batch.courses?.title || batch.name}
-                    </Text>
-                    <Text style={[styles.batchName, { color: colors.mut }]}>{batch.name}</Text>
                   </View>
-                </View>
 
-                <View style={styles.footerRow}>
-                  <View style={styles.footerLeft}>
-                    <View style={styles.footerItem}>
-                      <Calendar color={colors.mut} size={14} />
-                      <Text style={[styles.footerItemText, { color: colors.mut }]}>
-                        {batch.courses?.sessions_count || 8} {t('lecturesSuffix')}
-                      </Text>
+                  <View style={styles.footerRow}>
+                    <View style={styles.footerLeft}>
+                      <View style={styles.footerItem}>
+                        <Calendar color={colors.mut} size={14} />
+                        <Text style={[styles.footerItemText, { color: colors.mut }]}>
+                          {batch.courses?.sessions_count || 8} {t('lecturesSuffix')}
+                        </Text>
+                      </View>
+                      {batch.branches?.name_ar ? (
+                        <View style={styles.footerItem}>
+                          <MapPin color={colors.mut} size={14} />
+                          <Text style={[styles.footerItemText, { color: colors.mut }]}>{batch.branches.name_ar}</Text>
+                        </View>
+                      ) : null}
                     </View>
-                    {batch.branches?.name_ar ? (
+
+                    <ChevronLeft color={colors.primary} size={18} />
+                  </View>
+                </CustomCard>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <EmptyStateView
+              title={t('vcEmptyTitle')}
+              description={t('vcEmptyDesc')}
+              icon={<GraduationCap color={colors.primary} size={32} />}
+            />
+          )
+        ) : (
+          allCourses.length ? (
+            allCourses.map((course) => (
+              <TouchableOpacity
+                key={course.id}
+                activeOpacity={0.85}
+                onPress={() => {
+                  RTCHaptics.light();
+                  onNavigate('s-course-detail', { courseId: course.id });
+                }}
+              >
+                <CustomCard style={styles.courseCard}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.titleWrap}>
+                      <View style={[styles.catBadge, { backgroundColor: colors.primarySoft }]}>
+                        <Text style={[styles.catText, { color: colors.primary }]}>
+                          {course.category || 'دورة تدريبية'}
+                        </Text>
+                      </View>
+                      <Text style={[styles.courseTitle, { color: colors.txt }]}>
+                        {course.title}
+                      </Text>
+                      {course.description ? (
+                        <Text style={[styles.batchName, { color: colors.mut }]} numberOfLines={2}>
+                          {course.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <View style={styles.footerRow}>
+                    <View style={styles.footerLeft}>
+                      <View style={styles.footerItem}>
+                        <Calendar color={colors.mut} size={14} />
+                        <Text style={[styles.footerItemText, { color: colors.mut }]}>
+                          {course.sessions_count || 8} {t('lecturesSuffix')}
+                        </Text>
+                      </View>
                       <View style={styles.footerItem}>
                         <MapPin color={colors.mut} size={14} />
-                        <Text style={[styles.footerItemText, { color: colors.mut }]}>{batch.branches.name_ar}</Text>
+                        <Text style={[styles.footerItemText, { color: colors.mut }]}>
+                          {course.branches?.name_ar || 'جميع الفروع'}
+                        </Text>
                       </View>
-                    ) : null}
-                  </View>
+                    </View>
 
-                  <ChevronLeft color={colors.primary} size={18} />
-                </View>
-              </CustomCard>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <EmptyStateView
-            title={t('vcEmptyTitle')}
-            description={t('vcEmptyDesc')}
-            icon={<GraduationCap color={colors.teal} size={32} />}
-          />
+                    <ChevronLeft color={colors.primary} size={18} />
+                  </View>
+                </CustomCard>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <EmptyStateView
+              title="لا توجد دورات متاحة حالياً"
+              description="سيتم إدراج الدورات التدريبية المتاحة فور اعتمادها من إدارة المركز."
+              icon={<BookOpen color={colors.primary} size={32} />}
+            />
+          )
         )}
       </ScrollView>
     </View>

@@ -22,7 +22,7 @@ import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { CustomButton } from '../../components/common/CustomButton';
 import { RTCHaptics } from '../../core/native/haptics';
-import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay, CalendarCheck } from 'lucide-react-native';
+import { BookOpen, Calendar, Clock, MapPin, ChevronLeft, CheckCircle2, Clock3, MonitorPlay, CalendarCheck, Star } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
 export interface StudentCoursesScreenProps {
@@ -187,22 +187,38 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
                     ) : null}
                   </View>
 
-                  {/* Online batch join link (fixes F-11) */}
-                  {batch?.meeting_url ? (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        RTCHaptics.light();
-                        Linking.openURL(batch.meeting_url as string);
-                      }}
-                      style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft }]}
-                    >
-                      <MonitorPlay color={colors.primary} size={15} />
-                      <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
-                        {t('joinOnlineCta')}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
+                  {/* Action buttons row: Rate course & Join online */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    {course?.id ? (
+                      <TouchableOpacity
+                        activeOpacity={0.75}
+                        onPress={() => {
+                          RTCHaptics.light();
+                          onNavigate('s-course-rating', { courseId: course.id, courseTitle: course.title });
+                        }}
+                        style={[styles.rateBtn, { backgroundColor: colors.goldSoft, borderColor: colors.gold + '40' }]}
+                      >
+                        <Star color={colors.gold} size={14} fill={colors.gold} />
+                        <Text style={[styles.rateBtnText, { color: colors.gold }]}>تقييم الدورة</Text>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    {batch?.meeting_url ? (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          RTCHaptics.light();
+                          Linking.openURL(batch.meeting_url as string);
+                        }}
+                        style={[styles.joinOnlineBtn, { backgroundColor: colors.primarySoft, flex: 1 }]}
+                      >
+                        <MonitorPlay color={colors.primary} size={15} />
+                        <Text style={[styles.joinOnlineText, { color: colors.primary }]}>
+                          {t('joinOnlineCta')}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </CustomCard>
               </TouchableOpacity>
             );
@@ -340,6 +356,20 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
   },
   joinOnlineText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  rateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+  },
+  rateBtnText: {
     fontSize: 12,
     fontWeight: '800',
   },

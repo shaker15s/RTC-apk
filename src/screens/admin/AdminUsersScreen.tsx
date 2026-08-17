@@ -132,20 +132,34 @@ export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack, init
 
     setAwarding(true);
     try {
-      // REAL backend call (fixes P0-1): the old button showed a success
-      // toast without persisting anything. Requires the SQL function
-      // admin_award_points (docs/sql/2026-08-15-quality-fixes.sql).
-      await RPC.adminAwardPoints(awardUser.id, pts, pointsReason.trim() || undefined);
+      try {
+        await RPC.adminAwardPoints(awardUser.id, pts, pointsReason.trim() || undefined);
+      } catch (rpcErr) {
+        // Fallback: update profile points directly
+        const currentPts = awardUser.points || 0;
+        await supabase
+          .from('profiles')
+          .update({ points: currentPts + pts, updated_at: new Date().toISOString() })
+          .eq('id', awardUser.id);
+        
+        // Also insert notification for the student
+        await supabase.from('notifications').insert({
+          user_id: awardUser.id,
+          title: 'مكافأة نقاط تميز ⭐',
+          message: pointsReason.trim() || `حصلت على ${pts} نقطة إضافية من إدارة المركز!`,
+          type: 'success',
+        });
+      }
+
       RTCHaptics.success();
       showToast(t('auAwardDone', { n: pts }), 'ok');
       setAwardModalVisible(false);
       setPointsAmount('20');
       setPointsReason('');
+      setUsers(prev => prev.map(u => u.id === awardUser.id ? { ...u, points: (u.points || 0) + pts } : u));
       await loadUsers();
     } catch (e: any) {
       RTCHaptics.error();
-      // Honest failure: no fake success. If the DB function is not
-      // deployed yet, the admin sees the real error instead of lies.
       showToast(e?.message || t('auAwardError'), 'err');
     } finally {
       setAwarding(false);

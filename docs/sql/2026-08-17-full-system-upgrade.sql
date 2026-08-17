@@ -97,5 +97,47 @@ END $$;
 
 GRANT EXECUTE ON FUNCTION public.change_user_role(UUID, TEXT) TO authenticated;
 
--- 7. Force schema reload for PostgREST
+-- 7. Admin Award Points RPC (allows Admin to reward points to students/volunteers)
+CREATE OR REPLACE FUNCTION public.admin_award_points(p_user_id UUID, p_points INT, p_reason TEXT DEFAULT NULL)
+RETURNS JSONB LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_new_balance INT;
+BEGIN
+  IF NOT public.is_admin() THEN
+    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin') THEN
+      RAISE EXCEPTION 'unauthorized';
+    END IF;
+  END IF;
+
+  IF p_points <= 0 THEN
+    RAISE EXCEPTION 'النقاط يجب أن تكون أكبر من الصفر';
+  END IF;
+
+  UPDATE public.profiles
+     SET points = COALESCE(points, 0) + p_points,
+         updated_at = now()
+   WHERE id = p_user_id
+  RETURNING points INTO v_new_balance;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'المستخدم غير موجود';
+  END IF;
+
+  -- Create notification for the student
+  INSERT INTO public.notifications (user_id, title, message, type)
+  VALUES (
+    p_user_id,
+    'مكافأة نقاط تميز ⭐',
+    COALESCE(p_reason, 'حصلت على ' || p_points || ' نقطة إضافية من إدارة المركز!'),
+    'success'
+  );
+
+  PERFORM public.write_audit('award_points', 'profiles', p_user_id::text, jsonb_build_object('points', p_points, 'reason', p_reason));
+
+  RETURN jsonb_build_object('success', true, 'new_balance', v_new_balance);
+END $$;
+
+GRANT EXECUTE ON FUNCTION public.admin_award_points(UUID, INT, TEXT) TO authenticated;
+
+-- 8. Force schema reload for PostgREST
 NOTIFY pgrst, 'reload schema';

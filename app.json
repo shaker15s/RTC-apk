@@ -2,7 +2,7 @@
   "expo": {
     "name": "مسار RTC",
     "slug": "shaker",
-    "version": "100.4.0",
+    "version": "100.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "org.resala.rtc.masar",
@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.resala.rtc.masar",
-      "buildNumber": "10000",
+      "buildNumber": "10050",
       "infoPlist": {
         "NSCameraUsageDescription": "نحتاج إذن الكاميرا لمسح رمز QR الخاص بحضور المحاضرة.",
         "NSPhotoLibraryUsageDescription": "نحتاج إذن الصور لاختيار صورتك الشخصية أو إرفاق مستندات الأعذار.",
@@ -37,7 +37,7 @@
         "backgroundColor": "#00288E"
       },
       "package": "org.resala.rtc.masar",
-      "versionCode": 10040,
+      "versionCode": 10050,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
@@ -77,7 +77,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/f48915ef-3b07-4855-9cf8-c2796e5c9c9e"
+      "url": "https://u.expo.dev/f48915ef-3b07-4855-9cf8-c2796e5c9c9e",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

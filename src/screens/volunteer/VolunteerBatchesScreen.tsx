@@ -322,10 +322,10 @@ export const VolunteerBatchesScreen: React.FC<{
             <SkeletonLoader height={68} borderRadius={Radii.lg} />
           </View>
         ) : students.length ? (
-          <ResponsiveGrid spacing={Spacing.sm} minItemWidth={280} maxColumns={2}>
+          <ResponsiveGrid spacing={Spacing.sm} minItemWidth={140} maxColumns={2}>
             {students.map((student) => (
-              <CustomCard key={student.student_id} style={styles.studentCard}>
-                <View style={styles.studentLeft}>
+              <CustomCard key={student.student_id} style={styles.studentGridCard}>
+                <View style={styles.studentCardTop}>
                   <View style={[styles.studentAvatar, { backgroundColor: colors.card2 }]}>
                     {student.avatar_url ? (
                       <Image source={{ uri: student.avatar_url }} style={styles.studentAvatarImg} />
@@ -333,35 +333,35 @@ export const VolunteerBatchesScreen: React.FC<{
                       <Users color={colors.mut} size={18} />
                     )}
                   </View>
-
-                  <View style={styles.studentInfo}>
-                    <Text style={[styles.studentName, { color: colors.txt }]} numberOfLines={1}>{student.full_name}</Text>
-                    {student.phone ? (
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          RTCHaptics.light();
-                          Clipboard.setStringAsync(student.phone as string).catch(() => {});
-                          showToast(t('phoneCopied'), 'info');
-                        }}
-                      >
-                        <Text style={[styles.studentPhone, { color: colors.mut }]}>
-                          {maskPhone(student.phone)} 👆
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-                </View>
-
-                <View style={styles.studentRight}>
                   <View style={[styles.attBadge, { backgroundColor: colors.teal + '18' }]}>
                     <Text style={[styles.attText, { color: colors.teal }]}>
                       {t('attendancePct', { p: student.attendance_pct || 0 })}
                     </Text>
                   </View>
+                </View>
+
+                <Text style={[styles.studentGridName, { color: colors.txt }]} numberOfLines={1}>
+                  {student.full_name}
+                </Text>
+
+                <View style={styles.studentGridFooter}>
                   <Text style={[styles.pointsText, { color: colors.gold }]}>
                     ⭐ {student.points || 0} {t('ptShort')}
                   </Text>
+                  {student.phone ? (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        RTCHaptics.light();
+                        Clipboard.setStringAsync(student.phone as string).catch(() => {});
+                        showToast(t('phoneCopied'), 'info');
+                      }}
+                    >
+                      <Text style={[styles.studentPhone, { color: colors.mut }]}>
+                        {maskPhone(student.phone)} 📋
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </CustomCard>
             ))}
@@ -532,22 +532,19 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 11.5,
   },
-  studentCard: {
+  studentGridCard: {
+    padding: 12,
+    gap: 8,
+  },
+  studentCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
-  },
-  studentLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
   },
   studentAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -557,33 +554,34 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  studentInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  studentName: {
+  studentGridName: {
     fontSize: 13.5,
     fontWeight: '700',
+    marginTop: 2,
   },
-  studentPhone: {
-    fontSize: 11,
-  },
-  studentRight: {
-    alignItems: 'flex-end',
-    gap: 4,
+  studentGridFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
   attBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: Radii.full,
   },
   attText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   pointsText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  studentPhone: {
+    fontSize: 10.5,
   },
   modalOverlay: {
     flex: 1,

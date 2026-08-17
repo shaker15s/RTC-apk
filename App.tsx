@@ -91,11 +91,24 @@ export default function App() {
         supabase.auth.getSession().then(({ data }) => {
           if (data?.session) {
             refreshProfile();
-            // Retry silent push registration (e.g. user enabled
-            // notifications from system settings — fixes P0-2)
+            // Retry silent push registration
             RTCNotifications.syncPushRegistration().catch(() => {});
           }
         });
+
+        // Silent background OTA updates check
+        if (!__DEV__) {
+          try {
+            const Updates = require('expo-updates');
+            if (Updates && Updates.checkForUpdateAsync) {
+              Updates.checkForUpdateAsync().then((res: any) => {
+                if (res?.isAvailable && Updates.fetchUpdateAsync) {
+                  Updates.fetchUpdateAsync().catch(() => {});
+                }
+              }).catch(() => {});
+            }
+          } catch (err) {}
+        }
       }
     };
     const appStateSub = AppState.addEventListener('change', handleAppStateChange);

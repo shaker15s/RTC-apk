@@ -39,6 +39,10 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
     active_batches: 0,
     attendance_rate: 0,
     issued_certificates: 0,
+    completion_rate: 0,
+    excuse_rate: 100,
+    satisfaction_score: '5.0',
+    satisfaction_pct: 100,
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,15 +53,39 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
       const profs = data.profs || [];
       const students = profs.filter((p: any) => p.role === 'student');
       const att = data.att || [];
+      const certs = data.certs || [];
+      const enrollments = data.enrollments || [];
+      const excuses = data.excuses || [];
+      const ratings = data.ratings || [];
 
       const presentAtt = att.filter((a: any) => a.status === 'present' || a.status === 'late').length;
       const realAttendanceRate = att.length > 0 ? Math.round((presentAtt / att.length) * 100) : 0;
+
+      const completionRate = enrollments.length > 0
+        ? Math.min(100, Math.round((certs.length / enrollments.length) * 100))
+        : (students.length > 0 ? Math.min(100, Math.round((certs.length / students.length) * 100)) : 0);
+
+      const reviewedExcuses = excuses.filter((e: any) => e.status === 'approved' || e.status === 'rejected').length;
+      const excuseRate = excuses.length > 0 ? Math.round((reviewedExcuses / excuses.length) * 100) : 100;
+
+      let satisfactionScore = '5.0';
+      let satisfactionPct = 100;
+      if (ratings.length > 0) {
+        const sum = ratings.reduce((acc: number, r: any) => acc + (r.rating || 5), 0);
+        const avg = sum / ratings.length;
+        satisfactionScore = avg.toFixed(1);
+        satisfactionPct = Math.round((avg / 5) * 100);
+      }
 
       setKpis({
         active_students: students.length,
         active_batches: data.batches?.length || 0,
         attendance_rate: realAttendanceRate,
-        issued_certificates: data.certs?.length || 0,
+        issued_certificates: certs.length,
+        completion_rate: completionRate,
+        excuse_rate: excuseRate,
+        satisfaction_score: satisfactionScore,
+        satisfaction_pct: satisfactionPct,
       });
     } catch (e) {
     } finally {
@@ -103,7 +131,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                 <View style={[styles.kpiIconWrap, { backgroundColor: colors.primarySoft }]}>
                   <Users color={colors.primary} size={22} />
                 </View>
-                <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis?.active_students || 0}</Text>
+                <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis.active_students || 0}</Text>
                 <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anActiveStudents')}</Text>
               </CustomCard>
 
@@ -112,7 +140,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                 <View style={[styles.kpiIconWrap, { backgroundColor: colors.teal + '18' }]}>
                   <BookOpen color={colors.teal} size={22} />
                 </View>
-                <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis?.active_batches || 0}</Text>
+                <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis.active_batches || 0}</Text>
                 <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anRunningGroups')}</Text>
               </CustomCard>
 
@@ -122,7 +150,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                   <CalendarCheck color="#7A30D8" size={22} />
                 </View>
                 <Text style={[styles.kpiVal, { color: colors.txt }]}>
-                  {Math.round(kpis?.avg_attendance_pct || 82)}%
+                  {kpis.attendance_rate || 0}%
                 </Text>
                 <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anAvgAttendance')}</Text>
               </CustomCard>
@@ -132,7 +160,7 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
                 <View style={[styles.kpiIconWrap, { backgroundColor: colors.gold + '18' }]}>
                   <Award color={colors.gold} size={22} />
                 </View>
-                <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis?.issued_certs || 0}</Text>
+                <Text style={[styles.kpiVal, { color: colors.txt }]}>{kpis.issued_certificates || 0}</Text>
                 <Text style={[styles.kpiLbl, { color: colors.mut }]}>{t('anCertified')}</Text>
               </CustomCard>
             </View>
@@ -146,26 +174,26 @@ export const AnalyticsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =>
 
               <View style={styles.indicatorRow}>
                 <Text style={[styles.indLabel, { color: colors.mut }]}>{t('anCompletion')}</Text>
-                <Text style={[styles.indValue, { color: colors.teal }]}>88%</Text>
+                <Text style={[styles.indValue, { color: colors.teal }]}>{kpis.completion_rate}%</Text>
               </View>
               <View style={[styles.progressBarTrack, { backgroundColor: colors.card2 }]}>
-                <View style={[styles.progressBarFill, { width: '88%', backgroundColor: colors.teal }]} />
+                <View style={[styles.progressBarFill, { width: `${Math.min(100, Math.max(0, kpis.completion_rate))}%`, backgroundColor: colors.teal }]} />
               </View>
 
               <View style={[styles.indicatorRow, { marginTop: 12 }]}>
                 <Text style={[styles.indLabel, { color: colors.mut }]}>{t('anExcuseRate')}</Text>
-                <Text style={[styles.indValue, { color: colors.primary }]}>94%</Text>
+                <Text style={[styles.indValue, { color: colors.primary }]}>{kpis.excuse_rate}%</Text>
               </View>
               <View style={[styles.progressBarTrack, { backgroundColor: colors.card2 }]}>
-                <View style={[styles.progressBarFill, { width: '94%', backgroundColor: colors.primary }]} />
+                <View style={[styles.progressBarFill, { width: `${Math.min(100, Math.max(0, kpis.excuse_rate))}%`, backgroundColor: colors.primary }]} />
               </View>
 
               <View style={[styles.indicatorRow, { marginTop: 12 }]}>
                 <Text style={[styles.indLabel, { color: colors.mut }]}>{t('anSatisfaction')}</Text>
-                <Text style={[styles.indValue, { color: colors.gold }]}>4.9 / 5.0 ⭐</Text>
+                <Text style={[styles.indValue, { color: colors.gold }]}>{kpis.satisfaction_score} / 5.0 ⭐</Text>
               </View>
               <View style={[styles.progressBarTrack, { backgroundColor: colors.card2 }]}>
-                <View style={[styles.progressBarFill, { width: '98%', backgroundColor: colors.gold }]} />
+                <View style={[styles.progressBarFill, { width: `${Math.min(100, Math.max(0, kpis.satisfaction_pct))}%`, backgroundColor: colors.gold }]} />
               </View>
             </CustomCard>
           </>

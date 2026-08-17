@@ -1,7 +1,7 @@
 /**
  * GlassHeader component matching web header with blur effect, safe-area, notif dot, and avatar.
  */
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../../state/authStore';
 import { Bell, ChevronRight, User } from 'lucide-react-native';
 import { useT, t } from '../../core/i18n';
 import { RTCHaptics } from '../../core/native/haptics';
+import { EasterEggModal } from '../feedback/EasterEggModal';
 
 import { Avatar } from '../common/Avatar';
 
@@ -39,6 +40,10 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
   const { colors, isDark } = useAppStore();
   const { profile } = useAuthStore();
 
+  const [eggModalVisible, setEggModalVisible] = useState(false);
+  const tapCountRef = useRef(0);
+  const lastTapRef = useRef(0);
+
   return (
     <View
       style={[
@@ -65,13 +70,32 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
               <ChevronRight color={colors.txt} size={20} />
             </TouchableOpacity>
           ) : (
-            <View style={[styles.logoWrap, { borderColor: colors.line }]}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                const now = Date.now();
+                if (now - lastTapRef.current < 450) {
+                  tapCountRef.current += 1;
+                } else {
+                  tapCountRef.current = 1;
+                }
+                lastTapRef.current = now;
+
+                RTCHaptics.light();
+
+                if (tapCountRef.current === 5) {
+                  tapCountRef.current = 0;
+                  setEggModalVisible(true);
+                }
+              }}
+              style={[styles.logoWrap, { borderColor: colors.line }]}
+            >
               <Image
                 source={require('../../../assets/icon.png')}
                 style={styles.logo}
                 defaultSource={require('../../../assets/icon.png')}
               />
-            </View>
+            </TouchableOpacity>
           )}
 
           <View style={styles.titleWrap}>
@@ -81,6 +105,12 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
             </Text>
           </View>
         </View>
+
+        <EasterEggModal
+          visible={eggModalVisible}
+          type={profile?.role === 'volunteer' ? 'resala_cheer' : 'dev_mode'}
+          onClose={() => setEggModalVisible(false)}
+        />
 
         {/* Right side (Actions / Notification / Avatar) */}
         <View style={styles.right}>

@@ -40,6 +40,10 @@ import {
 } from 'lucide-react-native';
 import { useT, t } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
+import { EasterEggModal, EasterEggType } from '../../components/feedback/EasterEggModal';
+
+let trophyTaps = 0;
+let lastTrophyTap = 0;
 
 export const BADGES_CATALOG = [
   { id: 'welcome', name: t('bdWelcomeName'), icon: 'flag', color: '#00288E', desc: t('bdWelcomeDesc'), unlock: t('bdWelcomeUnlock') },
@@ -60,6 +64,8 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
 
   const [selectedBadge, setSelectedBadge] = useState<any | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [eggModalVisible, setEggModalVisible] = useState(false);
+  const [eggType, setEggType] = useState<EasterEggType>('streak_legend');
 
   const points = profile?.points || 0;
   const streak = profile?.streak || 0;
@@ -119,9 +125,28 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
         {/* Points Big Hero */}
         <LinearGradient colors={['#D4AF37', '#854D0E', '#00288E']} style={styles.pointsHero}>
           <View style={styles.heroInner}>
-            <View style={styles.trophyCircle}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                const now = Date.now();
+                if (now - lastTrophyTap < 500) {
+                  trophyTaps += 1;
+                } else {
+                  trophyTaps = 1;
+                }
+                lastTrophyTap = now;
+                RTCHaptics.light();
+
+                if (trophyTaps === 7) {
+                  trophyTaps = 0;
+                  setEggType('streak_legend');
+                  setEggModalVisible(true);
+                }
+              }}
+              style={styles.trophyCircle}
+            >
               <Trophy color="#FFFFFF" size={32} />
-            </View>
+            </TouchableOpacity>
             <Text style={styles.totalPointsNum}>{points}</Text>
             <Text style={styles.totalPointsLabel}>{t('spTotalPoints')}</Text>
 
@@ -138,6 +163,12 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
             </View>
           </View>
         </LinearGradient>
+
+        <EasterEggModal
+          visible={eggModalVisible}
+          type={eggType}
+          onClose={() => setEggModalVisible(false)}
+        />
 
         {/* Action Buttons Row */}
         <View style={styles.actionsRow}>

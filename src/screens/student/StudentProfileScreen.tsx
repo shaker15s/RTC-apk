@@ -17,6 +17,7 @@ import { useT, t } from '../../core/i18n';
 import { layoutNeedsReload, applyLayoutDirection, reloadApp } from '../../core/i18n/direction';
 import { maskPhone } from '../../core/security/sanitizers';
 import { RTCSharing } from '../../core/native/sharing';
+import { EasterEggModal } from '../../components/feedback/EasterEggModal';
 import {
   Moon,
   Globe,
@@ -36,12 +37,16 @@ import {
 } from 'lucide-react-native';
 import { Radii } from '../../core/theme/tokens';
 
+let verTaps = 0;
+let lastVerTap = 0;
+
 export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
   const { t } = useT();
   const { profile, signOut } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [eggModalVisible, setEggModalVisible] = useState(false);
 
   const handleLogout = async () => {
     RTCHaptics.light();
@@ -273,10 +278,35 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
           <Text style={[styles.logoutText, { color: colors.red }]}>{t('logoutCta')}</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.versionText, { color: colors.mut }]}>
-          {t('versionLine', { v: RTC_CONFIG.version })}
-        </Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            const now = Date.now();
+            if (now - lastVerTap < 450) {
+              verTaps += 1;
+            } else {
+              verTaps = 1;
+            }
+            lastVerTap = now;
+            RTCHaptics.light();
+
+            if (verTaps === 7) {
+              verTaps = 0;
+              setEggModalVisible(true);
+            }
+          }}
+        >
+          <Text style={[styles.versionText, { color: colors.mut }]}>
+            {t('versionLine', { v: RTC_CONFIG.version })}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      <EasterEggModal
+        visible={eggModalVisible}
+        type="lucky_biscuit"
+        onClose={() => setEggModalVisible(false)}
+      />
 
       {/* Logout Confirm Modal */}
       <ConfirmModal

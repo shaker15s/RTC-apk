@@ -92,7 +92,7 @@ const STUDENT_ROUTES = {
 };
 
 const VOLUNTEER_ROUTES = {
-  prefix: ['v-', 's-analytics', 'support', 's-notifications', 's-edit-profile'],
+  prefix: ['v-', 's-analytics', 'support', 's-notifications', 's-edit-profile', 's-course-detail', 's-explore', 's-checkin', 's-excuse'],
   extra: [] as string[],
   deny: [] as string[],
 };

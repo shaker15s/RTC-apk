@@ -139,18 +139,35 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         return;
       }
 
-      await signUpWithEmail(email, password, fullName.trim(), phone.trim(), selectedBranchId);
-      if (onLoginSuccess) onLoginSuccess();
+      try {
+        await signUpWithEmail(email, password, fullName.trim(), phone.trim(), selectedBranchId);
+        // Only navigate on success (no auth error)
+        if (!useAuthStore.getState().error) {
+          if (onLoginSuccess) onLoginSuccess();
+        }
+      } catch (e: any) {
+        showToast(e?.message || 'فشل إنشاء الحساب، حاول مرة أخرى', 'err');
+      }
     } else {
-      await signInWithEmail(email, password);
-      if (onLoginSuccess) onLoginSuccess();
+      try {
+        await signInWithEmail(email, password);
+        if (!useAuthStore.getState().error) {
+          if (onLoginSuccess) onLoginSuccess();
+        }
+      } catch (e: any) {
+        showToast(e?.message || 'فشل تسجيل الدخول، تحقق من البيانات', 'err');
+      }
     }
   };
 
   const handleGoogleSignIn = async () => {
     RTCHaptics.light();
-    await signInWithGoogle();
-    if (onLoginSuccess) onLoginSuccess();
+    try {
+      await signInWithGoogle();
+      // onLoginSuccess will be handled by AppNavigator via session state change
+    } catch (e: any) {
+      showToast(e?.message || 'فشل تسجيل الدخول بجوجل', 'err');
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -189,7 +206,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
         branch_id: selectedBranchId,
       });
       RTCHaptics.success();
-      showToast(t('profileSaved'), 'ok');
+      showToast('تم حفظ بياناتك بنجاح! جاهز للانطلاق 🎉', 'ok');
 
       RTCNotifications.requestPermissions()
         .then((granted) => {
@@ -198,6 +215,11 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onLoginSucce
           }
         })
         .catch(() => {});
+
+      // Navigate to course exploration for new users after completing profile
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (e: any) {
       showToast(e?.message || t('profileSaveError'), 'err');
     }

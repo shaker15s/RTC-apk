@@ -1,6 +1,7 @@
 /**
- * Custom Card Component with Double-Bezel (Doppelrand) nested architecture,
- * 1px hairline border highlights, and tactile spring motion.
+ * Custom Card Component — clean single-layer card.
+ * Subtle shadow, crisp border, and tactile spring motion.
+ * No double-bezel / no grey outer halo padding.
  */
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
@@ -31,36 +32,17 @@ export const CustomCard: React.FC<CustomCardProps> = ({
   const cardContent = (
     <View
       style={[
-        styles.outerHalo,
+        styles.card,
         {
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 40, 142, 0.08)',
-          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 40, 142, 0.02)',
+          backgroundColor: colors.card,
+          borderColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
         },
         variant === 'elevated' && (isDark ? Shadows.medium : Shadows.soft),
         style,
+        innerStyle,
       ]}
     >
-      <View
-        style={[
-          styles.innerCore,
-          {
-            backgroundColor: isDark ? colors.card : colors.card,
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.9)',
-          },
-          innerStyle,
-        ]}
-      >
-        {/* Subtle Top Specular Glass Highlight */}
-        <View
-          style={[
-            styles.specularHighlight,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.85)',
-            },
-          ]}
-        />
-        {children}
-      </View>
+      {children}
     </View>
   );
 
@@ -76,25 +58,10 @@ export const CustomCard: React.FC<CustomCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  outerHalo: {
-    borderRadius: Radii.xxl,
-    padding: 1.5,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  innerCore: {
+  card: {
     borderRadius: Radii.xl,
     padding: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    position: 'relative',
-  },
-  specularHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    zIndex: 1,
   },
 });

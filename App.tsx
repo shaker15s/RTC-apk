@@ -135,16 +135,17 @@ export default function App() {
       }
     });
 
-    // 5. Automatic OTA Update check & instant application on launch
+    // 5. Automatic OTA Update check — download silently, apply on next restart
+    // NOTE: Do NOT call reloadAsync() here — it would restart the app every time it opens!
+    // The update applies automatically via the fallbackToCacheTimeout: 0 in app.json.
     if (!__DEV__) {
       import('expo-updates')
         .then(async (Updates) => {
           try {
             const check = await Updates.checkForUpdateAsync();
             if (check.isAvailable) {
+              // Download silently in background — user gets it on next open
               await Updates.fetchUpdateAsync();
-              // Apply update immediately so user doesn't need to restart twice
-              await Updates.reloadAsync();
             }
           } catch (e) {
             // Non-blocking if offline or in expo go

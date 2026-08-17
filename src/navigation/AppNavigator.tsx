@@ -224,6 +224,12 @@ function RootFlow() {
     const home = role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home';
     if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === 'onboarding') {
       navigationRef.navigate(home as never);
+      // For new students: also push s-explore so they can browse and join courses immediately
+      if (role === 'student') {
+        setTimeout(() => {
+          navigationRef.navigate('s-explore' as never);
+        }, 300);
+      }
     }
   }, [session, profile, isInitialized]);
 

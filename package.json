@@ -1,6 +1,6 @@
 {
   "name": "rtc-masar-mobile",
-  "version": "100.0.0",
+  "version": "2.0.0",
   "description": "تطبيق مسار RTC النيتف الرسمي لمراكز رسالة للتدريب (Android & iOS)",
   "main": "index.js",
   "scripts": {

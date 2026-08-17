@@ -24,6 +24,12 @@ export const ChangelogScreen: React.FC<ChangelogScreenProps> = ({ onBack }) => {
   // Built on every render so language switching translates it live.
   const releases = [
     {
+      version: t('relV2000'),
+      date: t('relAug2026'),
+      badge: t('releaseMajor'),
+      items: [t('relV2000B1'), t('relV2000B2'), t('relV2000B3'), t('relV2000B4'), t('relV2000B5')],
+    },
+    {
       version: t('relV1004'),
       date: t('relAug2026'),
       badge: t('releaseMajor'),

@@ -106,7 +106,8 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
         slug: `${slug}-${Date.now().toString(36)}`,
         category: newCategory,
         sessions_count: parseInt(newSessions, 10) || 8,
-        description: newInstructor.trim() ? `${newDescription.trim()}\nالمدرب: ${newInstructor.trim()}` : newDescription.trim() || undefined,
+        description: newDescription.trim() || undefined,
+        instructor_name: newInstructor.trim() || undefined,
         branch_id: newBranchId || branches[0]?.id,
       });
 

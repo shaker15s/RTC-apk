@@ -372,9 +372,15 @@ export const en = {
   dirSwitchMessage: 'Switching the language requires restarting the app to apply the new layout direction (RTL/LTR). Continue?',
   dirSwitchConfirm: 'Restart now',
   freeNotice: '100% Free Learning',
-  // ---------- v100.4.0c: changelog content ----------
+  // ---------- v2.0.0 & v100.4.0c: changelog content ----------
   relAug2026: 'August 2026',
   relJul2026: 'July 2026',
+  relV2000: 'v2.0.0 (Golden Path — Full Modernization & Apple-Grade Performance)',
+  relV2000B1: '🍎 Apple-Grade UI: Smooth single-layer cards, natural shadows, and fluid animations',
+  relV2000B2: '🔍 Volunteer Course Exploration: Browse and volunteer for courses across all Resala branches',
+  relV2000B3: '⚡ 1-Tap Smart Attendance: Mark all present/absent with instant status toggles',
+  relV2000B4: '👑 Full Admin Governance: Instant role promotion, bonus points granting, and branch/instructor assignments',
+  relV2000B5: '🚀 Silent background updates with automatic onboarding navigation',
   relV1004: 'v100.4.0 (Completion — full translation, smart attendance & PDF)',
   relV1004B1: '🌐 Full English translation: every student, volunteer and admin screen plus components (719 keys)',
   relV1004B2: '📅 Smart attendance: real per-course commitment rate, certificate eligibility (75%), status filters and attendance points',

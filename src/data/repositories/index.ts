@@ -528,19 +528,17 @@ export const Repository = {
 
   // Admin Users List with sanitized query
   async fetchUsers(search?: string): Promise<UserProfile[]> {
-    let q = supabase
-      .from('profiles')
-      .select('*, branches(name_ar)')
-      .order('created_at', { ascending: false });
+    let allUsers = await RPC.adminListProfiles() || [];
     if (search) {
-      const sanitized = search.replace(/[,.()%*]/g, '').trim();
+      const sanitized = search.replace(/[,.()%*]/g, '').trim().toLowerCase();
       if (sanitized.length > 0) {
-        q = q.or(`full_name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
+        allUsers = allUsers.filter(u => 
+          (u.full_name?.toLowerCase().includes(sanitized)) ||
+          (u.phone?.includes(sanitized))
+        );
       }
     }
-    const { data, error } = await q;
-    if (error) throw mapSupabaseError(error);
-    return (data || []) as UserProfile[];
+    return allUsers;
   },
 
   // Storage Upload Avatar
@@ -633,10 +631,10 @@ export const Repository = {
   async fetchExcuses(batchId?: string) {
     let q = supabase
       .from('excuses')
-      .select('*, profiles(full_name, avatar_url, phone), sessions(title, session_date, batches(name))')
+      .select('*, profiles(full_name, avatar_url, phone), batches(name), sessions(title, session_date)')
       .order('created_at', { ascending: false });
     if (batchId) {
-      q = q.eq('sessions.batch_id', batchId);
+      q = q.eq('batch_id', batchId);
     }
     const { data, error } = await q;
     if (error) throw error;

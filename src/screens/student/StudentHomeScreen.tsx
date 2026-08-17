@@ -50,6 +50,7 @@ import {
   Layers,
   Facebook,
   ExternalLink,
+  CalendarCheck,
 } from 'lucide-react-native';
 
 export interface StudentHomeScreenProps {
@@ -195,6 +196,20 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
               <QrCode color={colors.primary} size={22} />
             </View>
             <Text style={[styles.actionGridLabel, { color: colors.txt }]}>تسجيل الحضور</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('s-attendance');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: colors.tealSoft }]}>
+              <CalendarCheck color={colors.teal} size={22} />
+            </View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>سجل حضوري</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

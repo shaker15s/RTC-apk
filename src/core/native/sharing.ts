@@ -7,7 +7,7 @@ import { Share as RNShare } from 'react-native';
 import { RTC_CONFIG } from '../config';
 
 export const RTCSharing = {
-  async shareText(title: string, message: string, url = RTC_CONFIG.officialUrl): Promise<boolean> {
+  async shareText(title: string, message: string, url = RTC_CONFIG.appDownloadUrl): Promise<boolean> {
     try {
       const result = await RNShare.share({
         title,

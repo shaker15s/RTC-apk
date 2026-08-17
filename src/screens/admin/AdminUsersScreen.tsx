@@ -61,6 +61,14 @@ export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack, init
     return () => clearTimeout(handler);
   }, [searchInput]);
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'volunteer' | 'admin'>(initialRole);
+
+  // Sync roleFilter when navigating with a new initialRole param
+  useEffect(() => {
+    if (initialRole) {
+      setRoleFilter(initialRole);
+    }
+  }, [initialRole]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 

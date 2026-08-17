@@ -141,14 +141,14 @@ export const VolunteerHomeScreen: React.FC<VolunteerHomeScreenProps> = ({ onNavi
             style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={() => {
               RTCHaptics.selection();
-              onNavigate('v-attendance');
+              onNavigate('v-batches');
             }}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconBox, { backgroundColor: colors.primarySoft }]}>
               <ClipboardList color={colors.primary} size={22} />
             </View>
-            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>سجل الحضور</Text>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>رصد الحضور</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

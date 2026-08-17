@@ -20,6 +20,7 @@ import { ConfirmModal } from '../../components/feedback/ConfirmModal';
 import { maskPhone } from '../../core/security/sanitizers';
 import { RTCHaptics } from '../../core/native/haptics';
 import { RTC_CONFIG } from '../../core/config';
+import { RTCSharing } from '../../core/native/sharing';
 import {
   User,
   MapPin,
@@ -34,6 +35,7 @@ import {
   LifeBuoy,
   Users,
   Shield,
+  Share2,
 } from 'lucide-react-native';
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
@@ -149,6 +151,25 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
 
         {/* Shortcuts */}
         <CustomCard style={styles.menuCard}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={async () => {
+              RTCHaptics.selection();
+              await RTCSharing.shareText(t('shareAppMessage'), t('shareAppBody'));
+            }}
+            style={styles.menuItem}
+          >
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: colors.teal + '18' }]}>
+                <Share2 color={colors.teal} size={18} />
+              </View>
+              <Text style={[styles.menuTitle, { color: colors.txt }]}>{t('shareAppCta')}</Text>
+            </View>
+            <ChevronLeft color={colors.mut} size={18} />
+          </TouchableOpacity>
+
+          <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
+
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => onNavigate('support')}

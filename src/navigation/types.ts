@@ -42,7 +42,7 @@ export type RootStackParamList = {
 
   // Admin Routes
   'a-home': undefined;
-  'a-users': undefined;
+  'a-users': { initialRole?: 'all' | 'student' | 'volunteer' | 'admin' } | undefined;
   'a-courses': undefined;
   'a-certs': undefined;
   'a-settings': undefined;

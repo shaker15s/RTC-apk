@@ -10,6 +10,7 @@ export const RTC_CONFIG = {
   appName: 'مسار RTC',
   appScheme: 'org.resala.rtc.masar://auth',
   officialUrl: 'https://rtc-kohl.vercel.app/',
+  appDownloadUrl: 'https://expo.dev/accounts/resala-rtc/projects/masar-rtc/builds',
   hotline: '19450',
   resalaActivityUrl: 'https://resala.org/resala-training-centers',
   facebookPageUrl: 'https://www.facebook.com/RTCPage/',

@@ -37,8 +37,10 @@ import {
   Shield,
   Share2,
 } from 'lucide-react-native';
-import { useT } from '../../core/i18n';
-import { Radii } from '../../core/theme/tokens';
+import { EasterEggModal } from '../../components/feedback/EasterEggModal';
+
+let verTaps = 0;
+let lastVerTap = 0;
 
 export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
@@ -46,6 +48,7 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
   const { profile, signOut } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [eggModalVisible, setEggModalVisible] = useState(false);
 
   const handleLogout = async () => {
     RTCHaptics.light();
@@ -195,10 +198,35 @@ export const VolunteerProfileScreen: React.FC<{ onNavigate: (screenId: string) =
           <Text style={[styles.logoutText, { color: colors.red }]}>{t('logoutCta')}</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.versionText, { color: colors.mut }]}>
-          {t('versionLine', { v: RTC_CONFIG.version })}
-        </Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            const now = Date.now();
+            if (now - lastVerTap < 450) {
+              verTaps += 1;
+            } else {
+              verTaps = 1;
+            }
+            lastVerTap = now;
+            RTCHaptics.light();
+
+            if (verTaps === 7) {
+              verTaps = 0;
+              setEggModalVisible(true);
+            }
+          }}
+        >
+          <Text style={[styles.versionText, { color: colors.mut }]}>
+            {t('versionLine', { v: RTC_CONFIG.version })}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      <EasterEggModal
+        visible={eggModalVisible}
+        type="resala_cheer"
+        onClose={() => setEggModalVisible(false)}
+      />
 
       {/* Logout Confirm Modal */}
       <ConfirmModal

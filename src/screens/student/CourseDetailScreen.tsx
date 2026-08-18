@@ -276,43 +276,61 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                       ) : null}
                     </View>
 
-                    {isVolunteer && batch.instructor_id === profile?.id ? (
-                      <CustomButton
-                        title="👑 أنت مدرب/منظم هذه الدفعة"
-                        onPress={() => onNavigate && onNavigate('v-batches')}
-                        variant="teal"
-                        size="mid"
-                      />
-                    ) : isVolunteer ? (
+                    {isVolunteer ? (
                       <View style={{ gap: 8 }}>
-                        <CustomButton
-                          title={batch.instructor_id ? "🤝 تنظيم/مساعدة في الدفعة" : "👑 تطوع كمدرب/منظم للدفعة"}
-                          onPress={async () => {
-                            RTCHaptics.selection();
-                            try {
-                              setJoiningBatchId(batch.id);
-                              await RPC.assignInstructor(batch.id, profile!.id);
-                              showToast("تم تسجيلك كمنظم/مدرب لهذه الدفعة بنجاح! ⭐", "ok");
-                              await loadData();
-                            } catch (err: any) {
-                              showToast(err?.message || "فشل التسجيل كمنظم", "err");
-                            } finally {
-                              setJoiningBatchId(null);
-                            }
-                          }}
-                          variant="primary"
-                          size="mid"
-                          loading={joiningBatchId === batch.id}
-                        />
-                        {myEnrolledBatchIds[batch.id] === 'enrolled' ? (
+                        {/* 1. Status Display if already assigned as instructor */}
+                        {batch.instructor_id === profile?.id ? (
                           <CustomButton
-                            title="✓ مسجل أيضاً كمتدرب"
+                            title="👨‍🏫 أنت مدرب هذه الدفعة"
+                            onPress={() => onNavigate && onNavigate('v-batches')}
+                            variant="teal"
+                            size="mid"
+                          />
+                        ) : (
+                          /* Volunteer can volunteer as Instructor ONLY if not already instructor */
+                          <CustomButton
+                            title="👨‍🏫 التطوع كمدرب للدفعة"
+                            onPress={async () => {
+                              RTCHaptics.selection();
+                              try {
+                                setJoiningBatchId(batch.id);
+                                await RPC.assignInstructor(batch.id, profile!.id);
+                                showToast("تم تسجيلك كمدرب للدفعة بنجاح! 👨‍🏫", "ok");
+                                await loadData();
+                              } catch (err: any) {
+                                showToast(err?.message || "فشل التسجيل كمدرب", "err");
+                              } finally {
+                                setJoiningBatchId(null);
+                              }
+                            }}
+                            variant="primary"
+                            size="mid"
+                            loading={joiningBatchId === batch.id}
+                          />
+                        )}
+
+                        {/* 2. Volunteer can ALSO join as Student/Beneficiary (unless already Instructor of this batch) */}
+                        {batch.instructor_id === profile?.id ? (
+                          <Text style={{ fontSize: 11, color: colors.mut, textAlign: 'center' }}>
+                            (لا يمكن التسجيل كطالب/منظم في نفس الدفعة التي تدربها)
+                          </Text>
+                        ) : myEnrolledBatchIds[batch.id] === 'enrolled' ? (
+                          <CustomButton
+                            title="✓ مسجل كطالب/مستفيد في الدفعة"
                             onPress={() => {}}
                             variant="soft"
                             size="mid"
                             disabled={true}
                           />
-                        ) : null}
+                        ) : (
+                          <CustomButton
+                            title="🎓 التسجيل كطالب/مستفيد في الدفعة"
+                            onPress={() => handleJoinBatch(batch.id)}
+                            variant="soft"
+                            size="mid"
+                            loading={joiningBatchId === batch.id}
+                          />
+                        )}
                       </View>
                     ) : myEnrolledBatchIds[batch.id] === 'enrolled' ? (
                       <CustomButton
@@ -374,8 +392,15 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
                       {r.created_at ? new Date(r.created_at).toLocaleDateString(dateLocale()) : ''}
                     </Text>
                   </View>
+
+                  {(isVolunteer || profile?.role === 'admin') && r.profiles?.full_name ? (
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.primary, marginTop: 4 }}>
+                      👤 تقييم بواسطة: {r.profiles.full_name}
+                    </Text>
+                  ) : null}
+
                   {r.comment ? (
-                    <Text style={[styles.ratingComment, { color: colors.txt }]}>{r.comment}</Text>
+                    <Text style={[styles.ratingComment, { color: colors.txt, marginTop: 4 }]}>{r.comment}</Text>
                   ) : null}
                 </CustomCard>
               ))

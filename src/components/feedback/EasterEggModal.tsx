@@ -74,19 +74,20 @@ export const EasterEggModal: React.FC<EasterEggModalProps> = ({
   extraData,
 }) => {
   const content = EGG_CONTENTS[type] || EGG_CONTENTS.resala_cheer;
-  const [scaleAnim] = useState(new Animated.Value(0.3));
+  const scaleAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
     if (visible) {
-      RTCHaptics.notificationSuccess();
+      try {
+        RTCHaptics.notificationSuccess();
+      } catch (e) {}
+      scaleAnim.setValue(0.3);
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 65,
         friction: 7,
         useNativeDriver: true,
       }).start();
-    } else {
-      scaleAnim.setValue(0.3);
     }
   }, [visible]);
 

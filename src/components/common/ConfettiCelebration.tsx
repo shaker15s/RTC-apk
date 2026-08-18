@@ -35,19 +35,21 @@ export const ConfettiCelebration: React.FC<{ active?: boolean; count?: number }>
     if (!active) return;
 
     const animations = pieces.map((p, idx) => {
-      const delay = idx * 25;
-      const duration = 2200 + Math.random() * 1200;
+      const delay = idx * 20;
+      const duration = 2400 + Math.random() * 1000;
+      p.animY.setValue(-50);
+      p.animRotate.setValue(0);
 
       return Animated.parallel([
         Animated.timing(p.animY, {
-          toValue: SCREEN_HEIGHT + 60,
+          toValue: SCREEN_HEIGHT + 80,
           duration,
           delay,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(p.animRotate, {
-          toValue: 8 + Math.random() * 12,
+          toValue: 6,
           duration,
           delay,
           easing: Easing.linear,

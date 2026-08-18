@@ -106,12 +106,6 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
           </View>
         </View>
 
-        <EasterEggModal
-          visible={eggModalVisible}
-          type={profile?.role === 'volunteer' ? 'resala_cheer' : 'dev_mode'}
-          onClose={() => setEggModalVisible(false)}
-        />
-
         {/* Right side (Actions / Notification / Avatar) */}
         <View style={styles.right}>
           {rightAction}
@@ -147,6 +141,12 @@ export const GlassHeader: React.FC<GlassHeaderProps> = ({
           ) : null}
         </View>
       </View>
+
+      <EasterEggModal
+        visible={eggModalVisible}
+        type={profile?.role === 'volunteer' ? 'resala_cheer' : 'dev_mode'}
+        onClose={() => setEggModalVisible(false)}
+      />
     </View>
   );
 };

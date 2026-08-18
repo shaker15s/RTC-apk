@@ -424,10 +424,10 @@ export const Repository = {
 
     const ratingsRes = await supabase
       .from('course_ratings')
-      .select('rating, comment, created_at')
+      .select('rating, comment, created_at, profiles(full_name, avatar_url)')
       .eq('course_id', courseId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(15);
 
     return {
       course: courseRes.data as Course,

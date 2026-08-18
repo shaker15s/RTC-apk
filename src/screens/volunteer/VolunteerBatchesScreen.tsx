@@ -271,16 +271,22 @@ export const VolunteerBatchesScreen: React.FC<{
               </View>
 
               {!isCurrentBatchLive ? (
-                <CustomButton
-                  title={t('startSessionCta')}
-                  onPress={() => {
-                    RTCHaptics.light();
-                    setStartSessionModal(true);
-                  }}
-                  variant="teal"
-                  size="sm"
-                  icon={<Play color="#FFFFFF" size={15} />}
-                />
+                (currentBatch.sessions_done || 0) >= (currentBatch.courses?.sessions_count || 8) ? (
+                  <View style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.teal + '18', borderRadius: Radii.md }}>
+                    <Text style={{ color: colors.teal, fontSize: 12, fontWeight: '800' }}>✓ اكتملت جميع المحاضرات</Text>
+                  </View>
+                ) : (
+                  <CustomButton
+                    title={t('startSessionCta')}
+                    onPress={() => {
+                      RTCHaptics.light();
+                      setStartSessionModal(true);
+                    }}
+                    variant="teal"
+                    size="sm"
+                    icon={<Play color="#FFFFFF" size={15} />}
+                  />
+                )
               ) : null}
             </View>
 

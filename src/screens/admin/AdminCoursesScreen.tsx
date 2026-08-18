@@ -71,6 +71,12 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
   const [batchInstructor, setBatchInstructor] = useState('');
   const [creatingBatch, setCreatingBatch] = useState(false);
 
+  // Edit Course Modal State
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [editSessions, setEditSessions] = useState('8');
+  const [updatingCourse, setUpdatingCourse] = useState(false);
+
   const loadCourses = async () => {
     try {
       const data = await Repository.fetchCourses(true);
@@ -156,6 +162,29 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
     }
   };
 
+  const handleUpdateCourseSessions = async () => {
+    if (!editingCourse) return;
+    const count = parseInt(editSessions, 10);
+    if (!count || count < 1) {
+      showToast('يرجى إدخال عدد محاضرات صحيح', 'warn');
+      return;
+    }
+    setUpdatingCourse(true);
+    try {
+      await Repository.updateCourse(editingCourse.id, {
+        sessions_count: count,
+      });
+      RTCHaptics.success();
+      showToast('تم تحديث عدد محاضرات المقرر بنجاح! 🚀', 'ok');
+      setEditModalVisible(false);
+      await loadCourses();
+    } catch (e: any) {
+      showToast(e?.message || 'تعذر تعديل المقرر', 'err');
+    } finally {
+      setUpdatingCourse(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <GlassHeader
@@ -233,7 +262,19 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               </View>
 
               {/* Action Buttons */}
-              <View style={styles.actionsRow}>
+              <View style={[styles.actionsRow, { gap: 8 }]}>
+                <CustomButton
+                  title="✏️ تعديل المقرر"
+                  onPress={() => {
+                    RTCHaptics.light();
+                    setEditingCourse(course);
+                    setEditSessions(String(course.sessions_count || 8));
+                    setEditModalVisible(true);
+                  }}
+                  variant="soft"
+                  size="sm"
+                  style={{ flex: 1 }}
+                />
                 <CustomButton
                   title={t('acNewGroup')}
                   onPress={() => {
@@ -392,6 +433,37 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               size="big"
               loading={creatingBatch}
               style={{ marginTop: 8 }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Course Modal */}
+      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>تعديل المقرر ({editingCourse?.title})</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <X color={colors.mut} size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInputField
+              label="عدد المحاضرات الإجمالي للمقرر"
+              value={editSessions}
+              onChangeText={setEditSessions}
+              placeholder="8"
+              keyboardType="numeric"
+            />
+
+            <CustomButton
+              title="حفظ التعديلات"
+              onPress={handleUpdateCourseSessions}
+              variant="primary"
+              size="big"
+              loading={updatingCourse}
+              style={{ marginTop: 12 }}
             />
           </View>
         </View>

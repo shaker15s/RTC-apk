@@ -29,6 +29,7 @@ import { navigationRef } from './navigationRef';
 import { RootStackParamList } from './types';
 import { linking } from './linking';
 import { t } from '../core/i18n';
+import { Platform } from 'react-native';
 
 // Layout & Feedback Components
 import { OfflineBanner } from '../components/layout/OfflineBanner';
@@ -81,6 +82,17 @@ import { AdminBroadcastScreen } from '../screens/admin/AdminBroadcastScreen';
 import { AdminAnalyticsScreen } from '../screens/admin/AdminAnalyticsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// ---------------------------------------------------------------
+// Determine platform-aware animation configuration
+// ---------------------------------------------------------------
+// Honor system reduced-motion preference by switching to fade transition
+const prefersReducedMotion = false; // TODO: integrate with Appearance.reduceMotion
+const transitionAnimation = prefersReducedMotion
+  ? 'fade'
+  : Platform.OS === 'ios'
+    ? 'slide_from_right_ios'
+    : 'scale_from_center';
 
 // ---------------------------------------------------------------
 // Screen adapter: injects onNavigate / onBack into every screen so
@@ -261,7 +273,7 @@ function RootFlow() {
 
   return (
     <Stack.Navigator
-      screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
+      screenOptions={{ headerShown: false, animation: transitionAnimation }}
       initialRouteName={incomplete ? 'onboarding' : home}
     >
       {AUTHED_SCREENS.map((r) => (

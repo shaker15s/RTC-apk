@@ -236,6 +236,24 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ onNavigate }) 
             style={[styles.moduleCard, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={() => {
               RTCHaptics.selection();
+              onNavigate('a-committees');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.moduleIconBox, { backgroundColor: colors.tealSoft }]}>
+              <Users color={colors.teal} size={22} />
+            </View>
+            <View style={styles.moduleTextWrap}>
+              <Text style={[styles.moduleTitle, { color: colors.txt }]}>لجان التطوع</Text>
+              <Text style={[styles.moduleSub, { color: colors.mut }]}>إدارة وتنسيق اللجان التطوعية</Text>
+            </View>
+            <ChevronLeft color={colors.mut} size={16} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.moduleCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
               onNavigate('a-settings');
             }}
             activeOpacity={0.7}

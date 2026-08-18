@@ -51,7 +51,11 @@ export const StudentCheckInScreen: React.FC<{
     points: number;
   } | null>(null);
 
+  const isCheckingInRef = React.useRef(false);
+
   const handleCheckIn = async (rawInput: string) => {
+    if (loading || isCheckingInRef.current) return;
+    isCheckingInRef.current = true;
     let cleanCode = rawInput.trim();
     let meta: any = null;
 
@@ -89,13 +93,27 @@ export const StudentCheckInScreen: React.FC<{
         points: 15,
       });
 
-      await refreshProfile();
       setCode('');
+      // Background profile and points refresh (non-blocking for UI)
+      refreshProfile().catch(() => {});
     } catch (e: any) {
-      RTCHaptics.error();
-      showToast(e?.message || t('invalidCodeError'), 'err');
+      const errorMsg = e?.message || '';
+      if (errorMsg.includes('already') || errorMsg.includes('مسبقاً') || errorMsg.includes('مسجل') || errorMsg.includes('registered')) {
+        RTCHaptics.success();
+        showToast('تم تسجيل حضورك لهذه المحاضرة مسبقاً ✓', 'ok');
+        setCelebrationData({
+          message: 'أنت مسجل بالفعل في هذه المحاضرة! لا داعي للقلق ✨',
+          courseTitle: meta?.courseTitle,
+          instructor: meta?.instructor,
+          points: 0,
+        });
+      } else {
+        RTCHaptics.error();
+        showToast(errorMsg || t('invalidCodeError'), 'err');
+      }
     } finally {
       setLoading(false);
+      isCheckingInRef.current = false;
     }
   };
 
@@ -223,11 +241,7 @@ export const StudentCheckInScreen: React.FC<{
               onPress={() => {
                 RTCHaptics.light();
                 setCelebrationData(null);
-                if (onNavigate) {
-                  onNavigate('s-home');
-                } else {
-                  onBack();
-                }
+                onBack();
               }}
               variant="teal"
               size="big"

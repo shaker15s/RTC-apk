@@ -51,6 +51,7 @@ import {
   Facebook,
   ExternalLink,
   CalendarCheck,
+  Trophy,
 } from 'lucide-react-native';
 
 export interface StudentHomeScreenProps {
@@ -238,6 +239,20 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ onNavigate
               <Award color={colors.gold} size={22} />
             </View>
             <Text style={[styles.actionGridLabel, { color: colors.txt }]}>شهاداتي</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionGridItem, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={() => {
+              RTCHaptics.selection();
+              onNavigate('s-leaderboard');
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: colors.primarySoft }]}>
+              <Trophy color={colors.primary} size={22} />
+            </View>
+            <Text style={[styles.actionGridLabel, { color: colors.txt }]}>لوحة المتصدرين</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

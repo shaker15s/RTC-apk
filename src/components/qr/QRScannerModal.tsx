@@ -20,17 +20,20 @@ export interface QRScannerModalProps {
 export const QRScannerModal: React.FC<QRScannerModalProps> = ({ visible, onScan, onClose }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const scannedRef = React.useRef(false);
   const { colors } = useAppStore();
   const { t } = useT();
 
   useEffect(() => {
     if (visible) {
       setScanned(false);
+      scannedRef.current = false;
     }
   }, [visible]);
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
+    if (scannedRef.current || scanned) return;
+    scannedRef.current = true;
     setScanned(true);
     RTCHaptics.success();
     onScan(data);

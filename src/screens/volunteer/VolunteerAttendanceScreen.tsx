@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { RPC, BatchRosterStudent } from '../../data/rpc';
+import { supabase } from '../../data/supabaseClient';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { CustomButton } from '../../components/common/CustomButton';
@@ -59,7 +60,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
 
   const [saving, setSaving] = useState(false);
 
-  // Self-load the roster when it wasn't passed through navigation
+  // 1. Self-load the roster when it wasn't passed through navigation
   useEffect(() => {
     if (initialStudents?.length) return;
     let cancelled = false;
@@ -83,6 +84,38 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
       cancelled = true;
     };
   }, [batchId]);
+
+  // 2. Realtime subscription for live attendance updates as students scan QR codes
+  useEffect(() => {
+    if (!sessionId) return;
+    const channel = supabase
+      .channel(`live-att-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload: any) => {
+          if (payload.new && payload.new.student_id) {
+            const studentId = payload.new.student_id;
+            const newStatus = payload.new.status || 'present';
+            setAttendanceState((prev) => ({
+              ...prev,
+              [studentId]: newStatus,
+            }));
+            RTCHaptics.light();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
 
   const setStudentStatus = (studentId: string, status: AttendanceStatus) => {
     RTCHaptics.selection();

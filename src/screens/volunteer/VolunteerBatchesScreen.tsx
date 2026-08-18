@@ -247,6 +247,19 @@ export const VolunteerBatchesScreen: React.FC<{
               />
 
               <CustomButton
+                title="📝 تقرير الجلسة"
+                onPress={() =>
+                  onNavigate('v-report', {
+                    sessionId: activeSession.id,
+                    batchId: activeBatchId,
+                  })
+                }
+                variant="secondary"
+                size="mid"
+                style={{ flex: 1 }}
+              />
+
+              <CustomButton
                 title={t('endSessionCta')}
                 onPress={handleCloseSession}
                 variant="danger"

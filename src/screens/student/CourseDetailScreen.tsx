@@ -16,6 +16,7 @@ import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Repository, Course, Batch } from '../../data/repositories';
 import { RPC } from '../../data/rpc';
+import { supabase } from '../../data/supabaseClient';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { CustomButton } from '../../components/common/CustomButton';
@@ -68,6 +69,13 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   const [ratingValue, setRatingValue] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
+
+  // Quick Create Batch modal state for volunteer/organizer
+  const [newBatchModalVisible, setNewBatchModalVisible] = useState(false);
+  const [batchName, setBatchName] = useState('');
+  const [batchSchedule, setBatchSchedule] = useState('الأحد والثلاثاء 6:00 م');
+  const [batchInstructor, setBatchInstructor] = useState('');
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
 
   const loadData = async () => {
     try {
@@ -214,8 +222,21 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
             </CustomCard>
 
             {/* Available Batches Section */}
-            <View style={styles.sectionHeader}>
+            <View style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
               <Text style={[styles.sectionTitle, { color: colors.txt }]}>{t('availableBatches')}</Text>
+              {isVolunteer ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    RTCHaptics.light();
+                    setBatchName(`مجموعة ${new Date().toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' })}`);
+                    setBatchInstructor(profile?.full_name || '');
+                    setNewBatchModalVisible(true);
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.teal + '18', borderRadius: Radii.full }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: colors.teal }}>+ إنشاء مجموعة جديدة</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             {batches.length ? (
@@ -459,6 +480,76 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
               variant="primary"
               size="big"
               loading={ratingSubmitting}
+              style={{ marginTop: 8 }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Quick Create Batch Modal for Volunteers / Admins */}
+      <Modal visible={newBatchModalVisible} transparent animationType="slide" onRequestClose={() => setNewBatchModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>إنشاء دفعة / مجموعة جديدة 👥</Text>
+              <TouchableOpacity onPress={() => setNewBatchModalVisible(false)}>
+                <X color={colors.mut} size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInputField
+              label="اسم المجموعة / الدفعة"
+              value={batchName}
+              onChangeText={setBatchName}
+              placeholder="مثال: مجموعة السبت والثلاثاء (صباحاً)"
+            />
+
+            <TextInputField
+              label="المواعيد والجدول"
+              value={batchSchedule}
+              onChangeText={setBatchSchedule}
+              placeholder="مثال: الأحد والثلاثاء من 6 إلى 8 مساءً"
+            />
+
+            <TextInputField
+              label="اسم المدرب المسؤول (اختياري)"
+              value={batchInstructor}
+              onChangeText={setBatchInstructor}
+              placeholder="اسم المدرب أو اترك فارغاً"
+            />
+
+            <CustomButton
+              title="تأكيد وإنشاء المجموعة الآن"
+              onPress={async () => {
+                if (!batchName.trim()) {
+                  showToast('يرجى كتابة اسم للمجموعة', 'warn');
+                  return;
+                }
+                setBatchSubmitting(true);
+                try {
+                  const { error } = await supabase.from('batches').insert({
+                    course_id: courseId,
+                    branch_id: course?.branch_id || profile?.branch_id,
+                    name: batchName.trim(),
+                    schedule: batchSchedule.trim(),
+                    instructor_id: profile?.id,
+                    is_active: true,
+                  });
+                  if (error) throw error;
+                  RTCHaptics.success();
+                  showToast('تم إنشاء المجموعة بنجاح وتعيينك مدرباً لها! 🎉', 'ok');
+                  setNewBatchModalVisible(false);
+                  await loadData();
+                } catch (err: any) {
+                  RTCHaptics.error();
+                  showToast(err?.message || 'فشل إنشاء المجموعة', 'err');
+                } finally {
+                  setBatchSubmitting(false);
+                }
+              }}
+              variant="teal"
+              size="big"
+              loading={batchSubmitting}
               style={{ marginTop: 8 }}
             />
           </View>

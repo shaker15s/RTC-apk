@@ -15,6 +15,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { RPC } from '../../data/rpc';
+import { supabase } from '../../data/supabaseClient';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
@@ -88,7 +89,33 @@ export const StudentAttendanceScreen: React.FC<{
 
   const loadData = async () => {
     try {
-      const list = await RPC.getMyAttendance();
+      let list = await RPC.getMyAttendance();
+      if (!list || list.length === 0) {
+        // Direct Query Fallback: Fetch directly from attendance table
+        const session = (await supabase.auth.getSession()).data.session;
+        if (session?.user) {
+          const { data } = await supabase
+            .from('attendance')
+            .select('id, status, points, created_at, session_id, sessions(title, session_date, batches(name, courses(id, title, sessions_count)))')
+            .eq('student_id', session.user.id)
+            .order('created_at', { ascending: false });
+
+          if (data && data.length > 0) {
+            list = data.map((row: any) => ({
+              id: row.id,
+              session_id: row.session_id,
+              session_title: row.sessions?.title || t('lectureWord'),
+              session_date: row.sessions?.session_date || row.created_at,
+              course_id: row.sessions?.batches?.courses?.id,
+              course_title: row.sessions?.batches?.courses?.title || row.sessions?.batches?.name,
+              course_sessions_count: row.sessions?.batches?.courses?.sessions_count || 8,
+              batch_name: row.sessions?.batches?.name,
+              status: row.status,
+              points: row.points || 15,
+            })) as AttendanceRecord[];
+          }
+        }
+      }
       setRecords(list || []);
       setRpcMissing(false);
     } catch (e: any) {

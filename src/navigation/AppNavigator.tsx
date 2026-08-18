@@ -148,7 +148,6 @@ const PUBLIC_SCREENS: RouteDef[] = [
 
 const AUTHED_SCREENS: RouteDef[] = [
   // Shared / public-reachable
-  { name: 'onboarding', component: OnboardingWithNav },
   { name: 'verify', component: makeScreen(VerifyCertScreen) },
   { name: 'changelog', component: makeScreen(ChangelogScreen) },
 
@@ -228,7 +227,6 @@ function RootFlow() {
   }, [pendingRoute, session, profile, isInitialized]);
 
   // Auto-route to the role home once the profile is completed
-  // (mirrors the old navigator's behaviour: onboarding → home).
   useEffect(() => {
     if (!session || !profile || !isInitialized) return;
     if (!profile?.phone || !profile?.branch_id) return;
@@ -236,12 +234,6 @@ function RootFlow() {
     const home = role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home';
     if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === 'onboarding') {
       navigationRef.navigate(home as never);
-      // For new students: also push s-explore so they can browse and join courses immediately
-      if (role === 'student') {
-        setTimeout(() => {
-          navigationRef.navigate('s-explore' as never);
-        }, 300);
-      }
     }
   }, [session, profile, isInitialized]);
 
@@ -265,16 +257,23 @@ function RootFlow() {
     );
   }
 
-  // Signed in: role-based stack. New users with incomplete profiles
-  // start at onboarding (step 2) until phone + branch are set.
+  // Signed in: role-based stack.
   const role = profile?.role || 'student';
   const incomplete = !profile?.phone || !profile?.branch_id;
   const home = role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : 's-home';
 
+  if (incomplete) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="onboarding" component={OnboardingWithNav} />
+      </Stack.Navigator>
+    );
+  }
+
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false, animation: transitionAnimation }}
-      initialRouteName={incomplete ? 'onboarding' : home}
+      initialRouteName={home}
     >
       {AUTHED_SCREENS.map((r) => (
         <Stack.Screen key={r.name} name={r.name} component={r.component} />

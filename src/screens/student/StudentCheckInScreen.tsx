@@ -76,7 +76,6 @@ export const StudentCheckInScreen: React.FC<{
     setLoading(true);
 
     try {
-      // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
       const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
       const msg = res?.message || t('checkInSuccessDefault');
@@ -92,8 +91,21 @@ export const StudentCheckInScreen: React.FC<{
       await refreshProfile();
       setCode('');
     } catch (e: any) {
-      RTCHaptics.error();
-      showToast(e?.message || t('invalidCodeError'), 'err');
+      // تعديل: التعامل بمرونة لو الحضور اتسجل فعلاً قبل كدة
+      const errorMsg = e?.message || '';
+      if (errorMsg.includes('already') || errorMsg.includes('مسبقاً')) {
+        RTCHaptics.success();
+        showToast('تم تسجيل حضورك لهذه المحاضرة مسبقاً', 'ok');
+        setCelebrationData({
+          message: 'تم تسجيل حضورك مسبقاً في هذه المحاضرة',
+          courseTitle: meta?.courseTitle,
+          instructor: meta?.instructor,
+          points: 0,
+        });
+      } else {
+        RTCHaptics.error();
+        showToast(errorMsg || t('invalidCodeError'), 'err');
+      }
     } finally {
       setLoading(false);
     }

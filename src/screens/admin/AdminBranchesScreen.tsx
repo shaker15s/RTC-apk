@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 40,
+    paddingBottom: 140,
     gap: 12,
   },
   branchCard: {

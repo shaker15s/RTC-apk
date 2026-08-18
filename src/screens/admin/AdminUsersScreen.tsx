@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 40,
+    paddingBottom: 140,
     gap: 12,
   },
   userCard: {

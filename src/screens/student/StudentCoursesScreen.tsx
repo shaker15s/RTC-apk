@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 90,
+    paddingBottom: 140,
     gap: 12,
   },
   courseCard: {

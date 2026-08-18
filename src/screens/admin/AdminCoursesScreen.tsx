@@ -12,6 +12,8 @@ import {
   Modal,
   FlatList,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
@@ -302,7 +304,10 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
 
       {/* New Course Modal */}
       <Modal visible={courseModalVisible} transparent animationType="slide" onRequestClose={() => setCourseModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('acNewCourseModal')}</Text>
@@ -311,71 +316,76 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               </TouchableOpacity>
             </View>
 
-            <TextInputField
-              label={t('acCourseName')}
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder={t('acCoursePlaceholder')}
-              required
-            />
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 10 }}>
+              <TextInputField
+                label={t('acCourseName')}
+                value={newTitle}
+                onChangeText={setNewTitle}
+                placeholder={t('acCoursePlaceholder')}
+                required
+              />
 
-            <TextInputField
-              label="اسم المدرب المسؤول (اختياري)"
-              value={newInstructor}
-              onChangeText={setNewInstructor}
-              placeholder="مثال: أ. أحمد سامي"
-            />
+              <TextInputField
+                label="اسم المدرب المسؤول (اختياري)"
+                value={newInstructor}
+                onChangeText={setNewInstructor}
+                placeholder="مثال: أ. أحمد سامي"
+              />
 
-            <TextInputField
-              label={t('acCategory')}
-              value={newCategory}
-              onChangeText={setNewCategory}
-              placeholder={t('acCategoryPlaceholder')}
-            />
+              <TextInputField
+                label={t('acCategory')}
+                value={newCategory}
+                onChangeText={setNewCategory}
+                placeholder={t('acCategoryPlaceholder')}
+              />
 
-            <TextInputField
-              label={t('acSessionsCount')}
-              value={newSessions}
-              onChangeText={setNewSessions}
-              keyboardType="numeric"
-              placeholder="8"
-            />
+              <TextInputField
+                label={t('acSessionsCount')}
+                value={newSessions}
+                onChangeText={setNewSessions}
+                keyboardType="numeric"
+                placeholder="8"
+              />
 
-            {branches.length > 0 ? (
-              <View style={{ gap: 6, marginVertical: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.txt }}>الفرع:</Text>
-                <SelectChips
-                  items={branches.map(b => ({ id: b.id, label: b.name_ar }))}
-                  selectedId={newBranchId}
-                  onSelect={setNewBranchId}
-                />
-              </View>
-            ) : null}
+              {branches.length > 0 ? (
+                <View style={{ gap: 6, marginVertical: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.txt }}>الفرع:</Text>
+                  <SelectChips
+                    items={branches.map(b => ({ id: b.id, label: b.name_ar }))}
+                    selectedId={newBranchId}
+                    onSelect={setNewBranchId}
+                  />
+                </View>
+              ) : null}
 
-            <TextInputField
-              label={t('acDescription')}
-              value={newDescription}
-              onChangeText={setNewDescription}
-              placeholder={t('acDescriptionPlaceholder')}
-              multiline
-              numberOfLines={2}
-            />
+              <TextInputField
+                label={t('acDescription')}
+                value={newDescription}
+                onChangeText={setNewDescription}
+                placeholder={t('acDescriptionPlaceholder')}
+                multiline
+                numberOfLines={2}
+              />
 
-            <CustomButton
-              title={t('acSaveCourse')}
-              onPress={handleCreateCourse}
-              variant="primary"
-              size="big"
-              loading={creatingCourse}
-              style={{ marginTop: 8 }}
-            />
+              <CustomButton
+                title={t('acSaveCourse')}
+                onPress={handleCreateCourse}
+                variant="primary"
+                size="big"
+                loading={creatingCourse}
+                style={{ marginTop: 8 }}
+              />
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* New Batch Modal */}
       <Modal visible={batchModalVisible} transparent animationType="slide" onRequestClose={() => setBatchModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.txt }]}>
@@ -386,61 +396,66 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               </TouchableOpacity>
             </View>
 
-            <TextInputField
-              label={t('acGroupName')}
-              value={batchName}
-              onChangeText={setBatchName}
-              placeholder={t('acGroupPlaceholder')}
-              required
-            />
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 10 }}>
+              <TextInputField
+                label={t('acGroupName')}
+                value={batchName}
+                onChangeText={setBatchName}
+                placeholder={t('acGroupPlaceholder')}
+                required
+              />
 
-            <TextInputField
-              label="مدرب المجموعة"
-              value={batchInstructor}
-              onChangeText={setBatchInstructor}
-              placeholder="اسم المدرب"
-            />
+              <TextInputField
+                label="مدرب المجموعة"
+                value={batchInstructor}
+                onChangeText={setBatchInstructor}
+                placeholder="اسم المدرب"
+              />
 
-            <TextInputField
-              label={t('acSchedule')}
-              value={batchSchedule}
-              onChangeText={setBatchSchedule}
-              placeholder="مثال: السبت والثلاثاء 6:00 م"
-            />
+              <TextInputField
+                label={t('acSchedule')}
+                value={batchSchedule}
+                onChangeText={setBatchSchedule}
+                placeholder="مثال: السبت والثلاثاء 6:00 م"
+              />
 
-            <TextInputField
-              label={t('acVenue')}
-              value={batchLocation}
-              onChangeText={setBatchLocation}
-              placeholder="القاعة أو الرابط"
-            />
+              <TextInputField
+                label={t('acVenue')}
+                value={batchLocation}
+                onChangeText={setBatchLocation}
+                placeholder="القاعة أو الرابط"
+              />
 
-            {branches.length > 0 ? (
-              <View style={{ gap: 6, marginVertical: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.txt }}>الفرع:</Text>
-                <SelectChips
-                  items={branches.map(b => ({ id: b.id, label: b.name_ar }))}
-                  selectedId={batchBranchId}
-                  onSelect={setBatchBranchId}
-                />
-              </View>
-            ) : null}
+              {branches.length > 0 ? (
+                <View style={{ gap: 6, marginVertical: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.txt }}>الفرع:</Text>
+                  <SelectChips
+                    items={branches.map(b => ({ id: b.id, label: b.name_ar }))}
+                    selectedId={batchBranchId}
+                    onSelect={setBatchBranchId}
+                  />
+                </View>
+              ) : null}
 
-            <CustomButton
-              title={t('acOpenRegistration')}
-              onPress={handleCreateBatch}
-              variant="teal"
-              size="big"
-              loading={creatingBatch}
-              style={{ marginTop: 8 }}
-            />
+              <CustomButton
+                title={t('acOpenRegistration')}
+                onPress={handleCreateBatch}
+                variant="teal"
+                size="big"
+                loading={creatingBatch}
+                style={{ marginTop: 8 }}
+              />
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Edit Course Modal */}
       <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.txt }]}>تعديل المقرر ({editingCourse?.title})</Text>
@@ -466,7 +481,7 @@ export const AdminCoursesScreen: React.FC<{ onBack: () => void }> = ({ onBack })
               style={{ marginTop: 12 }}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -491,7 +506,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 40,
+    paddingBottom: 140,
     gap: 12,
   },
   courseCard: {

@@ -66,6 +66,10 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
   const userBadgeIds = profile?.badge_ids || ['welcome'];
 
   const handleShareApp = async () => {
+    if (userBadgeIds.includes('social')) {
+      showToast(t('socialAlreadyToast'), 'info');
+      return;
+    }
     setSharing(true);
     try {
       const shared = await RTCSharing.shareText(
@@ -73,13 +77,23 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
         t('shareAppBody')
       );
       if (shared) {
-        await RPC.claimSocialBadge();
-        RTCHaptics.success();
-        // Points amount comes from the backend — no hardcoded claim (F-6)
-        showToast('حصلت على شارة نجم سوشيال! 🎉', 'ok');
+        const result = await RPC.claimSocialBadge();
+        if (result?.already_claimed) {
+          showToast(t('socialAlreadyToast'), 'info');
+        } else {
+          RTCHaptics.success();
+          showToast(t('socialBadgeToast'), 'ok');
+        }
         await refreshProfile();
       }
-    } catch (e) {
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      if (msg.includes('already') || msg.includes('مسبق') || msg.includes('شارة')) {
+        showToast(t('socialAlreadyToast'), 'info');
+        await refreshProfile();
+      } else {
+        showToast(e?.message || t('errorGeneric'), 'err');
+      }
     } finally {
       setSharing(false);
     }

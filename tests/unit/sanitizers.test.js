@@ -182,6 +182,8 @@ function runSanitizersTests() {
   assert(canAccess('v-batches', 'volunteer') === true, 'Volunteer can access v-batches');
   assert(canAccess('v-attendance', 'volunteer') === true, 'Volunteer can access v-attendance');
   assert(canAccess('v-report', 'volunteer') === true, 'Volunteer can access v-report');
+  assert(canAccess('v-student-record', 'volunteer') === true, 'Volunteer can access student attendance record');
+  assert(canAccess('s-attendance', 'volunteer') === true, 'Volunteer can access attendance history');
   assert(canAccess('s-analytics', 'volunteer') === true, 'Volunteer can access shared s-analytics');
   assert(canAccess('s-notifications', 'volunteer') === true, 'Volunteer can access s-notifications');
   assert(canAccess('s-edit-profile', 'volunteer') === true, 'Volunteer can access s-edit-profile');
@@ -197,6 +199,8 @@ function runSanitizersTests() {
   assert(canAccess('a-branches', 'admin') === true, 'Admin can access a-branches');
   assert(canAccess('a-broadcast', 'admin') === true, 'Admin can access a-broadcast');
   assert(canAccess('a-analytics', 'admin') === true, 'Admin can access a-analytics');
+  assert(canAccess('a-user-detail', 'admin') === true, 'Admin can access user detail dossier');
+  assert(canAccess('v-student-record', 'admin') === true, 'Admin can inspect a student attendance record');
   assert(canAccess('s-analytics', 'admin') === true, 'Admin can access s-analytics');
 
   console.log(`\n  📊 Sanitizers Suite: ${passed} passed, ${failed} failed\n`);

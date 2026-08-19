@@ -42,6 +42,7 @@
 | 28 | `get_active_session` | `p_batch_id` | instructor/admin | استرجاع الجلسة النشطة للمدرب (P0-5) |
 | 29 | `get_my_next_session` | — | authenticated | أقرب محاضرة قادمة حقيقية للطالب (F-2) |
 | 30 | `get_my_attendance` | — | authenticated | سجل الحضور التفصيلي للطالب (F-10) — v100.2.0 |
+| 31 | `get_student_attendance` | `p_student_id`, `p_batch_id` | instructor/admin | سجل حضور طالب واحد للمتطوع/المشرف |
 
 > 🔴 SQL المقترح للدالتين 27 و 28 موجود في `docs/sql/2026-08-15-quality-fixes.sql`.
 > العميل يتعامل مع غيابهما بشكل آمن (fallback محلي) حتى يتم نشرهما على الداتابيز.

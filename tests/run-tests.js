@@ -88,6 +88,7 @@ const ALL_RPCS = [
   'get_my_next_session',
   // v100.2.0
   'get_my_attendance',
+  'get_student_attendance',
 ];
 
 const rpcFilePath = path.join(__dirname, '../src/data/rpc/index.ts');
@@ -146,6 +147,8 @@ const ALL_34_SCREENS = [
   'AdminCommitteesScreen.tsx',
   'AdminBroadcastScreen.tsx',
   'AdminAnalyticsScreen.tsx',
+  'AdminUserDetailScreen.tsx',
+  'VolunteerStudentRecordScreen.tsx',
 ];
 
 const screensBaseDir = path.join(__dirname, '../src/screens');

@@ -38,7 +38,7 @@ export interface ExploreCoursesScreenProps {
 }
 
 export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNavigate, onBack }) => {
-  const { colors } = useAppStore();
+  const { colors, showToast } = useAppStore();
   const { t } = useT();
   const { branches } = useAuthStore();
 
@@ -57,6 +57,7 @@ export const ExploreCoursesScreen: React.FC<ExploreCoursesScreenProps> = ({ onNa
       );
       setCourses(data);
     } catch (e) {
+      showToast(t('coursesLoadError'), 'warn');
     } finally {
       setLoading(false);
       setRefreshing(false);

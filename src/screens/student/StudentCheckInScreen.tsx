@@ -14,6 +14,7 @@ import {
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { RPC } from '../../data/rpc';
+import { extractCheckInCode } from '../../data/coreFlow';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { TextInputField } from '../../components/common/TextInputField';
@@ -49,25 +50,14 @@ export const StudentCheckInScreen: React.FC<{
     courseTitle?: string;
     instructor?: string;
     points: number;
+    already?: boolean;
   } | null>(null);
 
   const handleCheckIn = async (rawInput: string) => {
-    let cleanCode = rawInput.trim();
-    let meta: any = null;
+    const extracted = extractCheckInCode(rawInput);
+    const cleanCode = extracted.code;
+    const meta = extracted.meta;
 
-    try {
-      if (cleanCode.startsWith('{') && cleanCode.endsWith('}')) {
-        const parsed = JSON.parse(cleanCode);
-        if (parsed.code) {
-          cleanCode = parsed.code;
-          meta = parsed;
-        }
-      }
-    } catch (e) {
-      // Use raw input
-    }
-
-    cleanCode = cleanCode.toUpperCase();
     if (!cleanCode) {
       showToast(t('emptyCodeWarn'), 'warn');
       return;
@@ -78,29 +68,28 @@ export const StudentCheckInScreen: React.FC<{
     try {
       const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
-      const msg = res?.message || t('checkInSuccessDefault');
-      showToast(t('checkInDoneToast'), 'ok');
-      
+      const already = !!res?.already;
+      showToast(already ? t('checkInAlreadyToast') : t('checkInDoneToast'), already ? 'info' : 'ok');
       setCelebrationData({
-        message: msg,
-        courseTitle: meta?.courseTitle,
-        instructor: meta?.instructor,
-        points: 15,
+        message: res?.message || (already ? t('checkInAlready') : t('checkInSuccessDefault')),
+        courseTitle: res?.course_title || meta?.courseTitle,
+        instructor: res?.instructor || meta?.instructor,
+        points: already ? 0 : Number(res?.points) || 0,
+        already,
       });
-
       await refreshProfile();
       setCode('');
     } catch (e: any) {
-      // تعديل: التعامل بمرونة لو الحضور اتسجل فعلاً قبل كدة
       const errorMsg = e?.message || '';
-      if (errorMsg.includes('already') || errorMsg.includes('مسبقاً')) {
+      if (errorMsg.includes('already') || errorMsg.includes('مسبق') || errorMsg.includes('مسجل')) {
         RTCHaptics.success();
-        showToast('تم تسجيل حضورك لهذه المحاضرة مسبقاً', 'ok');
+        showToast(t('checkInAlreadyToast'), 'ok');
         setCelebrationData({
-          message: 'تم تسجيل حضورك مسبقاً في هذه المحاضرة',
+          message: t('checkInAlready'),
           courseTitle: meta?.courseTitle,
           instructor: meta?.instructor,
           points: 0,
+          already: true,
         });
       } else {
         RTCHaptics.error();
@@ -153,7 +142,8 @@ export const StudentCheckInScreen: React.FC<{
             value={code}
             onChangeText={setCode}
             placeholder={t('codePlaceholder')}
-            maxLength={10}
+            maxLength={16}
+            autoCapitalize="characters"
             inputStyle={{
               textAlign: 'center',
               letterSpacing: 4,
@@ -204,7 +194,7 @@ export const StudentCheckInScreen: React.FC<{
             </View>
 
             <Text style={[styles.celebrateTitle, { color: colors.txt }]}>
-              تم تسجيل حضورك بنجاح! 🎉
+              {celebrationData?.already ? t('checkInAlready') : t('checkInCelebrateTitle')}
             </Text>
 
             {celebrationData?.courseTitle ? (
@@ -215,7 +205,7 @@ export const StudentCheckInScreen: React.FC<{
 
             {celebrationData?.instructor ? (
               <Text style={[styles.celebrateInstructor, { color: colors.mut }]}>
-                المدرب: {celebrationData.instructor}
+                {t('cdInstructor')} {celebrationData.instructor}
               </Text>
             ) : null}
 

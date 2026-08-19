@@ -144,8 +144,12 @@ export default function App() {
           try {
             const check = await Updates.checkForUpdateAsync();
             if (check.isAvailable) {
-              // Download silently in background — user gets it on next open
               await Updates.fetchUpdateAsync();
+              try {
+                useAppStore.getState().showToast(t('updateReadyToast'), 'info');
+              } catch {
+                // toast store may not be ready
+              }
             }
           } catch (e) {
             // Non-blocking if offline or in expo go
@@ -161,29 +165,38 @@ export default function App() {
     };
   }, []);
 
-  // 5. Notification tap routing (fixes F-12): when the user taps a
-  //    notification (foreground or cold start), hand the target screen
-  //    to the navigator via sessionStore.
+  // 5. Notification tap routing (fixes F-12). Native module can be
+  //    missing after a bad OTA — never crash the whole app.
   useEffect(() => {
-    const routeFromPayload = (payload: any) => {
-      const screen = payload?.request?.content?.data?.screen;
-      if (screen && typeof screen === 'string') {
-        useSessionStore.getState().setPendingRoute(screen);
+    let sub: { remove: () => void } | null = null;
+    try {
+      const routeFromPayload = (payload: any) => {
+        const screen = payload?.request?.content?.data?.screen;
+        if (screen && typeof screen === 'string') {
+          useSessionStore.getState().setPendingRoute(screen);
+        }
+      };
+
+      sub = Notifications.addNotificationResponseReceivedListener((response) => {
+        routeFromPayload(response?.notification);
+      });
+
+      Notifications.getLastNotificationResponseAsync()
+        .then((response) => {
+          if (response) routeFromPayload(response.notification);
+        })
+        .catch(() => {});
+    } catch {
+      // Expo Go / outdated native binary — ignore
+    }
+
+    return () => {
+      try {
+        sub?.remove();
+      } catch {
+        // ignore
       }
     };
-
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      routeFromPayload(response?.notification);
-    });
-
-    // Cold start: the tap that launched the app
-    Notifications.getLastNotificationResponseAsync()
-      .then((response) => {
-        if (response) routeFromPayload(response.notification);
-      })
-      .catch(() => {});
-
-    return () => sub.remove();
   }, []);
 
   // Gate rendering until preferences are loaded so dark-mode users

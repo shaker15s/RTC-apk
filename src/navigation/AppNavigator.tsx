@@ -121,6 +121,10 @@ function makeScreen(Screen: React.ComponentType<any>, extraProps?: (props: any) 
     const onBack = () => {
       if (navigation.canGoBack()) {
         navigation.goBack();
+      } else {
+        const role = profile?.role;
+        const root = role === 'admin' ? 'a-home' : role === 'volunteer' ? 'v-home' : role === 'student' ? 's-home' : 'onboarding';
+        navigation.navigate(root as never);
       }
     };
 
@@ -249,10 +253,10 @@ function RootFlow() {
     );
   }
 
-  // Signed out: public stack
+  // Signed out: public stack (strictly defaults to onboarding login screen)
   if (!session) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="onboarding">
         {PUBLIC_SCREENS.map((r) => (
           <Stack.Screen key={r.name} name={r.name} component={r.component} />
         ))}

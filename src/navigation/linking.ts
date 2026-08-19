@@ -19,7 +19,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
   config: {
     screens: {
       // Public screens
-      onboarding: 'auth',
+      onboarding: '',
       verify: {
         path: 'verify',
         parse: {

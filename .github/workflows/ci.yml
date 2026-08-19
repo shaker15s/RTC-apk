@@ -31,14 +31,17 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
+        working-directory: ./rtc_mobile
         run: |
           npm ci || npm install
 
       - name: TypeScript Static Type Analysis (tsc --noEmit)
+        working-directory: ./rtc_mobile
         run: |
           npx tsc --noEmit
 
       - name: Run Quality Test Suite (Parity, Contracts, Security, i18n & Design Tokens)
+        working-directory: ./rtc_mobile
         run: |
           node tests/run-tests.js
 
@@ -56,6 +59,7 @@ jobs:
 
       - name: 🚀 Publish Automatic Over-The-Air (OTA) Update to Mobile App
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        working-directory: ./rtc_mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |

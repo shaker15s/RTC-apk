@@ -13,10 +13,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#00288E"
     },
-    "platforms": [
-      "android",
-      "ios"
-    ],
+   "platforms": ["android", "ios", "web"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.resala.rtc.masar",

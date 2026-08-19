@@ -1,18 +1,15 @@
 {
-  "name": "rtc-masar-mobile",
+  "name": "rtc-masar-web",
   "version": "2.0.0",
-  "description": "تطبيق مسار RTC النيتف الرسمي لمراكز رسالة للتدريب (Android & iOS)",
+  "description": "تطبيق مسار RTC الويب الرسمي لمراكز رسالة للتدريب",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "web": "expo start --web",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web",
     "test": "node tests/run-tests.js",
-    "lint": "tsc --noEmit",
-    "build:apk": "npx eas-cli build -p android --profile preview",
-    "build:apk:local": "npx eas-cli build -p android --profile preview --local",
-    "build:aab": "npx eas-cli build -p android --profile production"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.2",
@@ -44,7 +41,9 @@
     "expo-web-browser": "~15.0.11",
     "lucide-react-native": "^0.475.0",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-web": "~0.19.13",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-reanimated": "~4.1.1",

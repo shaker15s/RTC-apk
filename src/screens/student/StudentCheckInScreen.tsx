@@ -80,7 +80,6 @@ export const StudentCheckInScreen: React.FC<{
     setLoading(true);
 
     try {
-      // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
       const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
       const msg = res?.message || t('checkInSuccessDefault');

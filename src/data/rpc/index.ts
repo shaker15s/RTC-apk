@@ -4,6 +4,23 @@
  * All fake fallbacks removed for production accuracy.
  */
 import { supabase } from '../supabaseClient';
+import {
+  extractCheckInCode,
+  fallbackBatchRoster,
+  fallbackClaimSocialBadge,
+  fallbackGetActiveSession,
+  fallbackJoinBatch,
+  fallbackMyAttendance,
+  fallbackStartSession,
+  fallbackStudentAttendance,
+  fallbackStudentCheckIn,
+  isAlreadyRecordedError,
+  isMissingRpcError,
+  normalizeCheckInPayload,
+  type CheckInResult,
+  type JoinResult,
+  type SocialBadgeResult,
+} from '../coreFlow';
 
 export interface UserProfile {
   id: string;
@@ -105,10 +122,22 @@ export const RPC = {
 
   // 3. batch_roster
   async batchRoster(batchId: string): Promise<BatchRosterStudent[]> {
-    const res = await supabase.rpc('batch_roster', {
-      p_batch_id: batchId,
-    });
-    return unwrap(res, []) || [];
+    try {
+      const res = await supabase.rpc('batch_roster', {
+        p_batch_id: batchId,
+      });
+      const rows = unwrap(res, []) || [];
+      if (Array.isArray(rows) && rows.length) return rows;
+    } catch (e) {
+      if (!isMissingRpcError(e)) {
+        try {
+          return await fallbackBatchRoster(batchId);
+        } catch {
+          throw e;
+        }
+      }
+    }
+    return fallbackBatchRoster(batchId);
   },
 
   // 4. admin_list_profiles
@@ -140,28 +169,90 @@ export const RPC = {
   },
 
   // 7. join_batch
-  async joinBatch(batchId: string): Promise<{ success: boolean; status: 'enrolled' | 'waitlist' }> {
-    const res = await supabase.rpc('join_batch', {
-      p_batch_id: batchId,
-    });
-    return unwrap(res);
+  async joinBatch(batchId: string): Promise<JoinResult> {
+    try {
+      const res = await supabase.rpc('join_batch', {
+        p_batch_id: batchId,
+      });
+      const raw = unwrap<any>(res);
+      const value = Array.isArray(raw) ? raw[0] : raw;
+      if (value && typeof value === 'object') {
+        return {
+          success: value.success !== false,
+          status: value.status === 'waitlist' ? 'waitlist' : 'enrolled',
+          already: !!value.already,
+        };
+      }
+      return { success: true, status: 'enrolled' };
+    } catch (e) {
+      if (isAlreadyRecordedError(e)) {
+        return { success: true, status: 'enrolled', already: true };
+      }
+      return fallbackJoinBatch(batchId);
+    }
   },
 
   // 8. start_session
-  async startSession(batchId: string, title?: string): Promise<{ id: string; checkin_code: string }> {
-    const res = await supabase.rpc('start_session', {
-      p_batch_id: batchId,
-      p_title: title || null,
-    });
-    return unwrap(res);
+  async startSession(batchId: string, title?: string): Promise<{ id: string; checkin_code: string; title?: string }> {
+    try {
+      const res = await supabase.rpc('start_session', {
+        p_batch_id: batchId,
+        p_title: title || null,
+      });
+      const raw = unwrap<any>(res);
+      const value = Array.isArray(raw) ? raw[0] : raw;
+      if (value?.id && (value.checkin_code || value.checkinCode)) {
+        return {
+          id: value.id,
+          checkin_code: value.checkin_code || value.checkinCode,
+          title: value.title,
+        };
+      }
+    } catch (e) {
+      if (!isMissingRpcError(e) && !isAlreadyRecordedError(e)) {
+        try {
+          return await fallbackStartSession(batchId, title);
+        } catch {
+          throw e;
+        }
+      }
+    }
+    return fallbackStartSession(batchId, title);
   },
 
   // 9. student_check_in
-  async studentCheckIn(code: string): Promise<{ success: boolean; message: string }> {
-    const res = await supabase.rpc('student_check_in', {
-      p_code: code,
-    });
-    return unwrap(res);
+  async studentCheckIn(rawCode: string): Promise<CheckInResult> {
+    const extracted = extractCheckInCode(rawCode);
+    const code = extracted.code;
+    if (!code) {
+      throw new Error('empty-code');
+    }
+
+    try {
+      const res = await supabase.rpc('student_check_in', {
+        p_code: code,
+      });
+      const normalized = normalizeCheckInPayload(unwrap(res), '');
+      if (!normalized.course_title && extracted.meta?.courseTitle) {
+        normalized.course_title = extracted.meta.courseTitle;
+      }
+      if (!normalized.instructor && extracted.meta?.instructor) {
+        normalized.instructor = extracted.meta.instructor;
+      }
+      return normalized;
+    } catch (e) {
+      if (isAlreadyRecordedError(e)) {
+        return {
+          success: true,
+          already: true,
+          message: String((e as any)?.message || ''),
+          points: 0,
+          course_title: extracted.meta?.courseTitle,
+          instructor: extracted.meta?.instructor,
+        };
+      }
+      return fallbackStudentCheckIn(code);
+    }
   },
 
   // 10. record_session_attendance
@@ -311,10 +402,26 @@ export const RPC = {
     return unwrap(res);
   },
 
-  // 24. claim_social_badge
-  async claimSocialBadge(): Promise<void> {
-    const res = await supabase.rpc('claim_social_badge');
-    return unwrap(res);
+  // 24. claim_social_badge — idempotent (one-time only)
+  async claimSocialBadge(): Promise<SocialBadgeResult> {
+    try {
+      const res = await supabase.rpc('claim_social_badge');
+      const raw = unwrap<any>(res);
+      const value = Array.isArray(raw) ? raw[0] : raw;
+      if (value && typeof value === 'object') {
+        return {
+          success: value.success !== false,
+          already_claimed: !!(value.already_claimed || value.already),
+          points: Number(value.points) || 0,
+        };
+      }
+      return { success: true, already_claimed: false, points: 25 };
+    } catch (e) {
+      if (isAlreadyRecordedError(e)) {
+        return { success: true, already_claimed: true, points: 0 };
+      }
+      return fallbackClaimSocialBadge();
+    }
   },
 
   // 25. disable_my_push_devices
@@ -370,9 +477,36 @@ export const RPC = {
   async getMyAttendance(): Promise<MyAttendanceItem[]> {
     try {
       const res = await supabase.rpc('get_my_attendance');
-      return unwrap(res, []) || [];
-    } catch (e) {
-      return [];
+      const rows = unwrap(res, []) || [];
+      if (Array.isArray(rows) && rows.length) {
+        return rows.map((r: any) => ({
+          ...r,
+          points: Number(r.points ?? r.points_awarded ?? 0),
+        }));
+      }
+    } catch {
+      // fall through to table query so the student still sees history
     }
+    return fallbackMyAttendance();
+  },
+
+  // 31. get_student_attendance (volunteer / admin)
+  async getStudentAttendance(studentId: string, batchId?: string): Promise<MyAttendanceItem[]> {
+    try {
+      const res = await supabase.rpc('get_student_attendance', {
+        p_student_id: studentId,
+        p_batch_id: batchId || null,
+      });
+      const rows = unwrap(res, []) || [];
+      if (Array.isArray(rows) && rows.length) {
+        return rows.map((r: any) => ({
+          ...r,
+          points: Number(r.points ?? r.points_awarded ?? 0),
+        }));
+      }
+    } catch {
+      // fall through
+    }
+    return fallbackStudentAttendance(studentId, batchId);
   },
 };

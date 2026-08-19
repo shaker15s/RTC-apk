@@ -72,6 +72,10 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
   const userBadgeIds = profile?.badge_ids || ['welcome'];
 
   const handleShareApp = async () => {
+    if (userBadgeIds.includes('social')) {
+      showToast(t('socialAlreadyToast'), 'info');
+      return;
+    }
     setSharing(true);
     try {
       const shared = await RTCSharing.shareText(
@@ -79,20 +83,24 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
         t('shareAppBody')
       );
       if (shared) {
-        if (userBadgeIds.includes('social')) {
-          RTCHaptics.success();
-          showToast('شكراً لمشاركة مسار RTC مع أصدقائك! ❤️ (حصلت على الشارة مسبقاً)', 'ok');
-          return;
+        try {
+          const result = await RPC.claimSocialBadge();
+          if (result?.already_claimed) {
+            showToast(t('socialAlreadyToast') || 'حصلت على هذه الشارة مسبقاً ✨', 'info');
+          } else {
+            RTCHaptics.success();
+            showToast(t('socialBadgeToast') || 'حصلت على شارة نجم سوشيال! 🎉', 'ok');
+          }
+          await refreshProfile();
+        } catch (claimErr: any) {
+          const msg = String(claimErr?.message || '');
+          if (msg.includes('already') || msg.includes('مسبق') || msg.includes('شارة')) {
+            showToast(t('socialAlreadyToast') || 'حصلت على هذه الشارة مسبقاً ✨', 'info');
+          }
         }
-        await RPC.claimSocialBadge();
-        RTCHaptics.success();
-        showToast('حصلت على شارة نجم سوشيال! 🎉', 'ok');
-        await refreshProfile();
       }
     } catch (e: any) {
-      if (e?.message?.includes('already') || e?.message?.includes('مسبقاً')) {
-        showToast('حصلت على هذه الشارة مسبقاً ✨', 'info');
-      }
+      showToast(e?.message || t('errorGeneric'), 'err');
     } finally {
       setSharing(false);
     }

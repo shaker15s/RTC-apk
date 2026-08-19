@@ -92,13 +92,40 @@ const STUDENT_ROUTES = {
 };
 
 const VOLUNTEER_ROUTES = {
-  prefix: ['v-', 's-analytics', 'support', 's-notifications', 's-edit-profile', 's-course-detail', 's-explore', 's-checkin', 's-excuse'],
+  prefix: [
+    'v-',
+    's-analytics',
+    'support',
+    's-notifications',
+    's-edit-profile',
+    's-course-detail',
+    's-explore',
+    's-checkin',
+    's-excuse',
+    's-attendance',
+  ],
   extra: [] as string[],
   deny: [] as string[],
 };
 
 const ADMIN_ROUTES = {
-  prefix: ['a-', 's-analytics', 'support', 's-notifications', 's-edit-profile'],
+  prefix: [
+    'a-',
+    's-analytics',
+    'support',
+    's-notifications',
+    's-edit-profile',
+    's-course-detail',
+    's-explore',
+    's-attendance',
+    's-checkin',
+    'v-batches',
+    'v-attendance',
+    'v-student-record',
+    'v-excuses',
+    'v-courses',
+    'v-report',
+  ],
   extra: [] as string[],
   deny: [] as string[],
 };

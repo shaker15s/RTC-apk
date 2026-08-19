@@ -235,7 +235,7 @@ export const VolunteerAttendanceScreen: React.FC<VolunteerAttendanceScreenProps>
             <Text style={[styles.loadingText, { color: colors.mut }]}>{t('emptyRoster')}</Text>
           </View>
         ) : students.map((student) => {
-          const currentStatus = attendanceState[student.student_id] || 'present';
+          const currentStatus = attendanceState[student.student_id] || 'unmarked';
 
           return (
             <CustomCard key={student.student_id} style={styles.studentRowCard}>

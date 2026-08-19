@@ -73,6 +73,13 @@ export const VolunteerBatchesScreen: React.FC<{
   const [startSessionModal, setStartSessionModal] = useState(false);
   const [starting, setStarting] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
+  const [editModal, setEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editSchedule, setEditSchedule] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editMeeting, setEditMeeting] = useState('');
+  const [editCapacity, setEditCapacity] = useState('30');
+  const [savingBatch, setSavingBatch] = useState(false);
 
   const loadBatches = async () => {
     try {
@@ -155,6 +162,38 @@ export const VolunteerBatchesScreen: React.FC<{
       showToast(e?.message || t('sessionStartError'), 'err');
     } finally {
       setStarting(false);
+    }
+  };
+
+  const openEditBatch = () => {
+    if (!currentBatch) return;
+    setEditName(currentBatch.name || '');
+    setEditSchedule(currentBatch.schedule || '');
+    setEditLocation(currentBatch.location || '');
+    setEditMeeting(currentBatch.meeting_url || '');
+    setEditCapacity(String((currentBatch as any).capacity || 30));
+    setEditModal(true);
+  };
+
+  const handleSaveBatch = async () => {
+    if (!currentBatch) return;
+    setSavingBatch(true);
+    try {
+      await Repository.updateBatch(currentBatch.id, {
+        name: editName.trim() || currentBatch.name,
+        schedule: editSchedule.trim() || null,
+        location: editLocation.trim() || null,
+        meeting_url: editMeeting.trim() || null,
+        capacity: parseInt(editCapacity, 10) || 30,
+      });
+      RTCHaptics.success();
+      showToast(t('groupUpdated'), 'ok');
+      setEditModal(false);
+      await loadBatches();
+    } catch (e: any) {
+      showToast(e?.message || t('groupUpdateError'), 'err');
+    } finally {
+      setSavingBatch(false);
     }
   };
 
@@ -284,12 +323,23 @@ export const VolunteerBatchesScreen: React.FC<{
                 </Text>
               </View>
 
+<<<<<<< HEAD
               {!isCurrentBatchLive ? (
                 (currentBatch.sessions_done || 0) >= (currentBatch.courses?.sessions_count || 8) ? (
                   <View style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.teal + '18', borderRadius: Radii.md }}>
                     <Text style={{ color: colors.teal, fontSize: 12, fontWeight: '800' }}>✓ اكتملت جميع المحاضرات</Text>
                   </View>
                 ) : (
+=======
+              <View style={{ gap: 6, alignItems: 'flex-end' }}>
+                <CustomButton
+                  title={t('editGroup')}
+                  onPress={openEditBatch}
+                  variant="soft"
+                  size="sm"
+                />
+                {!isCurrentBatchLive ? (
+>>>>>>> origin/main
                   <CustomButton
                     title={t('startSessionCta')}
                     onPress={() => {
@@ -300,8 +350,13 @@ export const VolunteerBatchesScreen: React.FC<{
                     size="sm"
                     icon={<Play color="#FFFFFF" size={15} />}
                   />
+<<<<<<< HEAD
                 )
               ) : null}
+=======
+                ) : null}
+              </View>
+>>>>>>> origin/main
             </View>
 
             <View style={styles.batchStatsRow}>
@@ -528,6 +583,26 @@ export const VolunteerBatchesScreen: React.FC<{
                 />
               </View>
             ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Group / Batch Modal */}
+      <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('editGroup')}</Text>
+              <TouchableOpacity onPress={() => setEditModal(false)}>
+                <X color={colors.mut} size={22} />
+              </TouchableOpacity>
+            </View>
+            <TextInputField label={t('acGroupName')} value={editName} onChangeText={setEditName} />
+            <TextInputField label={t('acSchedule')} value={editSchedule} onChangeText={setEditSchedule} placeholder={t('acSchedulePlaceholder')} />
+            <TextInputField label={t('acVenue')} value={editLocation} onChangeText={setEditLocation} />
+            <TextInputField label={t('meetingUrlLabel')} value={editMeeting} onChangeText={setEditMeeting} placeholder="https://" />
+            <TextInputField label={t('capacityLabel')} value={editCapacity} onChangeText={setEditCapacity} keyboardType="numeric" />
+            <CustomButton title={t('saveGroup')} onPress={handleSaveBatch} variant="primary" size="big" loading={savingBatch} />
           </View>
         </View>
       </Modal>

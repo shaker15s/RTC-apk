@@ -15,6 +15,7 @@ import {
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { Repository, Enrollment, Course } from '../../data/repositories';
+import { RPC } from '../../data/rpc';
 import { useT } from '../../core/i18n';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
@@ -54,6 +55,7 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
   const [activeMainTab, setActiveMainTab] = useState<'my-courses' | 'explore'>('my-courses');
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [attendanceByCourse, setAttendanceByCourse] = useState<Record<string, { committed: number; total: number }>>({});
   const [filter, setFilter] = useState<'all' | 'enrolled' | 'waitlist' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('all');
@@ -63,12 +65,21 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
 
   const loadData = async () => {
     try {
-      const [myEnrollments, courses] = await Promise.all([
+      const [myEnrollments, courses, attendance] = await Promise.all([
         Repository.fetchMyEnrollments(),
         Repository.fetchCourses(true),
+        RPC.getMyAttendance().catch(() => []),
       ]);
       setEnrollments(myEnrollments);
       setAllCourses(courses);
+      const grouped: Record<string, { committed: number; total: number }> = {};
+      (attendance || []).forEach((row) => {
+        const key = row.course_id || row.course_title || 'unknown';
+        if (!grouped[key]) grouped[key] = { committed: 0, total: 0 };
+        grouped[key].total += 1;
+        if (row.status === 'present' || row.status === 'late') grouped[key].committed += 1;
+      });
+      setAttendanceByCourse(grouped);
     } catch (e) {
       showToast(t('coursesLoadError'), 'warn');
     } finally {
@@ -283,6 +294,17 @@ export const StudentCoursesScreen: React.FC<StudentCoursesScreenProps> = ({ onNa
 
                   {/* Action buttons row: Rate course & Join online */}
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        RTCHaptics.light();
+                        onNavigate('s-attendance');
+                      }}
+                      style={[styles.rateBtn, { backgroundColor: colors.teal + '14', borderColor: colors.teal + '40' }]}
+                    >
+                      <CalendarCheck color={colors.teal} size={14} />
+                      <Text style={[styles.rateBtnText, { color: colors.teal }]}>{t('viewMyAttendance')}</Text>
+                    </TouchableOpacity>
                     {course?.id ? (
                       <TouchableOpacity
                         activeOpacity={0.75}

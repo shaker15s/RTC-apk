@@ -69,6 +69,7 @@ export interface Batch {
   room?: string;
   meeting_url?: string;
   sessions_done: number;
+  capacity?: number;
   is_active: boolean;
   courses?: Course;
   branches?: { name_ar: string; slug: string };
@@ -213,7 +214,7 @@ export const Repository = {
       let q = supabase
         .from('courses')
         .select('*, branches(name_ar, slug)')
-        .eq('is_active', true)
+        .or('is_active.eq.true,is_active.is.null')
         .order('created_at', { ascending: false });
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
@@ -247,7 +248,7 @@ export const Repository = {
         .select(
           '*, courses(id, title, category, icon, color, sessions_count, max_students, description, start_date, interview_date, level), branches(name_ar, slug), profiles!instructor_id(full_name)'
         )
-        .eq('is_active', true)
+        .or('is_active.eq.true,is_active.is.null')
         .order('created_at', { ascending: false });
       if (branchId) q = q.eq('branch_id', branchId);
       const { data, error } = await q;
@@ -304,7 +305,7 @@ export const Repository = {
         .from('batches')
         .select('*, courses(id, title, category, icon, color, sessions_count, max_students), branches(name_ar)')
         .eq('instructor_id', session.user.id)
-        .eq('is_active', true);
+        .or('is_active.eq.true,is_active.is.null');
       if (error) throw mapSupabaseError(error);
       return data || [];
     } catch (e) {
@@ -428,7 +429,7 @@ export const Repository = {
       .from('batches')
       .select('*, profiles!instructor_id(full_name), branches(name_ar)')
       .eq('course_id', courseId)
-      .eq('is_active', true);
+      .or('is_active.eq.true,is_active.is.null');
 
     const ratingsRes = await supabase
       .from('course_ratings')
@@ -659,5 +660,16 @@ export const Repository = {
     const { data, error } = await supabase.from('batches').insert(payload).select().single();
     if (error) throw error;
     return data;
+  },
+
+  async updateBatch(id: string, payload: any) {
+    const { data, error } = await supabase.from('batches').update(payload).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async fetchUserDetail(userId: string) {
+    const { fallbackUserDetail } = await import('../coreFlow');
+    return fallbackUserDetail(userId);
   },
 };

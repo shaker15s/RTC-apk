@@ -39,6 +39,7 @@ export type RootStackParamList = {
   'v-excuses': undefined;
   'v-profile': undefined;
   'v-report': { sessionId?: string; sessionTitle?: string } | undefined;
+  'v-student-record': { studentId: string; studentName?: string; batchId?: string };
 
   // Admin Routes
   'a-home': undefined;
@@ -50,6 +51,7 @@ export type RootStackParamList = {
   'a-committees': undefined;
   'a-broadcast': undefined;
   'a-analytics': undefined;
+  'a-user-detail': { userId: string };
 };
 
 // Generic helper types for screens

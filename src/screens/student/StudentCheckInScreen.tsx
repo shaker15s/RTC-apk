@@ -14,6 +14,7 @@ import {
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
 import { RPC } from '../../data/rpc';
+import { extractCheckInCode } from '../../data/coreFlow';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { TextInputField } from '../../components/common/TextInputField';
@@ -49,29 +50,23 @@ export const StudentCheckInScreen: React.FC<{
     courseTitle?: string;
     instructor?: string;
     points: number;
+    already?: boolean;
   } | null>(null);
 
   const isCheckingInRef = React.useRef(false);
 
   const handleCheckIn = async (rawInput: string) => {
+<<<<<<< HEAD
     if (loading || isCheckingInRef.current) return;
     isCheckingInRef.current = true;
     let cleanCode = rawInput.trim();
     let meta: any = null;
+=======
+    const extracted = extractCheckInCode(rawInput);
+    const cleanCode = extracted.code;
+    const meta = extracted.meta;
+>>>>>>> origin/main
 
-    try {
-      if (cleanCode.startsWith('{') && cleanCode.endsWith('}')) {
-        const parsed = JSON.parse(cleanCode);
-        if (parsed.code) {
-          cleanCode = parsed.code;
-          meta = parsed;
-        }
-      }
-    } catch (e) {
-      // Use raw input
-    }
-
-    cleanCode = cleanCode.toUpperCase();
     if (!cleanCode) {
       showToast(t('emptyCodeWarn'), 'warn');
       return;
@@ -82,29 +77,28 @@ export const StudentCheckInScreen: React.FC<{
     try {
       const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
-      const msg = res?.message || t('checkInSuccessDefault');
-      showToast(t('checkInDoneToast'), 'ok');
-      
+      const already = !!res?.already;
+      showToast(already ? t('checkInAlreadyToast') : t('checkInDoneToast'), already ? 'info' : 'ok');
       setCelebrationData({
-        message: msg,
-        courseTitle: meta?.courseTitle,
-        instructor: meta?.instructor,
-        points: 15,
-      });
-
+        message: res?.message || (already ? t('checkInAlready') : t('checkInSuccessDefault')),
+        courseTitle: res?.course_title || meta?.courseTitle,
+        instructor: res?.instructor || meta?.instructor,
+        points: already ? 0 : Number(res?.points) || 0,
+        already,
       setCode('');
       // Background profile and points refresh (non-blocking for UI)
       refreshProfile().catch(() => {});
     } catch (e: any) {
       const errorMsg = e?.message || '';
-      if (errorMsg.includes('already') || errorMsg.includes('مسبقاً') || errorMsg.includes('مسجل') || errorMsg.includes('registered')) {
+      if (errorMsg.includes('already') || errorMsg.includes('مسبق') || errorMsg.includes('مسجل') || errorMsg.includes('registered')) {
         RTCHaptics.success();
-        showToast('تم تسجيل حضورك لهذه المحاضرة مسبقاً ✓', 'ok');
+        showToast(t('checkInAlreadyToast') || 'تم تسجيل حضورك مسبقاً ✓', 'ok');
         setCelebrationData({
           message: 'أنت مسجل بالفعل في هذه المحاضرة! لا داعي للقلق ✨',
           courseTitle: meta?.courseTitle,
           instructor: meta?.instructor,
           points: 0,
+          already: true,
         });
       } else {
         RTCHaptics.error();
@@ -158,7 +152,8 @@ export const StudentCheckInScreen: React.FC<{
             value={code}
             onChangeText={setCode}
             placeholder={t('codePlaceholder')}
-            maxLength={10}
+            maxLength={16}
+            autoCapitalize="characters"
             inputStyle={{
               textAlign: 'center',
               letterSpacing: 4,
@@ -209,7 +204,7 @@ export const StudentCheckInScreen: React.FC<{
             </View>
 
             <Text style={[styles.celebrateTitle, { color: colors.txt }]}>
-              تم تسجيل حضورك بنجاح! 🎉
+              {celebrationData?.already ? t('checkInAlready') : t('checkInCelebrateTitle')}
             </Text>
 
             {celebrationData?.courseTitle ? (
@@ -220,7 +215,7 @@ export const StudentCheckInScreen: React.FC<{
 
             {celebrationData?.instructor ? (
               <Text style={[styles.celebrateInstructor, { color: colors.mut }]}>
-                المدرب: {celebrationData.instructor}
+                {t('cdInstructor')} {celebrationData.instructor}
               </Text>
             ) : null}
 

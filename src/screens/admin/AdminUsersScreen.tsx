@@ -43,10 +43,11 @@ import { Radii } from '../../core/theme/tokens';
 
 export interface AdminUsersScreenProps {
   onBack: () => void;
+  onNavigate?: (screenId: string, params?: any) => void;
   initialRole?: 'all' | 'student' | 'volunteer' | 'admin';
 }
 
-export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack, initialRole = 'all' }) => {
+export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack, onNavigate, initialRole = 'all' }) => {
   const { colors, isDark, showToast } = useAppStore();
   const { t } = useT();
 
@@ -227,7 +228,14 @@ export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack, init
               user.role === 'admin' ? t('admin') : user.role === 'volunteer' ? t('auVolunteerRole') : t('student');
 
             return (
-              <CustomCard key={user.id} style={styles.userCard}>
+              <CustomCard
+                key={user.id}
+                style={styles.userCard}
+                onPress={() => {
+                  RTCHaptics.light();
+                  onNavigate?.('a-user-detail', { userId: user.id });
+                }}
+              >
                 <View style={styles.userMain}>
                   <View style={[styles.avatarBox, { backgroundColor: colors.card2 }]}>
                     {user.avatar_url ? (

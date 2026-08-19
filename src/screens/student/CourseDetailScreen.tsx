@@ -111,7 +111,10 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
     try {
       // Hard timeout so a hanging network never leaves a stuck spinner (A-7)
       const res = await withTimeout(RPC.joinBatch(batchId), 15000);
-      if (res?.status === 'waitlist') {
+      if (res?.already) {
+        setMyEnrolledBatchIds((prev) => ({ ...prev, [batchId]: res.status === 'waitlist' ? 'waitlist' : 'enrolled' }));
+        showToast(t('alreadyEnrolled'), 'info');
+      } else if (res?.status === 'waitlist') {
         setMyEnrolledBatchIds((prev) => ({ ...prev, [batchId]: 'waitlist' }));
         showToast(t('waitlisted'), 'warn');
       } else {

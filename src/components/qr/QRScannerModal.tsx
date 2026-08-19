@@ -32,9 +32,14 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ visible, onScan,
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
-    RTCHaptics.success();
-    onScan(data);
-    onClose();
+    try {
+      RTCHaptics.success();
+      onScan(String(data || ''));
+    } catch {
+      setScanned(false);
+    } finally {
+      onClose();
+    }
   };
 
   return (
@@ -61,7 +66,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({ visible, onScan,
               style={StyleSheet.absoluteFillObject}
               facing="back"
               barcodeScannerSettings={{
-                barcodeTypes: ['qr'],
+                barcodeTypes: ['qr', 'code128', 'code39'],
               }}
               onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
             />

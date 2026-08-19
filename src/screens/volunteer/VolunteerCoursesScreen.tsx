@@ -10,6 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
@@ -22,15 +23,15 @@ import { CustomButton } from '../../components/common/CustomButton';
 import { SkeletonLoader } from '../../components/feedback/SkeletonLoader';
 import { EmptyStateView } from '../../components/feedback/EmptyStateView';
 import { RTCHaptics } from '../../core/native/haptics';
-import { GraduationCap, Calendar, Users, MapPin, ChevronLeft, BookOpen, Search } from 'lucide-react-native';
+import { GraduationCap, Calendar, MapPin, ChevronLeft, BookOpen, Search, PlusCircle, X } from 'lucide-react-native';
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
 export const VolunteerCoursesScreen: React.FC<{
   onNavigate: (screenId: string, params?: any) => void;
 }> = ({ onNavigate }) => {
-  const { colors } = useAppStore();
-  const { branches } = useAuthStore();
+  const { colors, isDark, showToast } = useAppStore();
+  const { branches, profile } = useAuthStore();
   const { t } = useT();
 
   const [activeTab, setActiveTab] = useState<'my-batches' | 'all-courses'>('my-batches');
@@ -40,6 +41,13 @@ export const VolunteerCoursesScreen: React.FC<{
   const [selectedBranchId, setSelectedBranchId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [createVisible, setCreateVisible] = useState(false);
+  const [targetCourse, setTargetCourse] = useState<Course | null>(null);
+  const [groupName, setGroupName] = useState('');
+  const [groupSchedule, setGroupSchedule] = useState('');
+  const [groupLocation, setGroupLocation] = useState('');
+  const [groupMeeting, setGroupMeeting] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const loadData = async () => {
     try {
@@ -63,6 +71,45 @@ export const VolunteerCoursesScreen: React.FC<{
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
+  };
+
+  const openCreate = (course: Course) => {
+    setTargetCourse(course);
+    setGroupName(course.title);
+    setGroupSchedule('');
+    setGroupLocation('');
+    setGroupMeeting('');
+    setCreateVisible(true);
+  };
+
+  const handleCreateGroup = async () => {
+    if (!targetCourse || !groupName.trim()) {
+      showToast(t('acGroupNameHint'), 'warn');
+      return;
+    }
+    setCreating(true);
+    try {
+      await Repository.createBatch({
+        course_id: targetCourse.id,
+        name: groupName.trim(),
+        schedule: groupSchedule.trim() || null,
+        location: groupLocation.trim() || null,
+        meeting_url: groupMeeting.trim() || null,
+        instructor_id: profile?.id,
+        branch_id: targetCourse.branch_id || profile?.branch_id || branches[0]?.id,
+        is_active: true,
+        capacity: 30,
+      });
+      RTCHaptics.success();
+      showToast(t('acGroupCreated'), 'ok');
+      setCreateVisible(false);
+      setActiveTab('my-batches');
+      await loadData();
+    } catch (e: any) {
+      showToast(e?.message || t('acGroupError'), 'err');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const tabChips = [
@@ -129,9 +176,7 @@ export const VolunteerCoursesScreen: React.FC<{
                 activeOpacity={0.85}
                 onPress={() => {
                   RTCHaptics.light();
-                  if (batch.courses?.id) {
-                    onNavigate('s-course-detail', { courseId: batch.courses.id });
-                  }
+                  onNavigate('v-batches', { selectedBatchId: batch.id });
                 }}
               >
                 <CustomCard style={styles.courseCard}>
@@ -218,12 +263,18 @@ export const VolunteerCoursesScreen: React.FC<{
                       <View style={styles.footerItem}>
                         <MapPin color={colors.mut} size={14} />
                         <Text style={[styles.footerItemText, { color: colors.mut }]}>
-                          {course.branches?.name_ar || 'جميع الفروع'}
+                          {course.branches?.name_ar || t('acAllBranches')}
                         </Text>
                       </View>
                     </View>
 
-                    <ChevronLeft color={colors.primary} size={18} />
+                    <CustomButton
+                      title={t('newGroupCta')}
+                      variant="primary"
+                      size="sm"
+                      icon={<PlusCircle color="#FFFFFF" size={14} />}
+                      onPress={() => openCreate(course)}
+                    />
                   </View>
                 </CustomCard>
               </TouchableOpacity>
@@ -237,6 +288,25 @@ export const VolunteerCoursesScreen: React.FC<{
           )
         )}
       </ScrollView>
+
+      <Modal visible={createVisible} transparent animationType="slide" onRequestClose={() => setCreateVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>{t('createGroupTitle')}</Text>
+              <TouchableOpacity onPress={() => setCreateVisible(false)}>
+                <X color={colors.mut} size={22} />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ color: colors.mut, fontSize: 12 }}>{targetCourse?.title}</Text>
+            <TextInputField label={t('acGroupName')} value={groupName} onChangeText={setGroupName} />
+            <TextInputField label={t('acSchedule')} value={groupSchedule} onChangeText={setGroupSchedule} />
+            <TextInputField label={t('acVenue')} value={groupLocation} onChangeText={setGroupLocation} />
+            <TextInputField label={t('meetingUrlLabel')} value={groupMeeting} onChangeText={setGroupMeeting} />
+            <CustomButton title={t('acOpenRegistration')} onPress={handleCreateGroup} variant="teal" size="big" loading={creating} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -299,5 +369,26 @@ const styles = StyleSheet.create({
   },
   footerItemText: {
     fontSize: 11.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: Radii.xxl,
+    borderTopRightRadius: Radii.xxl,
+    padding: 24,
+    gap: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
   },
 });

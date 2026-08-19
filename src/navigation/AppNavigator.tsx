@@ -68,6 +68,7 @@ import { VolunteerExcusesScreen } from '../screens/volunteer/VolunteerExcusesScr
 import { VolunteerProfileScreen } from '../screens/volunteer/VolunteerProfileScreen';
 import { AnalyticsScreen } from '../screens/volunteer/AnalyticsScreen';
 import { SessionReportFormScreen } from '../screens/volunteer/SessionReportFormScreen';
+import { VolunteerStudentRecordScreen } from '../screens/volunteer/VolunteerStudentRecordScreen';
 
 // Admin Screens
 import { AdminHomeScreen } from '../screens/admin/AdminHomeScreen';
@@ -79,6 +80,7 @@ import { AdminBranchesScreen } from '../screens/admin/AdminBranchesScreen';
 import { AdminCommitteesScreen } from '../screens/admin/AdminCommitteesScreen';
 import { AdminBroadcastScreen } from '../screens/admin/AdminBroadcastScreen';
 import { AdminAnalyticsScreen } from '../screens/admin/AdminAnalyticsScreen';
+import { AdminUserDetailScreen } from '../screens/admin/AdminUserDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -165,6 +167,7 @@ const AUTHED_SCREENS: RouteDef[] = [
   { name: 'v-courses', component: makeScreen(VolunteerCoursesScreen) },
   { name: 'v-excuses', component: makeScreen(VolunteerExcusesScreen) },
   { name: 'v-report', component: makeScreen(SessionReportFormScreen) },
+  { name: 'v-student-record', component: makeScreen(VolunteerStudentRecordScreen) },
   { name: 'v-profile', component: makeScreen(VolunteerProfileScreen) },
   { name: 's-analytics', component: makeScreen(AnalyticsScreen) },
 

@@ -31,24 +31,50 @@ import {
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
+import { supabase } from '../../data/supabaseClient';
+
 export const AdminBranchesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
   const { t } = useT();
-  const { branches } = useAuthStore();
+  const { branches, loadBranches } = useAuthStore();
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [nameAr, setNameAr] = useState('');
   const [city, setCity] = useState(t('abDefaultCity'));
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
 
-  const handleAddBranch = () => {
+  const handleAddBranch = async () => {
     if (!nameAr.trim()) {
       showToast(t('abNameHint'), 'warn');
       return;
     }
-    showToast(t('abSaved'), 'ok');
-    setModalVisible(false);
+    setSubmitting(true);
+    try {
+      const slug = nameAr.trim().toLowerCase().replace(/\s+/g, '-');
+      const { error } = await supabase.from('branches').insert({
+        name_ar: nameAr.trim(),
+        slug,
+        city: city.trim() || 'القاهرة',
+        address: address.trim() || null,
+        phone: phone.trim() || null,
+        is_active: true,
+        sort_order: branches.length + 1,
+      });
+      if (error) throw error;
+      RTCHaptics.success();
+      showToast(t('abSaved'), 'ok');
+      setModalVisible(false);
+      setNameAr('');
+      setAddress('');
+      setPhone('');
+      await loadBranches();
+    } catch (e: any) {
+      showToast(e?.message || 'حدث خطأ أثناء حفظ الفرع', 'err');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -151,6 +177,7 @@ export const AdminBranchesScreen: React.FC<{ onBack: () => void }> = ({ onBack }
               onPress={handleAddBranch}
               variant="primary"
               size="big"
+              loading={submitting}
               style={{ marginTop: 8 }}
             />
           </View>

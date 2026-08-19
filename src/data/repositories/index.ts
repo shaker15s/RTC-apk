@@ -396,7 +396,15 @@ export const Repository = {
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw mapSupabaseError(error);
-      return data || [];
+      return ((data || []) as any[]).map((row) => ({
+        id: row.id,
+        student_id: row.student_id,
+        points: row.points !== undefined ? row.points : (row.amount ?? 0),
+        notes: row.notes || row.reason || '',
+        rule_id: row.rule_id,
+        created_at: row.created_at,
+        points_rules: row.points_rules,
+      })) as PointsLedgerItem[];
     } catch (e) {
       throw mapSupabaseError(e);
     }

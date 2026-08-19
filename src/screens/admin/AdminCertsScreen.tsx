@@ -16,6 +16,7 @@ import {
 import { useAppStore } from '../../state/appStore';
 import { Repository, CertItem, Batch } from '../../data/repositories';
 import { RPC } from '../../data/rpc';
+import { supabase } from '../../data/supabaseClient';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { TextInputField } from '../../components/common/TextInputField';
@@ -111,6 +112,8 @@ export const AdminCertsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
     setRevoking(true);
     try {
+      const { error } = await supabase.from('certs').delete().eq('id', selectedCert.id);
+      if (error) throw error;
       RTCHaptics.success();
       showToast(t('aceRevokedToast'), 'ok');
       setRevokeModalVisible(false);

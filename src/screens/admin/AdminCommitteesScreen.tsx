@@ -25,6 +25,8 @@ import { Layers, PlusCircle, Users, MapPin, X, CheckCircle2 } from 'lucide-react
 import { useT } from '../../core/i18n';
 import { Radii } from '../../core/theme/tokens';
 
+import { supabase } from '../../data/supabaseClient';
+
 export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { colors, isDark, showToast } = useAppStore();
   const { t } = useT();
@@ -34,6 +36,7 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
   const [refreshing, setRefreshing] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
 
@@ -58,13 +61,33 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
     await loadData();
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!name.trim()) {
       showToast(t('acoNameHint'), 'warn');
       return;
     }
-    showToast(t('acoSaved'), 'ok');
-    setModalVisible(false);
+    setSubmitting(true);
+    try {
+      const slug = name.trim().toLowerCase().replace(/\s+/g, '-');
+      const { error } = await supabase.from('volunteer_committees').insert({
+        name_ar: name.trim(),
+        slug,
+        description: desc.trim() || null,
+        is_active: true,
+        is_accepting: true,
+      });
+      if (error) throw error;
+      RTCHaptics.success();
+      showToast(t('acoSaved'), 'ok');
+      setModalVisible(false);
+      setName('');
+      setDesc('');
+      await loadData();
+    } catch (e: any) {
+      showToast(e?.message || 'حدث خطأ أثناء إضافة اللجنة', 'err');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -157,6 +180,7 @@ export const AdminCommitteesScreen: React.FC<{ onBack: () => void }> = ({ onBack
               onPress={handleAdd}
               variant="primary"
               size="big"
+              loading={submitting}
               style={{ marginTop: 8 }}
             />
           </View>

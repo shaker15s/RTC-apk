@@ -57,6 +57,7 @@ export const VolunteerBatchesScreen: React.FC<{
   const [batches, setBatches] = useState<Batch[]>([]);
   const [activeBatchId, setActiveBatchId] = useState<string>(initialBatchId || '');
   const [students, setStudents] = useState<BatchRosterStudent[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<BatchRosterStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -254,7 +255,7 @@ export const VolunteerBatchesScreen: React.FC<{
                     batchId: activeBatchId,
                   })
                 }
-                variant="secondary"
+                variant="soft"
                 size="mid"
                 style={{ flex: 1 }}
               />
@@ -343,46 +344,55 @@ export const VolunteerBatchesScreen: React.FC<{
         ) : students.length ? (
           <ResponsiveGrid spacing={Spacing.sm} minItemWidth={140} maxColumns={2}>
             {students.map((student) => (
-              <CustomCard key={student.student_id} style={styles.studentGridCard}>
-                <View style={styles.studentCardTop}>
-                  <View style={[styles.studentAvatar, { backgroundColor: colors.card2 }]}>
-                    {student.avatar_url ? (
-                      <Image source={{ uri: student.avatar_url }} style={styles.studentAvatarImg} />
-                    ) : (
-                      <Users color={colors.mut} size={18} />
-                    )}
-                  </View>
-                  <View style={[styles.attBadge, { backgroundColor: colors.teal + '18' }]}>
-                    <Text style={[styles.attText, { color: colors.teal }]}>
-                      {t('attendancePct', { p: student.attendance_pct || 0 })}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.studentGridName, { color: colors.txt }]} numberOfLines={1}>
-                  {student.full_name}
-                </Text>
-
-                <View style={styles.studentGridFooter}>
-                  <Text style={[styles.pointsText, { color: colors.gold }]}>
-                    ⭐ {student.points || 0} {t('ptShort')}
-                  </Text>
-                  {student.phone ? (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        RTCHaptics.light();
-                        Clipboard.setStringAsync(student.phone as string).catch(() => {});
-                        showToast(t('phoneCopied'), 'info');
-                      }}
-                    >
-                      <Text style={[styles.studentPhone, { color: colors.mut }]}>
-                        {maskPhone(student.phone)} 📋
+              <TouchableOpacity
+                key={student.student_id}
+                activeOpacity={0.8}
+                onPress={() => {
+                  RTCHaptics.light();
+                  setSelectedStudent(student);
+                }}
+              >
+                <CustomCard style={styles.studentGridCard}>
+                  <View style={styles.studentCardTop}>
+                    <View style={[styles.studentAvatar, { backgroundColor: colors.card2 }]}>
+                      {student.avatar_url ? (
+                        <Image source={{ uri: student.avatar_url }} style={styles.studentAvatarImg} />
+                      ) : (
+                        <Users color={colors.mut} size={18} />
+                      )}
+                    </View>
+                    <View style={[styles.attBadge, { backgroundColor: colors.teal + '18' }]}>
+                      <Text style={[styles.attText, { color: colors.teal }]}>
+                        {t('attendancePct', { p: student.attendance_pct || 0 })}
                       </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              </CustomCard>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.studentGridName, { color: colors.txt }]} numberOfLines={1}>
+                    {student.full_name}
+                  </Text>
+
+                  <View style={styles.studentGridFooter}>
+                    <Text style={[styles.pointsText, { color: colors.gold }]}>
+                      ⭐ {student.points || 0} {t('ptShort')}
+                    </Text>
+                    {student.phone ? (
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          RTCHaptics.light();
+                          Clipboard.setStringAsync(student.phone as string).catch(() => {});
+                          showToast(t('phoneCopied'), 'info');
+                        }}
+                      >
+                        <Text style={[styles.studentPhone, { color: colors.mut }]}>
+                          {maskPhone(student.phone)} 📋
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </CustomCard>
+              </TouchableOpacity>
             ))}
           </ResponsiveGrid>
         ) : (
@@ -424,6 +434,100 @@ export const VolunteerBatchesScreen: React.FC<{
               loading={starting}
               icon={<Play color="#FFFFFF" size={18} />}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Student Attendance & Profile Modal */}
+      <Modal
+        visible={!!selectedStudent}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedStudent(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.txt }]}>سجل حضور وتفاصيل المتدرب 🎓</Text>
+              <TouchableOpacity onPress={() => setSelectedStudent(null)}>
+                <X color={colors.mut} size={22} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedStudent ? (
+              <View style={{ gap: 14, marginVertical: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={[styles.studentAvatar, { width: 52, height: 52, borderRadius: 16, backgroundColor: colors.teal + '18' }]}>
+                    {selectedStudent.avatar_url ? (
+                      <Image source={{ uri: selectedStudent.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 16 }} />
+                    ) : (
+                      <Users color={colors.teal} size={24} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.txt }}>
+                      {selectedStudent.full_name}
+                    </Text>
+                    {selectedStudent.phone ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          RTCHaptics.light();
+                          Clipboard.setStringAsync(selectedStudent.phone as string).catch(() => {});
+                          showToast(t('phoneCopied'), 'info');
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
+                      >
+                        <Phone color={colors.mut} size={13} />
+                        <Text style={{ fontSize: 13, color: colors.teal, fontWeight: '600' }}>
+                          {selectedStudent.phone} (نسخ 📋)
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </View>
+
+                {/* Metrics Cards */}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1, backgroundColor: colors.teal + '14', padding: 12, borderRadius: Radii.lg, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: colors.teal }}>
+                      {selectedStudent.attendance_pct || 0}%
+                    </Text>
+                    <Text style={{ fontSize: 11, color: colors.mut, marginTop: 2 }}>نسبة الحضور</Text>
+                  </View>
+
+                  <View style={{ flex: 1, backgroundColor: colors.gold + '14', padding: 12, borderRadius: Radii.lg, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: colors.gold }}>
+                      ⭐ {selectedStudent.points || 0}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: colors.mut, marginTop: 2 }}>مجموع النقاط</Text>
+                  </View>
+
+                  <View style={{ flex: 1, backgroundColor: colors.primarySoft, padding: 12, borderRadius: Radii.lg, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: colors.primary }}>
+                      {selectedStudent.sessions_done || 0}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: colors.mut, marginTop: 2 }}>محاضرات مكتملة</Text>
+                  </View>
+                </View>
+
+                {/* Status indicator */}
+                <View style={{ backgroundColor: colors.card2, padding: 12, borderRadius: Radii.md, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <CheckCircle2 color={(selectedStudent.attendance_pct || 0) >= 75 ? colors.teal : colors.amber} size={18} />
+                  <Text style={{ fontSize: 12.5, color: colors.txt, flex: 1 }}>
+                    {(selectedStudent.attendance_pct || 0) >= 75
+                      ? 'مؤهل للحصول على الشهادة الرسمية بتفوق ✓'
+                      : 'يحتاج لحضور المزيد من المحاضرات للوصول لنسبة 75%'}
+                  </Text>
+                </View>
+
+                <CustomButton
+                  title="إغلاق السجل"
+                  onPress={() => setSelectedStudent(null)}
+                  variant="teal"
+                  size="big"
+                />
+              </View>
+            ) : null}
           </View>
         </View>
       </Modal>

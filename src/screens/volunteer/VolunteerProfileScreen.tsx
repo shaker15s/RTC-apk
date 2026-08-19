@@ -38,6 +38,8 @@ import {
   Share2,
 } from 'lucide-react-native';
 import { EasterEggModal } from '../../components/feedback/EasterEggModal';
+import { useT } from '../../core/i18n';
+import { Radii } from '../../core/theme/tokens';
 
 let verTaps = 0;
 let lastVerTap = 0;

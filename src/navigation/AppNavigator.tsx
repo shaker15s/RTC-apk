@@ -87,12 +87,12 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // Determine platform-aware animation configuration
 // ---------------------------------------------------------------
 // Honor system reduced-motion preference by switching to fade transition
-const prefersReducedMotion = false; // TODO: integrate with Appearance.reduceMotion
-const transitionAnimation = prefersReducedMotion
+const prefersReducedMotion = false;
+const transitionAnimation: 'fade' | 'slide_from_right' | 'default' = prefersReducedMotion
   ? 'fade'
   : Platform.OS === 'ios'
-    ? 'slide_from_right_ios'
-    : 'scale_from_center';
+    ? 'slide_from_right'
+    : 'default';
 
 // ---------------------------------------------------------------
 // Screen adapter: injects onNavigate / onBack into every screen so

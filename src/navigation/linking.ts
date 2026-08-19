@@ -22,9 +22,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
       onboarding: 'auth',
       verify: {
         path: 'verify',
-        parse: (param: any) => ({
-          serial: param.serial,
-        }),
+        parse: {
+          serial: (serial: string) => serial,
+        },
       },
       changelog: 'changelog',
       support: 'support',

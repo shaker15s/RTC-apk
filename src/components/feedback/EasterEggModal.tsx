@@ -79,7 +79,7 @@ export const EasterEggModal: React.FC<EasterEggModalProps> = ({
   useEffect(() => {
     if (visible) {
       try {
-        RTCHaptics.notificationSuccess();
+        RTCHaptics.success();
       } catch (e) {}
       scaleAnim.setValue(0.3);
       Animated.spring(scaleAnim, {

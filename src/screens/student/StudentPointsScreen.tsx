@@ -79,13 +79,20 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
         t('shareAppBody')
       );
       if (shared) {
+        if (userBadgeIds.includes('social')) {
+          RTCHaptics.success();
+          showToast('شكراً لمشاركة مسار RTC مع أصدقائك! ❤️ (حصلت على الشارة مسبقاً)', 'ok');
+          return;
+        }
         await RPC.claimSocialBadge();
         RTCHaptics.success();
-        // Points amount comes from the backend — no hardcoded claim (F-6)
         showToast('حصلت على شارة نجم سوشيال! 🎉', 'ok');
         await refreshProfile();
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.message?.includes('already') || e?.message?.includes('مسبقاً')) {
+        showToast('حصلت على هذه الشارة مسبقاً ✨', 'info');
+      }
     } finally {
       setSharing(false);
     }

@@ -135,6 +135,8 @@ eas build --platform ios --profile production
 | **Expo Go** (من بلاي ستور) | بس عبر السيرفر المحلي `npx expo start` — التعديلات بتوصل فورياً (Fast Refresh). **`eas update` مش بيأثر على Expo Go إطلاقاً.** |
 | **APK حقيقي** (من `eas build`) | تحديثات OTA من فرع `preview` (القناة متظبطة في eas.json). التحديث بيتنزّل في الخلفية عند فتح التطبيق، ويتفعّل عند إعادة الفتح. |
 
+> ⚠️ **سبب إن التحديث مكانش بيوصل:** ملف CI (`.github/workflows/ci.yml`) لسه شايل `working-directory: ./rtc_mobile` والمجلد ده مش موجود. غيّر المسار لجذر المشروع (احذف السطر) عشان `eas update` يشتغل بعد الدمج على `main`.
+
 **القواعد الذهبية:**
 1. تعديل على شاشات/منطق (JS/TSX) → `npx eas-cli update --branch preview --message "..."` كفاية.
 2. تعديل على `app.json` أو أي حاجة نيتف → مطلوب `eas build` جديد.

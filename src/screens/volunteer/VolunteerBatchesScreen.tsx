@@ -323,14 +323,6 @@ export const VolunteerBatchesScreen: React.FC<{
                 </Text>
               </View>
 
-<<<<<<< HEAD
-              {!isCurrentBatchLive ? (
-                (currentBatch.sessions_done || 0) >= (currentBatch.courses?.sessions_count || 8) ? (
-                  <View style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.teal + '18', borderRadius: Radii.md }}>
-                    <Text style={{ color: colors.teal, fontSize: 12, fontWeight: '800' }}>✓ اكتملت جميع المحاضرات</Text>
-                  </View>
-                ) : (
-=======
               <View style={{ gap: 6, alignItems: 'flex-end' }}>
                 <CustomButton
                   title={t('editGroup')}
@@ -339,24 +331,24 @@ export const VolunteerBatchesScreen: React.FC<{
                   size="sm"
                 />
                 {!isCurrentBatchLive ? (
->>>>>>> origin/main
-                  <CustomButton
-                    title={t('startSessionCta')}
-                    onPress={() => {
-                      RTCHaptics.light();
-                      setStartSessionModal(true);
-                    }}
-                    variant="teal"
-                    size="sm"
-                    icon={<Play color="#FFFFFF" size={15} />}
-                  />
-<<<<<<< HEAD
-                )
-              ) : null}
-=======
+                  (currentBatch.sessions_done || 0) >= (currentBatch.courses?.sessions_count || 8) ? (
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.teal + '18', borderRadius: Radii.md }}>
+                      <Text style={{ color: colors.teal, fontSize: 12, fontWeight: '800' }}>✓ اكتملت جميع المحاضرات</Text>
+                    </View>
+                  ) : (
+                    <CustomButton
+                      title={t('startSessionCta')}
+                      onPress={() => {
+                        RTCHaptics.light();
+                        setStartSessionModal(true);
+                      }}
+                      variant="teal"
+                      size="sm"
+                      icon={<Play color="#FFFFFF" size={15} />}
+                    />
+                  )
                 ) : null}
               </View>
->>>>>>> origin/main
             </View>
 
             <View style={styles.batchStatsRow}>

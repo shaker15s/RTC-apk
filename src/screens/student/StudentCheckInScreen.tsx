@@ -56,16 +56,11 @@ export const StudentCheckInScreen: React.FC<{
   const isCheckingInRef = React.useRef(false);
 
   const handleCheckIn = async (rawInput: string) => {
-<<<<<<< HEAD
     if (loading || isCheckingInRef.current) return;
     isCheckingInRef.current = true;
-    let cleanCode = rawInput.trim();
-    let meta: any = null;
-=======
     const extracted = extractCheckInCode(rawInput);
     const cleanCode = extracted.code;
     const meta = extracted.meta;
->>>>>>> origin/main
 
     if (!cleanCode) {
       showToast(t('emptyCodeWarn'), 'warn');
@@ -85,6 +80,7 @@ export const StudentCheckInScreen: React.FC<{
         instructor: res?.instructor || meta?.instructor,
         points: already ? 0 : Number(res?.points) || 0,
         already,
+      });
       setCode('');
       // Background profile and points refresh (non-blocking for UI)
       refreshProfile().catch(() => {});

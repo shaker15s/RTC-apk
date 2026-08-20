@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Modal, Linking, Alert } from 'react-native';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
+import { RPC } from '../../data/rpc';
 import { CustomCard } from '../../components/common/CustomCard';
 import { GlassHeader } from '../../components/layout/GlassHeader';
 import { SwitchToggle } from '../../components/common/SwitchToggle';
@@ -39,14 +40,49 @@ import { Radii } from '../../core/theme/tokens';
 export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => void }> = ({ onNavigate }) => {
   const { colors, isDark, toggleDarkMode, language, setAppLanguage, showToast } = useAppStore();
   const { t } = useT();
-  const { profile, signOut } = useAuthStore();
+  const { profile, signOut, refreshProfile } = useAuthStore();
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  const userBadgeIds = profile?.badge_ids || ['welcome'];
+  const hasSocialBadge = userBadgeIds.includes('social');
 
   const handleLogout = async () => {
     RTCHaptics.light();
     setLogoutModalVisible(false);
     await signOut();
+  };
+
+  const handleShareApp = async () => {
+    setSharing(true);
+    try {
+      await RTCSharing.shareText(
+        t('shareAppMessage'),
+        t('shareAppBody')
+      );
+      
+      // حتى لو مخدش الشارة قبل كده، ننادي الـ RPC عشان نسجلها ونعطيه النقاط لو متاح
+      const res: any = await RPC.claimSocialBadge();
+      
+      if (res && res.success === false) {
+        if (!hasSocialBadge) {
+          // لو السيرفر شافها قديمة بس عندنا مش محدثة
+          showToast(res.message || 'لقد حصلت على هذه المكافأة مسبقاً', 'warn');
+        } else {
+          showToast('شكراً لمشاركتك التطبيق!', 'ok');
+        }
+      } else {
+        RTCHaptics.success();
+        showToast('حصلت على شارة نجم سوشيال ونقاط المشاركة! 🎉', 'ok');
+      }
+      
+      await refreshProfile();
+    } catch (e: any) {
+      showToast(e?.message || 'حدث خطأ أثناء المشاركة', 'err');
+    } finally {
+      setSharing(false);
+    }
   };
 
   const getRoleLabel = () => {
@@ -116,7 +152,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
             <View style={[styles.statDivider, { backgroundColor: colors.line }]} />
             <View style={styles.statCell}>
               <Text style={[styles.statVal, { color: colors.gold }]}>
-                {profile?.badge_ids?.length || 1}
+                {userBadgeIds.length}
               </Text>
               <Text style={[styles.statLbl, { color: colors.mut }]}>{t('spfBadges')}</Text>
             </View>
@@ -153,15 +189,12 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
 
           <View style={[styles.menuDivider, { backgroundColor: colors.line }]} />
 
-          {/* LIVE language toggle (v100.3.0): switches the whole
-              translated UI instantly via the reactive i18n engine. */}
+          {/* LIVE language toggle */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => {
               RTCHaptics.selection();
               const next = language === 'ar' ? 'en' : 'ar';
-              // Instant switch when direction stays the same; otherwise
-              // confirm, apply the new direction and reload (v100.4.0d).
               if (!layoutNeedsReload(next)) {
                 setAppLanguage(next);
                 return;
@@ -201,7 +234,7 @@ export const StudentProfileScreen: React.FC<{ onNavigate: (screenId: string) => 
             activeOpacity={0.7}
             onPress={async () => {
               RTCHaptics.selection();
-              await RTCSharing.shareText(t('shareAppMessage'), t('shareAppBody'));
+              await handleShareApp();
             }}
             style={styles.menuItem}
           >
@@ -391,38 +424,6 @@ const styles = StyleSheet.create({
   },
   editProfileText: {
     fontSize: 13,
-    fontWeight: '700',
-  },
-  roleSwitchCard: {
-    padding: 16,
-    gap: 12,
-    borderWidth: 1.5,
-  },
-  roleSwitchTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  roleSwitchSubtitle: {
-    fontSize: 11.5,
-    lineHeight: 16,
-  },
-  roleSwitchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  roleSwitchBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: Radii.md,
-    borderWidth: 1,
-  },
-  roleSwitchBtnText: {
-    fontSize: 12.5,
     fontWeight: '700',
   },
   menuCard: {

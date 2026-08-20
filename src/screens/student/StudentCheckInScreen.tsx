@@ -78,26 +78,30 @@ export const StudentCheckInScreen: React.FC<{
     try {
       const res = await withTimeout(RPC.studentCheckIn(cleanCode), 15000);
       RTCHaptics.success();
+      
+      // استقبال البيانات الراجعة من الـ RPC لو موجودة (مثل اسم الكورس والمدرب والنقاط)
       const msg = res?.message || t('checkInSuccessDefault');
+      const earnedPoints = res?.points || 15;
+      
       showToast(t('checkInDoneToast'), 'ok');
       
       setCelebrationData({
         message: msg,
-        courseTitle: meta?.courseTitle,
-        instructor: meta?.instructor,
-        points: 15,
+        courseTitle: res?.courseTitle || meta?.courseTitle,
+        instructor: res?.instructor || meta?.instructor,
+        points: earnedPoints,
       });
 
       await refreshProfile();
       setCode('');
     } catch (e: any) {
-      // تعديل: التعامل بمرونة لو الحضور اتسجل فعلاً قبل كدة
       const errorMsg = e?.message || '';
-      if (errorMsg.includes('already') || errorMsg.includes('مسبقاً')) {
+      // التعامل بمرونة لو الحضور اتسجل فعلاً قبل كدة من السيرفر أو قاعدة البيانات
+      if (errorMsg.includes('already') || errorMsg.includes('مسبقاً') || errorMsg.includes('duplicate')) {
         RTCHaptics.success();
         showToast('تم تسجيل حضورك لهذه المحاضرة مسبقاً', 'ok');
         setCelebrationData({
-          message: 'تم تسجيل حضورك مسبقاً في هذه المحاضرة',
+          message: 'تم تسجيل حضورك مسبقاً في هذه المحاضرة بالفعل',
           courseTitle: meta?.courseTitle,
           instructor: meta?.instructor,
           points: 0,
@@ -214,7 +218,7 @@ export const StudentCheckInScreen: React.FC<{
             ) : null}
 
             {celebrationData?.instructor ? (
-              <Text style={[styles.celebrateInstructor, { color: colors.mut }]}>
+              <Text style={[styles.celebrateTemplateInstructor, { color: colors.mut }]}>
                 المدرب: {celebrationData.instructor}
               </Text>
             ) : null}
@@ -262,41 +266,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 16,
   },
-  successCard: {
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 2,
-    gap: 8,
-  },
-  successIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  successTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  successMessage: {
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  pointsEarnedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radii.full,
-    marginTop: 6,
-  },
-  pointsEarnedText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
   qrActionCard: {
     padding: 22,
     alignItems: 'center',
@@ -318,7 +287,7 @@ const styles = StyleSheet.create({
   qrCardSubtitle: {
     fontSize: 13,
     textAlign: 'center',
-    lineHeight: 19,
+    lineLine: 19,
     maxWidth: 290,
   },
   orRow: {
@@ -364,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.xxl,
     padding: 28,
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWait: 1.5,
     gap: 12,
   },
   celebrateIconCircle: {
@@ -385,7 +354,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  celebrateInstructor: {
+  celebrateTemplateInstructor: {
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',

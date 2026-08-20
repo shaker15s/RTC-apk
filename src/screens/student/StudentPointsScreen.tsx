@@ -65,21 +65,36 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
   const streak = profile?.streak || 0;
   const userBadgeIds = profile?.badge_ids || ['welcome'];
 
+  // هل الطالب أخد شارة السوشيال قبل كده؟
+  const hasSocialBadge = userBadgeIds.includes('social');
+
   const handleShareApp = async () => {
+    if (hasSocialBadge) {
+      showToast('لقد حصلت على مكافأة المشاركة مسبقاً!', 'warn');
+      return;
+    }
+
     setSharing(true);
     try {
       const shared = await RTCSharing.shareText(
         t('shareAppMessage'),
         t('shareAppBody')
       );
-      if (shared) {
-        await RPC.claimSocialBadge();
+      
+      // حتى لو الـ shared رجعت true (لأن نظام الموبايل بيعتبرها فتحت النافذة)
+      // بنعتمد على الـ Backend في حماية منع التكرار اللي عملناها في Supabase SQL
+      const res: any = await RPC.claimSocialBadge();
+      
+      if (res && res.success === false) {
+        showToast(res.message || 'لقد حصلت على هذه المكافأة مسبقاً', 'warn');
+      } else {
         RTCHaptics.success();
-        // Points amount comes from the backend — no hardcoded claim (F-6)
-        showToast('حصلت على شارة نجم سوشيال! 🎉', 'ok');
-        await refreshProfile();
+        showToast('حصلت على شارة نجم سوشيال ونقاط المشاركة! 🎉', 'ok');
       }
-    } catch (e) {
+      
+      await refreshProfile();
+    } catch (e: any) {
+      showToast(e?.message || 'حدث خطأ أثناء المشاركة', 'err');
     } finally {
       setSharing(false);
     }
@@ -150,15 +165,27 @@ export const StudentPointsScreen: React.FC<{ onNavigate: (screenId: string) => v
             style={{ flex: 1 }}
           />
 
-          <CustomButton
-            title={t('spShareBtn')}
-            onPress={handleShareApp}
-            variant="primary"
-            size="mid"
-            loading={sharing}
-            icon={<Share2 color="#FFFFFF" size={18} />}
-            style={{ flex: 1 }}
-          />
+          {/* زر المشاركة يتحول أو يتغير شكله لو الطالب أخد الشارة بالفعل */}
+          {!hasSocialBadge ? (
+            <CustomButton
+              title={t('spShareBtn')}
+              onPress={handleShareApp}
+              variant="primary"
+              size="mid"
+              loading={sharing}
+              icon={<Share2 color="#FFFFFF" size={18} />}
+              style={{ flex: 1 }}
+            />
+          ) : (
+            <CustomButton
+              title="تمت المشاركة ✓"
+              disabled={true}
+              variant="outline"
+              size="mid"
+              icon={<CheckCircle2 color={colors.teal} size={18} />}
+              style={{ flex: 1, opacity: 0.7 }}
+            />
+          )}
         </View>
 
         {/* Badges Matrix */}

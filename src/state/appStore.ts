@@ -3,6 +3,7 @@
  */
 import { create } from 'zustand';
 import NetInfo from '@react-native-community/netinfo';
+import { Platform } from 'react-native';
 import { LightColors, DarkColors, ThemeColors } from '../core/theme/tokens';
 import { LanguageKey, setLanguage as setI18nLanguage } from '../core/i18n';
 import { RTCSecureStorage } from '../core/storage/secureStorage';
@@ -87,6 +88,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   initNetworkListener: () => {
+    if (Platform.OS === 'web') {
+      const handleOnline = () => set({ isOnline: true });
+      const handleOffline = () => set({ isOnline: false });
+      
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      
+      // Set initial state
+      if (typeof navigator !== 'undefined') {
+        set({ isOnline: navigator.onLine });
+      }
+      
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+
     // REAL connectivity watcher (fixes P0-3): NetInfo events drive
     // isOnline, which drives the OfflineBanner.
     const applyState = (state: { isConnected: boolean | null; isInternetReachable: boolean | null }) => {

@@ -350,40 +350,67 @@ export const StudentAttendanceScreen: React.FC<{
                   {/* Session rows for this course */}
                   {g.records.map((rec) => {
                     const color = colors[STATUS_COLORS[rec.status] || 'red'];
-                    const dateStr = rec.session_date
-                      ? new Date(rec.session_date).toLocaleDateString(dateLocale(), {
+                    const dateObj = rec.session_date ? new Date(rec.session_date) : null;
+                    const dateStr = dateObj
+                      ? dateObj.toLocaleDateString('ar-EG', {
+                          weekday: 'short',
+                          year: 'numeric',
                           month: 'short',
                           day: 'numeric',
+                        })
+                      : 'تاريخ غير محدد';
+                    const timeStr = dateObj
+                      ? dateObj.toLocaleTimeString('ar-EG', {
                           hour: '2-digit',
                           minute: '2-digit',
                         })
                       : '';
                     const statusIcon = {
-                      present: <CheckCircle2 color={color} size={18} />,
-                      late: <Clock color={color} size={18} />,
-                      absent: <XCircle color={color} size={18} />,
-                      excused: <ShieldCheck color={color} size={18} />,
+                      present: <CheckCircle2 color={color} size={20} />,
+                      late: <Clock color={color} size={20} />,
+                      absent: <XCircle color={color} size={20} />,
+                      excused: <ShieldCheck color={color} size={20} />,
                     }[rec.status];
+
+                    const statusArabic = {
+                      present: 'حاضر ✓',
+                      late: 'متأخر ⏰',
+                      absent: 'غائب ✕',
+                      excused: 'عذر مقبول 📝',
+                    }[rec.status] || rec.status;
 
                     return (
                       <View
                         key={rec.session_id || `${rec.session_date}-${rec.status}`}
-                        style={[styles.sessionRow, { borderBottomColor: colors.line }]}
+                        style={[
+                          styles.sessionCard,
+                          {
+                            backgroundColor: colors.card,
+                            borderColor: color + '40',
+                          },
+                        ]}
                       >
                         <View style={[styles.statusCircle, { backgroundColor: color + '18' }]}>
                           {statusIcon}
                         </View>
                         <View style={styles.sessionInfo}>
-                          <Text style={[styles.sessionTitle, { color: colors.txt }]} numberOfLines={1}>
-                            {rec.session_title || t('lectureWord')}
+                          <Text style={[styles.coursePillText, { color: colors.primary }]}>
+                            {rec.course_title || g.title || 'دورة تدريبية'}
                           </Text>
-                          {dateStr ? <Text style={[styles.dateText, { color: colors.mut }]}>{dateStr}</Text> : null}
+                          <Text style={[styles.sessionTitle, { color: colors.txt }]} numberOfLines={1}>
+                            {rec.session_title || 'محاضرة تدريبية'}
+                          </Text>
+                          <Text style={[styles.dateText, { color: colors.mut }]}>
+                            📅 {dateStr} {timeStr ? `• ⏰ ${timeStr}` : ''}
+                          </Text>
                         </View>
                         <View style={styles.sessionRight}>
-                          <Text style={[styles.statusText, { color }]}>{t(rec.status)}</Text>
+                          <View style={[styles.statusBadge, { backgroundColor: color + '18', borderColor: color + '40' }]}>
+                            <Text style={[styles.statusText, { color }]}>{statusArabic}</Text>
+                          </View>
                           {typeof rec.points === 'number' && rec.points > 0 ? (
                             <Text style={[styles.pointsText, { color: colors.gold }]}>
-                              {t('plusPoints', { p: rec.points })}
+                              +{rec.points} نقطة
                             </Text>
                           ) : null}
                         </View>
@@ -397,40 +424,69 @@ export const StudentAttendanceScreen: React.FC<{
               <View style={styles.courseSection}>
                 {filtered.map((rec) => {
                   const color = colors[STATUS_COLORS[rec.status] || 'red'];
-                  const dateStr = rec.session_date
-                    ? new Date(rec.session_date).toLocaleDateString(dateLocale(), {
-                        weekday: 'long',
+                  const dateObj = rec.session_date ? new Date(rec.session_date) : null;
+                  const dateStr = dateObj
+                    ? dateObj.toLocaleDateString('ar-EG', {
+                        weekday: 'short',
+                        year: 'numeric',
                         month: 'short',
                         day: 'numeric',
                       })
+                    : 'تاريخ غير محدد';
+                  const timeStr = dateObj
+                    ? dateObj.toLocaleTimeString('ar-EG', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
                     : '';
+
+                  const statusArabic = {
+                    present: 'حاضر ✓',
+                    late: 'متأخر ⏰',
+                    absent: 'غائب ✕',
+                    excused: 'عذر مقبول 📝',
+                  }[rec.status] || rec.status;
+
                   return (
                     <View
                       key={rec.session_id || `${rec.session_date}-${rec.status}`}
-                      style={[styles.sessionRow, { borderBottomColor: colors.line }]}
+                      style={[
+                        styles.sessionCard,
+                        {
+                          backgroundColor: colors.card,
+                          borderColor: color + '40',
+                        },
+                      ]}
                     >
                       <View style={[styles.statusCircle, { backgroundColor: color + '18' }]}>
                         {rec.status === 'present' ? (
-                          <CheckCircle2 color={color} size={18} />
+                          <CheckCircle2 color={color} size={20} />
                         ) : rec.status === 'late' ? (
-                          <Clock color={color} size={18} />
+                          <Clock color={color} size={20} />
                         ) : rec.status === 'excused' ? (
-                          <ShieldCheck color={color} size={18} />
+                          <ShieldCheck color={color} size={20} />
                         ) : (
-                          <XCircle color={color} size={18} />
+                          <XCircle color={color} size={20} />
                         )}
                       </View>
                       <View style={styles.sessionInfo}>
-                        <Text style={[styles.sessionTitle, { color: colors.txt }]} numberOfLines={1}>
-                          {rec.course_title || rec.session_title || t('lectureWord')}
+                        <Text style={[styles.coursePillText, { color: colors.primary }]}>
+                          {rec.course_title || 'دورة تدريبية'}
                         </Text>
-                        {dateStr ? <Text style={[styles.dateText, { color: colors.mut }]}>{dateStr}</Text> : null}
+                        <Text style={[styles.sessionTitle, { color: colors.txt }]} numberOfLines={1}>
+                          {rec.session_title || 'محاضرة تدريبية'}
+                        </Text>
+                        <Text style={[styles.dateText, { color: colors.mut }]}>
+                          📅 {dateStr} {timeStr ? `• ⏰ ${timeStr}` : ''}
+                        </Text>
                       </View>
                       <View style={styles.sessionRight}>
-                        <Text style={[styles.statusText, { color }]}>{t(rec.status)}</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: color + '18', borderColor: color + '40' }]}>
+                          <Text style={[styles.statusText, { color }]}>{statusArabic}</Text>
+                        </View>
                         {typeof rec.points === 'number' && rec.points > 0 ? (
                           <Text style={[styles.pointsText, { color: colors.gold }]}>
-                            {t('plusPoints', { p: rec.points })}
+                            +{rec.points} نقطة
                           </Text>
                         ) : null}
                       </View>
@@ -469,21 +525,28 @@ const styles = StyleSheet.create({
   miniBadgeText: { fontSize: 10, fontWeight: '800' },
   progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressBar: { height: '100%', borderRadius: 3 },
-  sessionRow: {
+  sessionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: Radii.md,
-    paddingHorizontal: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: Radii.xl,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  statusCircle: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  sessionInfo: { flex: 1, gap: 2 },
-  sessionTitle: { fontSize: 13.5, fontWeight: '700' },
-  dateText: { fontSize: 11 },
-  sessionRight: { alignItems: 'flex-end', gap: 3 },
-  statusText: { fontSize: 12, fontWeight: '800' },
-  pointsText: { fontSize: 11, fontWeight: '700' },
+  statusCircle: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  sessionInfo: { flex: 1, gap: 3 },
+  coursePillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.2 },
+  sessionTitle: { fontSize: 15, fontWeight: '800' },
+  dateText: { fontSize: 11.5, fontWeight: '500' },
+  sessionRight: { alignItems: 'flex-end', gap: 6 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radii.full, borderWidth: 1 },
+  statusText: { fontSize: 11, fontWeight: '800' },
+  pointsText: { fontSize: 11.5, fontWeight: '800' },
 });

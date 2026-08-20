@@ -135,6 +135,25 @@ export default function App() {
       }
     });
 
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const href = window.location.href;
+      if (href.includes('code=') || href.includes('access_token')) {
+        handleOAuthReturnUrl(href).then(() => {
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        });
+      }
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+    }
+
     // 5. Automatic OTA Update check — check and apply instantly
     if (!__DEV__) {
       import('expo-updates')

@@ -4,6 +4,7 @@
  * Automatically chunks values larger than 1800 bytes to stay safely under
  * Android's 2048-byte SharedPreferences limit.
  */
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 const CHUNK_SIZE = 1800;
@@ -11,6 +12,14 @@ const memoryFallback: Record<string, string> = {};
 
 export const RTCSecureStorage = {
   async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return window.localStorage.getItem(key);
+        }
+      } catch (e) {}
+      return memoryFallback[key] || null;
+    }
     try {
       // 1. Check if item was stored as multi-chunk
       const manifest = await SecureStore.getItemAsync(`${key}__chunks`);
@@ -37,6 +46,16 @@ export const RTCSecureStorage = {
   },
 
   async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+          return;
+        }
+      } catch (e) {}
+      memoryFallback[key] = value;
+      return;
+    }
     try {
       // If value is small, store directly
       if (value.length <= CHUNK_SIZE) {
@@ -67,6 +86,15 @@ export const RTCSecureStorage = {
   },
 
   async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
+      } catch (e) {}
+      delete memoryFallback[key];
+      return;
+    }
     try {
       await this.cleanChunks(key);
       await SecureStore.deleteItemAsync(key).catch(() => {});
@@ -90,13 +118,24 @@ export const RTCSecureStorage = {
   },
 
   async clear(): Promise<void> {
+    const supabaseKeys = [
+      'supabase-auth-token',
+      'supabase.auth.token',
+      'sb-jwhedqmszbdougsqqmhv-auth-token',
+    ];
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          for (const key of supabaseKeys) {
+            window.localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {}
+      for (const k in memoryFallback) delete memoryFallback[k];
+      return;
+    }
     try {
       // Clear the known Supabase session keys from SecureStore
-      const supabaseKeys = [
-        'supabase-auth-token',
-        'supabase.auth.token',
-        'sb-jwhedqmszbdougsqqmhv-auth-token',
-      ];
       for (const key of supabaseKeys) {
         await this.removeItem(key);
       }

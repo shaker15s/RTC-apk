@@ -8,7 +8,7 @@
  * Callers show a confirmation dialog first (the language switch
  * itself is instant when no direction change is needed).
  */
-import { I18nManager, DevSettings } from 'react-native';
+import { I18nManager, DevSettings, Platform } from 'react-native';
 import * as Updates from 'expo-updates';
 import type { LanguageKey } from './index';
 
@@ -26,8 +26,13 @@ export function layoutNeedsReload(nextLang: LanguageKey): boolean {
  * natively across reloads/restarts.
  */
 export function applyLayoutDirection(nextLang: LanguageKey): void {
+  const isRTL = nextLang === 'ar';
+  if (Platform.OS === 'web') {
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.lang = isRTL ? 'ar' : 'en';
+  }
   I18nManager.allowRTL(true);
-  I18nManager.forceRTL(nextLang === 'ar');
+  I18nManager.forceRTL(isRTL);
 }
 
 /**
@@ -36,6 +41,10 @@ export function applyLayoutDirection(nextLang: LanguageKey): void {
  * DevSettings fallback for Expo Go.
  */
 export function reloadApp(): void {
+  if (Platform.OS === 'web') {
+    window.location.reload();
+    return;
+  }
   Updates.reloadAsync().catch(() => {
     if (__DEV__) {
       DevSettings.reload();

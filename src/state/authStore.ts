@@ -157,6 +157,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ isLoading: true, error: null });
     try {
+      if (Platform.OS === 'web') {
+        const redirectUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: {
+              prompt: 'select_account',
+              access_type: 'offline',
+            },
+          },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+        return;
+      }
+
       // Build the redirect URL for the standalone Android/iOS app
       // On standalone builds, Linking.createURL produces: org.resala.rtc.masar://auth
       const redirectUrl = Linking.createURL('auth');

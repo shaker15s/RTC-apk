@@ -90,11 +90,14 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // ---------------------------------------------------------------
 // Honor system reduced-motion preference by switching to fade transition
 const prefersReducedMotion = false;
-const transitionAnimation: 'fade' | 'slide_from_right' | 'default' = prefersReducedMotion
-  ? 'fade'
-  : Platform.OS === 'ios'
-    ? 'slide_from_right'
-    : 'default';
+const transitionAnimation: 'fade' | 'slide_from_right' | 'none' | 'default' = 
+  Platform.OS === 'web'
+    ? 'none'
+    : prefersReducedMotion
+      ? 'fade'
+      : Platform.OS === 'ios'
+        ? 'slide_from_right'
+        : 'default';
 
 // ---------------------------------------------------------------
 // Screen adapter: injects onNavigate / onBack into every screen so
@@ -351,7 +354,7 @@ export const AppNavigator: React.FC = () => {
     if (navigationRef.isReady()) {
       const route = navigationRef.getCurrentRoute();
       if (route?.name) {
-        setCurrentRoute(route.name);
+        setCurrentRoute((prev) => (prev !== route.name ? route.name : prev));
       }
     }
   };
@@ -374,5 +377,14 @@ const styles = StyleSheet.create({
   },
   screenWrap: {
     flex: 1,
+    ...(Platform.OS === 'web'
+      ? ({
+          maxWidth: 480,
+          width: '100%',
+          alignSelf: 'center',
+          minHeight: '100vh',
+          boxShadow: '0 0 20px rgba(0,0,0,0.06)',
+        } as any)
+      : {}),
   },
 });

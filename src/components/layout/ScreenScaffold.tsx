@@ -149,7 +149,14 @@ export const ScreenScaffold: React.FC<ScreenScaffoldProps> = ({
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bg }, style]}>
+    <View
+      style={[
+        styles.root,
+        { backgroundColor: colors.bg },
+        Platform.OS === 'web' && (styles.webContainer as ViewStyle),
+        style,
+      ]}
+    >
       {renderHeader()}
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
@@ -164,6 +171,13 @@ export const ScreenScaffold: React.FC<ScreenScaffoldProps> = ({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  webContainer: {
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+    minHeight: '100vh' as any,
+    boxShadow: '0 0 15px rgba(0,0,0,0.05)' as any,
   },
   keyboardContainer: {
     flex: 1,

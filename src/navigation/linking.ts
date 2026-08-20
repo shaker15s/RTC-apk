@@ -1,22 +1,54 @@
-/**
- * Deep Linking Configuration for Masar RTC Native Mobile.
- * Handles incoming universal links and custom schemes across Android and iOS.
- * ---------------------------------------------------------------
- * Screens marked with `?` have optional params; others are required.
- * verify screen carries serial? param for certification verification.
- * All screen prefixes map to deep link schema for cross-platform routing.
- */
 import { LinkingOptions } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import { RootStackParamList } from './types';
+
+/**
+ * Returns true if the URL is an OAuth callback that should NOT be
+ * handled by React Navigation's deep-link router.
+ */
+function isOAuthCallback(url: string | null): boolean {
+  if (!url) return false;
+  return url.includes('code=') || url.includes('access_token') || url.includes('error=');
+}
 
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
-    Linking.createURL('/'),
-    'org.resala.rtc.masar://',
-    'https://rtc-kohl.vercel.app',
+    ...(Platform.OS === 'web' && typeof window !== 'undefined'
+      ? [window.location.origin, 'https://rtc-kohl.vercel.app']
+      : [Linking.createURL('/'), 'org.resala.rtc.masar://', 'https://rtc-kohl.vercel.app']),
   ],
+
+  // Override getInitialURL to intercept OAuth callbacks before
+  // React Navigation tries to resolve them as screen routes.
+  async getInitialURL(): Promise<string | null> {
+    // On web, check the browser URL
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const href = window.location.href;
+      if (isOAuthCallback(href)) return null;
+      const url = new URL(href);
+      // If path is root or empty, don't trigger deep link
+      if (url.pathname === '/' || url.pathname === '') return null;
+      return href;
+    }
+    // On native, use Linking
+    const url = await Linking.getInitialURL();
+    if (isOAuthCallback(url)) return null;
+    return url;
+  },
+
+  // Override subscribe to filter out OAuth deep links on native
+  subscribe(listener: (url: string) => void) {
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      if (!isOAuthCallback(url)) {
+        listener(url);
+      }
+    });
+    return () => sub.remove();
+  },
+
   config: {
+    initialRouteName: 'onboarding',
     screens: {
       // Public screens
       onboarding: '',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../state/appStore';
 import { useAuthStore } from '../../state/authStore';
@@ -74,6 +74,7 @@ export const BottomNavigationBar: React.FC<BottomNavBarProps> = ({
         {
           bottom: Math.max(insets.bottom, 12),
         },
+        Platform.OS === 'web' && (styles.webOuterContainer as any),
       ]}
     >
       <View
@@ -149,6 +150,17 @@ const styles = StyleSheet.create({
     right: 14,
     zIndex: 100,
     alignItems: 'center',
+  },
+  webOuterContainer: {
+    position: 'fixed' as any,
+    bottom: 12,
+    left: 0,
+    right: 0,
+    marginHorizontal: 'auto',
+    maxWidth: 480,
+    width: '100%',
+    zIndex: 1000,
+    paddingHorizontal: 12,
   },
   islandCard: {
     width: '100%',

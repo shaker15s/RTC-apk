@@ -87,3 +87,22 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+import { Platform } from 'react-native';
+import * as Print from 'expo-print';
+
+export async function printCertificateHtml(html: string): Promise<string | undefined> {
+  if (Platform.OS === 'web') {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+    return undefined;
+  } else {
+    const { uri } = await Print.printToFileAsync({ html });
+    return uri;
+  }
+}

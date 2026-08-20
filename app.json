@@ -15,7 +15,8 @@
     },
     "platforms": [
       "android",
-      "ios"
+      "ios",
+      "web"
     ],
     "ios": {
       "supportsTablet": true,
